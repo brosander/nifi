@@ -11,7 +11,6 @@ import java.io.InputStream;
  * Created by brosander on 5/26/16.
  */
 public class WStringArrayTypeNode extends VariantTypeNode {
-
     private final String value;
 
     public WStringArrayTypeNode(InputStream inputStream, long offset, ChunkHeader chunkHeader, BxmlNode parent, int length) throws IOException {
