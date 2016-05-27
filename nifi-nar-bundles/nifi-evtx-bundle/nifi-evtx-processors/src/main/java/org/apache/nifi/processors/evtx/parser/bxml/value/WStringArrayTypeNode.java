@@ -16,8 +16,12 @@ public class WStringArrayTypeNode extends VariantTypeNode {
 
     public WStringArrayTypeNode(InputStream inputStream, long offset, ChunkHeader chunkHeader, BxmlNode parent, int length) throws IOException {
         super(inputStream, offset, chunkHeader, parent, length);
-        UnsignedInteger binaryLength = readWord();
-        value = readString(binaryLength.intValue());
+        if (length >= 0) {
+            value = readString(length);
+        } else {
+            UnsignedInteger binaryLength = readWord();
+            value = readString(binaryLength.intValue());
+        }
     }
 
     @Override

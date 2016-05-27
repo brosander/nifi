@@ -10,7 +10,7 @@ import java.util.List;
 /**
  * Created by brosander on 5/25/16.
  */
-public class EndOfStreamNode extends BxmlNode {
+public class EndOfStreamNode extends BxmlNodeWithToken {
     public EndOfStreamNode(InputStream inputStream, long offset, ChunkHeader chunkHeader, BxmlNode parent) throws IOException {
         super(inputStream, offset, chunkHeader, parent);
         init();
