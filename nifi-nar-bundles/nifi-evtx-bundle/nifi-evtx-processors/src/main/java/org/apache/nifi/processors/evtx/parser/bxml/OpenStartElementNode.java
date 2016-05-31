@@ -1,11 +1,11 @@
 package org.apache.nifi.processors.evtx.parser.bxml;
 
 import com.google.common.primitives.UnsignedInteger;
+import org.apache.nifi.processors.evtx.parser.BinaryReader;
 import org.apache.nifi.processors.evtx.parser.BxmlNodeVisitor;
 import org.apache.nifi.processors.evtx.parser.ChunkHeader;
 
 import java.io.IOException;
-import java.io.InputStream;
 
 /**
  * Created by brosander on 5/25/16.
@@ -17,22 +17,23 @@ public class OpenStartElementNode extends BxmlNodeWithToken {
     private final String tagName;
     private final int tagLength;
 
-    public OpenStartElementNode(InputStream inputStream, long offset, ChunkHeader chunkHeader, BxmlNode parent) throws IOException {
-        super(inputStream, offset, chunkHeader, parent);
+    public OpenStartElementNode(BinaryReader binaryReader, ChunkHeader chunkHeader, BxmlNode parent) throws IOException {
+        super(binaryReader, chunkHeader, parent);
         if ((getFlags() & 0x0b) != 0) {
             throw new IOException("Invalid flag detected");
         }
-        unknown = readWord();
-        size = readDWord();
-        stringOffset = readDWord();
+        unknown = binaryReader.readWord();
+        size = binaryReader.readDWord();
+        stringOffset = binaryReader.readDWord();
         int tagLength = 11;
         if ((getFlags() & 0x04) > 0) {
             tagLength += 4;
         }
         String string = getChunkHeader().getString(stringOffset);
-        if (stringOffset.compareTo(UnsignedInteger.valueOf(offset - chunkHeader.getOffset())) > 0) {
-            NameStringNode nameStringNode = chunkHeader.addNameStringNode(stringOffset, getInputStream());
-            tagLength += nameStringNode.getImplicitOffset();
+        if (stringOffset.compareTo(UnsignedInteger.valueOf(getOffset() - chunkHeader.getOffset())) > 0) {
+            int initialPosition = binaryReader.getPosition();
+            NameStringNode nameStringNode = chunkHeader.addNameStringNode(stringOffset, binaryReader);
+            tagLength += binaryReader.getPosition() - initialPosition;
             tagName = nameStringNode.getString();
         } else {
             tagName = string;
@@ -46,7 +47,7 @@ public class OpenStartElementNode extends BxmlNodeWithToken {
     }
 
     @Override
-    protected int getEndOfHeader() {
+    protected int getHeaderLength() {
         return tagLength;
     }
 

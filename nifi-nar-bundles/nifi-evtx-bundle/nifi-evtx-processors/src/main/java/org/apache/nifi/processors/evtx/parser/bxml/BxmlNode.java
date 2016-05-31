@@ -1,11 +1,11 @@
 package org.apache.nifi.processors.evtx.parser.bxml;
 
+import org.apache.nifi.processors.evtx.parser.BinaryReader;
 import org.apache.nifi.processors.evtx.parser.Block;
 import org.apache.nifi.processors.evtx.parser.BxmlNodeVisitor;
 import org.apache.nifi.processors.evtx.parser.ChunkHeader;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -33,26 +33,30 @@ public abstract class BxmlNode extends Block {
     private boolean hasEndOfStream = false;
     protected List<BxmlNode> children;
 
-    protected BxmlNode(InputStream inputStream, long offset, ChunkHeader chunkHeader, BxmlNode parent) {
-        super(inputStream, offset);
+    protected BxmlNode(BinaryReader binaryReader, ChunkHeader chunkHeader, BxmlNode parent) {
+        super(binaryReader, chunkHeader.getOffset() + binaryReader.getPosition());
         this.chunkHeader = chunkHeader;
         this.parent = parent;
         hasEndOfStream = false;
     }
 
     @Override
-    protected void init() throws IOException {
-        super.init();
+    protected void init(boolean shouldClearBinaryReader) throws IOException {
+        super.init(false);
         children = Collections.unmodifiableList(initChildren());
+        if (shouldClearBinaryReader) {
+            clearBinaryReader();
+        }
     }
 
     protected List<BxmlNode> initChildren() throws IOException {
+        BinaryReader binaryReader = getBinaryReader();
         List<BxmlNode> result = new ArrayList<>();
         int maxChildren = getMaxChildren();
         int[] endTokens = getEndTokens();
         for (int i = 0; i < maxChildren; i++) {
             // Masking flags for location of factory
-            int token = peek();
+            int token = binaryReader.peek();
             int factoryIndex = token & 0x0F;
             if (factoryIndex > factories.length - 1) {
                 throw new IOException("Invalid token " + factoryIndex);
@@ -61,7 +65,7 @@ public abstract class BxmlNode extends Block {
             if (factory == null) {
                 throw new IOException("Invalid token " + factoryIndex);
             }
-            BxmlNode bxmlNode = factory.create(getInputStream(), getCurrentOffset(), chunkHeader, this);
+            BxmlNode bxmlNode = factory.create(binaryReader, chunkHeader, this);
             result.add(bxmlNode);
             if (bxmlNode.hasEndOfStream() || bxmlNode instanceof EndOfStreamNode) {
                 hasEndOfStream = true;

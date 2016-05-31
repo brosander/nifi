@@ -1,12 +1,11 @@
 package org.apache.nifi.processors.evtx.parser.bxml.value;
 
+import org.apache.nifi.processors.evtx.parser.BinaryReader;
 import org.apache.nifi.processors.evtx.parser.ChunkHeader;
 import org.apache.nifi.processors.evtx.parser.bxml.BxmlNode;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.TimeZone;
 
 /**
@@ -22,9 +21,9 @@ public class FiletimeTypeNode extends VariantTypeNode {
         return simpleDateFormat;
     }
 
-    public FiletimeTypeNode(InputStream inputStream, long offset, ChunkHeader chunkHeader, BxmlNode parent, int length) throws IOException {
-        super(inputStream, offset, chunkHeader, parent, length);
-        value = FORMAT.format(readFileTime());
+    public FiletimeTypeNode(BinaryReader binaryReader, ChunkHeader chunkHeader, BxmlNode parent, int length) throws IOException {
+        super(binaryReader, chunkHeader, parent, length);
+        value = FORMAT.format(binaryReader.readFileTime());
     }
 
     @Override

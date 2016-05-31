@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.Date;
 
@@ -15,47 +16,60 @@ import java.util.Date;
  * Created by brosander on 5/26/16.
  */
 public class BinaryReader {
-    private final InputStream inputStream;
-    private int implicitOffset;
+    private final byte[] bytes;
+    private int position;
 
-    public BinaryReader(InputStream inputStream) {
-        this.inputStream = inputStream;
+    public BinaryReader(BinaryReader binaryReader, int position) {
+        this.bytes = binaryReader.bytes;
+        this.position = position;
+    }
+
+    public BinaryReader(InputStream inputStream, int size) throws IOException {
+        byte[] bytes = new byte[size];
+        int read = 0;
+        while (read < size) {
+            read += inputStream.read(bytes, read, size - read);
+        }
+        this.bytes = bytes;
+        this.position = 0;
+    }
+
+    public BinaryReader(byte[] bytes) {
+        this.bytes = bytes;
+        this.position = 0;
     }
 
     public int read() throws IOException {
-        int read = inputStream.read();
-        if (read >= 0) {
-            implicitOffset++;
-        }
-        return read;
+        return bytes[position++];
     }
 
     public int peek() throws IOException {
-        inputStream.mark(1);
-        try {
-            return inputStream.read();
-        } finally {
-            inputStream.reset();
-        }
+        return bytes[position];
+    }
+
+    public byte[] peekBytes(int length) throws IOException {
+        return Arrays.copyOfRange(bytes, position, position + length);
     }
 
     public byte[] readBytes(int length) throws IOException {
-        byte[] bytes = new byte[length];
-        readBytes(bytes, 0, length);
-        return bytes;
+        try {
+            return peekBytes(length);
+        } finally {
+            position += length;
+        }
     }
 
     public void readBytes(byte[] buf, int offset, int length) throws IOException {
-        int read = 0;
-        while (read < length) {
-            read += inputStream.read(buf, read + offset, length - read);
+        try {
+            System.arraycopy(bytes, position, buf, offset, length);
+        } finally {
+            position += length;
         }
-        implicitOffset += read;
     }
 
     public String readGuid() throws IOException {
         byte[] bytes = readBytes(16);
-        int[][] indexArrays = { { 3, 2, 1, 0 }, { 5, 4 }, { 7, 6 }, { 8, 9 }, { 10, 11, 12, 13, 14, 15 } };
+        int[][] indexArrays = {{3, 2, 1, 0}, {5, 4}, {7, 6}, {8, 9}, {10, 11, 12, 13, 14, 15}};
         StringBuilder result = new StringBuilder();
         for (int[] indexArray : indexArrays) {
             for (int index : indexArray) {
@@ -76,7 +90,7 @@ public class BinaryReader {
                 foundNull = true;
                 break;
             }
-            result.append((char)b);
+            result.append((char) b);
         }
         if (!foundNull) {
             throw new IOException("Expected null terminated string");
@@ -124,73 +138,11 @@ public class BinaryReader {
         return Base64.getEncoder().encodeToString(readBytes(length));
     }
 
-    public long skip(long bytes) throws IOException {
-        long result = inputStream.skip(bytes);
-        implicitOffset += result;
-        return result;
+    public void skip(int bytes) throws IOException {
+        position += bytes;
     }
 
-    public long getImplicitOffset() {
-        return implicitOffset;
-    }
-
-    public InputStream getInputStream() {
-        return new TrackingInputStream();
-    }
-
-    private class TrackingInputStream extends InputStream {
-        int lastMark = -1;
-
-        @Override
-        public int read() throws IOException {
-            int read = inputStream.read();
-            if (read != -1) {
-                implicitOffset++;
-            }
-            return read;
-        }
-
-        @Override
-        public int read(byte[] b) throws IOException {
-            int read = inputStream.read(b);
-            if (read > 0) {
-                implicitOffset += read;
-            }
-            return read;
-        }
-
-        @Override
-        public int read(byte[] b, int off, int len) throws IOException {
-            int read = inputStream.read(b, off, len);
-            if (read > 0) {
-                implicitOffset += read;
-            }
-            return read;
-        }
-
-        @Override
-        public boolean markSupported() {
-            return inputStream.markSupported();
-        }
-
-        @Override
-        public synchronized void reset() throws IOException {
-            if (lastMark == -1) {
-                throw new IOException("Call to reset when last mark not set");
-            }
-            try {
-                inputStream.reset();
-                implicitOffset = lastMark;
-            } catch (IOException e) {
-                lastMark = -1;
-                throw e;
-            }
-        }
-
-        @Override
-        public synchronized void mark(int readlimit) {
-            lastMark = implicitOffset;
-            inputStream.mark(readlimit);
-        }
+    public int getPosition() {
+        return position;
     }
 }

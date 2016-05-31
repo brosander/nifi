@@ -1,10 +1,10 @@
 package org.apache.nifi.processors.evtx.parser.bxml;
 
+import org.apache.nifi.processors.evtx.parser.BinaryReader;
 import org.apache.nifi.processors.evtx.parser.BxmlNodeVisitor;
 import org.apache.nifi.processors.evtx.parser.ChunkHeader;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.Collections;
 import java.util.List;
 
@@ -12,8 +12,8 @@ import java.util.List;
  * Created by brosander on 5/25/16.
  */
 public class EntityReferenceNode extends BxmlNodeWithTokenAndString {
-    public EntityReferenceNode(InputStream inputStream, long offset, ChunkHeader chunkHeader, BxmlNode parent) throws IOException {
-        super(inputStream, offset, chunkHeader, parent);
+    public EntityReferenceNode(BinaryReader binaryReader, ChunkHeader chunkHeader, BxmlNode parent) throws IOException {
+        super(binaryReader, chunkHeader, parent);
         init();
     }
 

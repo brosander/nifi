@@ -1,11 +1,10 @@
 package org.apache.nifi.processors.evtx.parser.bxml.value;
 
-import com.google.common.primitives.UnsignedInteger;
+import org.apache.nifi.processors.evtx.parser.BinaryReader;
 import org.apache.nifi.processors.evtx.parser.ChunkHeader;
 import org.apache.nifi.processors.evtx.parser.bxml.BxmlNode;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.TimeZone;
@@ -23,16 +22,16 @@ public class SystemtimeTypeNode extends VariantTypeNode {
         return simpleDateFormat;
     }
 
-    public SystemtimeTypeNode(InputStream inputStream, long offset, ChunkHeader chunkHeader, BxmlNode parent, int length) throws IOException {
-        super(inputStream, offset, chunkHeader, parent, length);
-        int year = readWord().intValue();
-        int month = readWord().intValue();
-        int dayOfWeek = readWord().intValue();
-        int day = readWord().intValue();
-        int hour = readWord().intValue();
-        int minute = readWord().intValue();
-        int second = readWord().intValue();
-        int microsecond = readWord().intValue();
+    public SystemtimeTypeNode(BinaryReader binaryReader, ChunkHeader chunkHeader, BxmlNode parent, int length) throws IOException {
+        super(binaryReader, chunkHeader, parent, length);
+        int year = binaryReader.readWord().intValue();
+        int month = binaryReader.readWord().intValue();
+        int dayOfWeek = binaryReader.readWord().intValue();
+        int day = binaryReader.readWord().intValue();
+        int hour = binaryReader.readWord().intValue();
+        int minute = binaryReader.readWord().intValue();
+        int second = binaryReader.readWord().intValue();
+        int microsecond = binaryReader.readWord().intValue();
         Calendar calendar = Calendar.getInstance();
         calendar.set(year, month, day, hour, minute, second);
         calendar.set(Calendar.MILLISECOND, microsecond / 1000);

@@ -1,11 +1,11 @@
 package org.apache.nifi.processors.evtx.parser.bxml;
 
 import com.google.common.primitives.UnsignedInteger;
+import org.apache.nifi.processors.evtx.parser.BinaryReader;
 import org.apache.nifi.processors.evtx.parser.BxmlNodeVisitor;
 import org.apache.nifi.processors.evtx.parser.ChunkHeader;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.Collections;
 import java.util.List;
 
@@ -19,18 +19,22 @@ public class TemplateInstanceNode extends BxmlNodeWithToken {
     private final UnsignedInteger templateOffset;
     private final boolean isResident;
     private final TemplateNode templateNode;
+    private final int templateLength;
 
-    public TemplateInstanceNode(InputStream inputStream, long offset, ChunkHeader chunkHeader, BxmlNode parent) throws IOException {
-        super(inputStream, offset, chunkHeader, parent);
-        unknown = read();
-        templateId = readDWord();
-        templateOffset = readDWord();
-        if (templateOffset.compareTo(UnsignedInteger.valueOf(offset - chunkHeader.getOffset())) > 0) {
+    public TemplateInstanceNode(BinaryReader binaryReader, ChunkHeader chunkHeader, BxmlNode parent) throws IOException {
+        super(binaryReader, chunkHeader, parent);
+        unknown = binaryReader.read();
+        templateId = binaryReader.readDWord();
+        templateOffset = binaryReader.readDWord();
+        if (templateOffset.compareTo(UnsignedInteger.valueOf(getOffset() - chunkHeader.getOffset())) > 0) {
             isResident = true;
-            templateNode = chunkHeader.addTemplateNode(templateOffset, getInputStream());
+            templateNode = chunkHeader.addTemplateNode(templateOffset, binaryReader);
+            templateLength = 0;
         } else {
             isResident = false;
+            int initialPosition = binaryReader.getPosition();
             templateNode = chunkHeader.getTemplateNode(templateOffset);
+            templateLength = binaryReader.getPosition() - initialPosition;
         }
 
         if (templateNode != null && !templateId.equals(templateNode.getTemplateId())) {
@@ -40,8 +44,8 @@ public class TemplateInstanceNode extends BxmlNodeWithToken {
     }
 
     @Override
-    protected int getEndOfHeader() {
-        return 10 + (isResident ? (int) templateNode.getImplicitOffset() : 0);
+    protected int getHeaderLength() {
+        return 10 + templateLength;
     }
 
     public TemplateNode getTemplateNode() {

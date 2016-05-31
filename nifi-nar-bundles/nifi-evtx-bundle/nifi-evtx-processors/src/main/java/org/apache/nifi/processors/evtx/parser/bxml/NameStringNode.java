@@ -1,11 +1,11 @@
 package org.apache.nifi.processors.evtx.parser.bxml;
 
 import com.google.common.primitives.UnsignedInteger;
+import org.apache.nifi.processors.evtx.parser.BinaryReader;
 import org.apache.nifi.processors.evtx.parser.BxmlNodeVisitor;
 import org.apache.nifi.processors.evtx.parser.ChunkHeader;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.Collections;
 import java.util.List;
 
@@ -18,16 +18,16 @@ public class NameStringNode extends BxmlNode {
     private final String string;
     private final UnsignedInteger stringLength;
 
-    public NameStringNode(InputStream inputStream, long offset, ChunkHeader chunkHeader) throws IOException {
-        super(inputStream, offset, chunkHeader, null);
-        nextOffset = readDWord();
-        hash = readWord();
-        stringLength = readWord();
+    public NameStringNode(BinaryReader binaryReader, ChunkHeader chunkHeader) throws IOException {
+        super(binaryReader, chunkHeader, null);
+        nextOffset = binaryReader.readDWord();
+        hash = binaryReader.readWord();
+        stringLength = binaryReader.readWord();
         if (stringLength.compareTo(UnsignedInteger.valueOf(Integer.MAX_VALUE)) > 0) {
             throw new IOException("Invalid string getLength");
         }
-        string = readWString(stringLength.intValue());
-        skip(2);
+        string = binaryReader.readWString(stringLength.intValue());
+        binaryReader.skip(2);
         init();
     }
 

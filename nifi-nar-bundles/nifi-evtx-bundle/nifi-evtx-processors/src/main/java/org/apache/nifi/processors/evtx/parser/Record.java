@@ -4,9 +4,7 @@ import com.google.common.primitives.UnsignedInteger;
 import com.google.common.primitives.UnsignedLong;
 import org.apache.nifi.processors.evtx.parser.bxml.RootNode;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.Date;
 
 /**
@@ -32,21 +30,28 @@ public class Record extends Block {
                 '}';
     }
 
-    public Record(InputStream inputStream, long offset, ChunkHeader chunkHeader) throws IOException {
-        super(inputStream, offset);
-        magicNumber = readDWord();
+    public Record(BinaryReader binaryReader, ChunkHeader chunkHeader) throws IOException {
+        super(binaryReader, chunkHeader.getOffset() + binaryReader.getPosition());
+        magicNumber = binaryReader.readDWord();
         if (magicNumber.intValue() != 10794) {
             throw new IOException("Invalid magic number");
         }
-        size = readDWord();
+        size = binaryReader.readDWord();
         if (size.compareTo(UnsignedInteger.valueOf(Integer.MAX_VALUE)) > 0 || size.intValue() > 0x10000) {
             throw new IOException("Invalid size");
         }
-        recordNum = readQWord();
-        timestamp = readFileTime();
-        long currentOffset = getCurrentOffset();
-        rootNode = new RootNode(new ByteArrayInputStream(readBytes(size.intValue() - 28)), currentOffset, chunkHeader, null);
-        size2 = readDWord();
+        recordNum = binaryReader.readQWord();
+        timestamp = binaryReader.readFileTime();
+        rootNode = new RootNode(binaryReader, chunkHeader, null);
+        int desiredPosition = getInitialPosition() + size.intValue() - 4;
+        int skipAmount = desiredPosition - binaryReader.getPosition();
+        if (skipAmount > 0) {
+            binaryReader.skip(skipAmount);
+        }
+        size2 = binaryReader.readDWord();
+        if (!size.equals(size2)) {
+            throw new IOException("Size 2 invalid");
+        }
     }
 
     public UnsignedLong getRecordNum() {
