@@ -1,6 +1,7 @@
 package org.apache.nifi.processors.evtx.parser.bxml;
 
 import org.apache.nifi.processors.evtx.parser.Block;
+import org.apache.nifi.processors.evtx.parser.BxmlNodeVisitor;
 import org.apache.nifi.processors.evtx.parser.ChunkHeader;
 
 import java.io.IOException;
@@ -99,4 +100,6 @@ public abstract class BxmlNode extends Block {
     public boolean hasEndOfStream() {
         return hasEndOfStream;
     }
+
+    public abstract void accept(BxmlNodeVisitor bxmlNodeVisitor) throws IOException;
 }

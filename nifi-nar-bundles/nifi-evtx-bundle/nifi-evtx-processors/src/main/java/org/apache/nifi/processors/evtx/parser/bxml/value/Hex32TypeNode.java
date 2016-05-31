@@ -14,7 +14,7 @@ public class Hex32TypeNode extends VariantTypeNode {
 
     public Hex32TypeNode(InputStream inputStream, long offset, ChunkHeader chunkHeader, BxmlNode parent, int length) throws IOException {
         super(inputStream, offset, chunkHeader, parent, length);
-        value = readDWord().toString(16);
+        value = "0x" + readDWord().toString(16);
     }
 
     @Override

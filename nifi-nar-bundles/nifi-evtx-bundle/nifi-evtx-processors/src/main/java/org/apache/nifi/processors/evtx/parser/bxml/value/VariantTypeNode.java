@@ -1,5 +1,6 @@
 package org.apache.nifi.processors.evtx.parser.bxml.value;
 
+import org.apache.nifi.processors.evtx.parser.BxmlNodeVisitor;
 import org.apache.nifi.processors.evtx.parser.ChunkHeader;
 import org.apache.nifi.processors.evtx.parser.bxml.BxmlNode;
 
@@ -26,4 +27,9 @@ public abstract class VariantTypeNode extends BxmlNode {
     }
 
     public abstract String getValue();
+
+    @Override
+    public void accept(BxmlNodeVisitor bxmlNodeVisitor) throws IOException {
+        bxmlNodeVisitor.visit(this);
+    }
 }

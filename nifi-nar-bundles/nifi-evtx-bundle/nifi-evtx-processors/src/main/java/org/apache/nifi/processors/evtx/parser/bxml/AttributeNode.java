@@ -1,5 +1,6 @@
 package org.apache.nifi.processors.evtx.parser.bxml;
 
+import org.apache.nifi.processors.evtx.parser.BxmlNodeVisitor;
 import org.apache.nifi.processors.evtx.parser.ChunkHeader;
 
 import java.io.IOException;
@@ -17,6 +18,11 @@ public class AttributeNode extends BxmlNodeWithTokenAndString {
     @Override
     protected int getMaxChildren() {
         return 1;
+    }
+
+    @Override
+    public void accept(BxmlNodeVisitor bxmlNodeVisitor) throws IOException {
+        bxmlNodeVisitor.visit(this);
     }
 
     public String getAttributeName() {

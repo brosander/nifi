@@ -14,7 +14,7 @@ public class Hex64TypeNode extends VariantTypeNode {
 
     public Hex64TypeNode(InputStream inputStream, long offset, ChunkHeader chunkHeader, BxmlNode parent, int length) throws IOException {
         super(inputStream, offset, chunkHeader, parent, length);
-        value = readQWord().toString(16);
+        value = "0x" + readQWord().toString(16);
     }
 
     @Override
