@@ -26,8 +26,8 @@ public class RootNode extends BxmlNode {
         for (long i = 0; i < substitutionCount.longValue(); i++) {
             try {
                 UnsignedInteger substitionSize = readWord();
-                int substituionType = readWord().intValue();
-                substitutionVariantFactories.add(new VariantTypeSizeAndFactory(substitionSize.intValue(), ValueNode.factories.get(substituionType)));
+                int substitutionType = readWord().intValue();
+                substitutionVariantFactories.add(new VariantTypeSizeAndFactory(substitionSize.intValue(), ValueNode.factories.get(substitutionType)));
             } catch (Exception e) {
                 System.out.println(i);
             }
