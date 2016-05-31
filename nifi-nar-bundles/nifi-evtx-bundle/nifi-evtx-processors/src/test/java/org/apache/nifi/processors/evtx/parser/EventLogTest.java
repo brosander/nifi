@@ -20,8 +20,7 @@ public class EventLogTest {
     @Test
     public void testParseHeader() throws IOException {
         try (FileInputStream inputStream = new FileInputStream("/Users/brosander/Downloads/winlogs/system-logs.evtx")) {
-            EventLog eventLog = new EventLog(inputStream);
-            FileHeader fileHeader = eventLog.getFileHeader();
+            FileHeader fileHeader = new FileHeader(inputStream);
             assertEquals("ElfFile", fileHeader.getMagicString());
             assertEquals(UnsignedLong.fromLongBits(0L), fileHeader.getOldestChunk());
             assertEquals(UnsignedLong.fromLongBits(33L), fileHeader.getCurrentChunkNumber());
@@ -34,7 +33,7 @@ public class EventLogTest {
             assertEquals("", fileHeader.getUnused1());
             assertEquals(UnsignedInteger.fromIntBits(0), fileHeader.getFlags());
             assertEquals(UnsignedInteger.valueOf(3575959108L), fileHeader.getChecksum());
-            eventLog.getFileHeader().forEachRemaining(chunkHeader -> {
+            fileHeader.forEachRemaining(chunkHeader -> {
                 chunkHeader.forEachRemaining(record -> {System.out.println(record);});
             });
         }
@@ -42,10 +41,10 @@ public class EventLogTest {
 
     @Test
     public void testXmlOutput() throws IOException, XMLStreamException {
-        try (FileInputStream inputStream = new FileInputStream("/Users/brosander/Downloads/winlogs/system-logs.evtx")) {
-            EventLog eventLog = new EventLog(inputStream);
-            FileHeader fileHeader = eventLog.getFileHeader();
-            assertEquals("ElfFile", fileHeader.getMagicString());
+//        try (FileInputStream inputStream = new FileInputStream("/Users/brosander/Downloads/winlogs/system-logs.evtx")) {
+        try (FileInputStream inputStream = new FileInputStream("/Users/brosander/Downloads/winlogs/application-logs.evtx")) {
+            FileHeader fileHeader = new FileHeader(inputStream);
+            /*assertEquals("ElfFile", fileHeader.getMagicString());
             assertEquals(UnsignedLong.fromLongBits(0L), fileHeader.getOldestChunk());
             assertEquals(UnsignedLong.fromLongBits(33L), fileHeader.getCurrentChunkNumber());
             assertEquals(UnsignedLong.fromLongBits(4315L), fileHeader.getNextRecordNumber());
@@ -56,12 +55,12 @@ public class EventLogTest {
             assertEquals(UnsignedInteger.fromIntBits(34), fileHeader.getChunkCount());
             assertEquals("", fileHeader.getUnused1());
             assertEquals(UnsignedInteger.fromIntBits(0), fileHeader.getFlags());
-            assertEquals(UnsignedInteger.valueOf(3575959108L), fileHeader.getChecksum());
+            assertEquals(UnsignedInteger.valueOf(3575959108L), fileHeader.getChecksum());*/
             XMLStreamWriter xmlStreamWriter = XMLOutputFactory.newFactory().createXMLStreamWriter(new FileOutputStream("/Users/brosander/Github/python-evtx/scripts/test.out"), "UTF-8");
             xmlStreamWriter.writeStartDocument();
             xmlStreamWriter.writeStartElement("Events");
             try {
-                eventLog.getFileHeader().forEachRemaining(chunkHeader -> {
+                fileHeader.forEachRemaining(chunkHeader -> {
                     chunkHeader.forEachRemaining(record -> {
                         try {
                             new XmlBxmlNodeVisitor(xmlStreamWriter, record.getRootNode());

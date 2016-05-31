@@ -28,6 +28,7 @@ public class FileHeader extends Block implements Iterator<ChunkHeader> {
     private final InputStream inputStream;
     private ChunkHeader next;
     private int currentOffset;
+    private int count = 0;
 
     public FileHeader(InputStream inputStream) throws IOException {
         super(new BinaryReader(inputStream, 4096));
@@ -125,9 +126,13 @@ public class FileHeader extends Block implements Iterator<ChunkHeader> {
 
     private void initNext() {
         try {
-            int currentOffset = this.currentOffset;
-            currentOffset += CHUNK_SIZE;
-            next = new ChunkHeader(new BinaryReader(inputStream, CHUNK_SIZE), currentOffset);
+            if (count++ < chunkCount.intValue()) {
+                int currentOffset = this.currentOffset;
+                currentOffset += CHUNK_SIZE;
+                next = new ChunkHeader(new BinaryReader(inputStream, CHUNK_SIZE), currentOffset);
+            } else {
+                next = null;
+            }
         } catch (IOException e) {
             e.printStackTrace();
         }
