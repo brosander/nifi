@@ -7,11 +7,7 @@ import org.apache.nifi.processors.evtx.parser.bxml.TemplateNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -35,39 +31,33 @@ public class ChunkHeader extends Block implements Iterator<Record> {
     private final UnsignedInteger headerChecksum;
     private final Map<UnsignedInteger, NameStringNode> nameStrings;
     private final Map<UnsignedInteger, TemplateNode> templateNodes;
-    private final InputStream dataInputStream;
-    private final byte[] dataBytes;
-    private final int implicitOffset;
     private Record record;
     private UnsignedLong recordNumber;
 
-    public ChunkHeader(InputStream inputStream, long headerOffset) throws IOException {
-        super(inputStream, headerOffset);
-        byte[] headerBytes = readBytes(128);
+    public ChunkHeader(BinaryReader binaryReader, int headerOffset) throws IOException {
+        super(binaryReader, headerOffset);
         CRC32 crc32 = new CRC32();
-        crc32.update(headerBytes, 0, 120);
-        BinaryReader headerReader = new BinaryReader(new ByteArrayInputStream(headerBytes));
+        crc32.update(binaryReader.peekBytes(120));
 
-        magicString = headerReader.readString(8);
-        fileFirstRecordNumber = headerReader.readQWord();
-        fileLastRecordNumber = headerReader.readQWord();
-        logFirstRecordNumber = headerReader.readQWord();
-        logLastRecordNumber = headerReader.readQWord();
-        headerSize = headerReader.readDWord();
-        lastRecordOffset = headerReader.readDWord();
-        nextRecordOffset = headerReader.readDWord();
-        dataChecksum = headerReader.readDWord();
-        unused = headerReader.readString(68);
+        magicString = binaryReader.readString(8);
+        fileFirstRecordNumber = binaryReader.readQWord();
+        fileLastRecordNumber = binaryReader.readQWord();
+        logFirstRecordNumber = binaryReader.readQWord();
+        logLastRecordNumber = binaryReader.readQWord();
+        headerSize = binaryReader.readDWord();
+        lastRecordOffset = binaryReader.readDWord();
+        nextRecordOffset = binaryReader.readDWord();
+        dataChecksum = binaryReader.readDWord();
+        unused = binaryReader.readString(68);
 
         if (!"ElfChnk".equals(magicString)) {
             throw new IOException("Invalid magic string " + this);
         }
 
-        headerChecksum = headerReader.readDWord();
+        headerChecksum = binaryReader.readDWord();
 
         // These are included into the checksum
-        byte[] afterHeaderBytes = readBytes(384);
-        crc32.update(afterHeaderBytes);
+        crc32.update(binaryReader.peekBytes(384));
 
         if (crc32.getValue() != headerChecksum.longValue()) {
             throw new IOException("Invalid checksum " + this);
@@ -75,25 +65,15 @@ public class ChunkHeader extends Block implements Iterator<Record> {
         if (lastRecordOffset.compareTo(UnsignedInteger.valueOf(Integer.MAX_VALUE)) > 0) {
             throw new IOException("Last record offset too big to fit into signed integer");
         }
-        dataBytes = readBytes(nextRecordOffset.intValue() - 512);
-        crc32 = new CRC32();
-        crc32.update(dataBytes);
-        if (crc32.getValue() != dataChecksum.longValue()) {
-            throw new IOException("Invalid data checksum " + this);
-        }
 
         nameStrings = new HashMap<>();
-        implicitOffset = headerBytes.length + afterHeaderBytes.length;
-        BinaryReader afterHeaderReader = new BinaryReader(new ByteArrayInputStream(afterHeaderBytes));
         for (int i = 0; i < 64; i++) {
-            UnsignedInteger offset = afterHeaderReader.readDWord();
+            UnsignedInteger offset = binaryReader.readDWord();
             while (offset.compareTo(UnsignedInteger.ZERO) > 0) {
                 if (offset.compareTo(UnsignedInteger.valueOf(Integer.MAX_VALUE)) > 1) {
                     throw new IOException("Invalid offset");
                 }
-                int effectiveOffset = offset.intValue() - implicitOffset;
-                ByteArrayInputStream offsetBuffer = new ByteArrayInputStream(dataBytes, effectiveOffset, dataBytes.length - effectiveOffset);
-                NameStringNode nameStringNode = new NameStringNode(offsetBuffer, offset.longValue(), this);
+                NameStringNode nameStringNode = new NameStringNode(new BinaryReader(binaryReader, offset.intValue()), this);
                 nameStrings.put(offset, nameStringNode);
                 offset = nameStringNode.getNextOffset();
             }
@@ -101,39 +81,43 @@ public class ChunkHeader extends Block implements Iterator<Record> {
 
         templateNodes = new HashMap<>();
         for (int i = 0; i < 32; i++) {
-            UnsignedInteger offset = afterHeaderReader.readDWord();
+            UnsignedInteger offset = binaryReader.readDWord();
             while (offset.compareTo(UnsignedInteger.ZERO) > 0) {
                 if (offset.compareTo(UnsignedInteger.valueOf(Integer.MAX_VALUE)) > 1) {
                     throw new IOException("Invalid offset");
                 }
-                int effectiveOffset = offset.intValue() - implicitOffset;
-                byte token = ByteBuffer.wrap(dataBytes, effectiveOffset - 10, 1).order(ByteOrder.LITTLE_ENDIAN).get();
+                int token = new BinaryReader(binaryReader, offset.intValue() - 10).read();
                 if (token != 0x0c) {
                     logger.warn("Unexpected token when parsing template at offset " + offset.intValue());
                     break;
                 }
-                UnsignedInteger pointer = new BinaryReader(new ByteArrayInputStream(dataBytes, effectiveOffset - 4, dataBytes.length - effectiveOffset + 4)).readDWord();
+                BinaryReader templateReader = new BinaryReader(binaryReader, offset.intValue() - 4);
+                UnsignedInteger pointer = templateReader.readDWord();
                 if (!offset.equals(pointer)) {
                     logger.warn("Invalid pointer when parsing template at offset " + offset.intValue());
                     break;
                 }
-                TemplateNode templateNode = new TemplateNode(new ByteArrayInputStream(dataBytes, effectiveOffset, dataBytes.length - effectiveOffset), this.getOffset() + offset.longValue(), this);
+                TemplateNode templateNode = new TemplateNode(templateReader, this);
                 templateNodes.put(offset, templateNode);
                 offset = templateNode.getNextOffset();
             }
         }
-        dataInputStream = new ByteArrayInputStream(dataBytes);
+        crc32 = new CRC32();
+        crc32.update(binaryReader.peekBytes(nextRecordOffset.intValue() - 512));
+        if (crc32.getValue() != dataChecksum.longValue()) {
+            throw new IOException("Invalid data checksum " + this);
+        }
         initNext();
     }
 
-    public NameStringNode addNameStringNode(UnsignedInteger offset, InputStream inputStream) throws IOException {
-        NameStringNode nameStringNode = new NameStringNode(inputStream, UnsignedInteger.valueOf(this.getOffset()).plus(offset).longValue(), this);
+    public NameStringNode addNameStringNode(UnsignedInteger offset, BinaryReader binaryReader) throws IOException {
+        NameStringNode nameStringNode = new NameStringNode(binaryReader, this);
         nameStrings.put(offset, nameStringNode);
         return nameStringNode;
     }
 
-    public TemplateNode addTemplateNode(UnsignedInteger offset, InputStream inputStream) throws IOException {
-        TemplateNode templateNode = new TemplateNode(inputStream, UnsignedInteger.valueOf(this.getOffset()).plus(offset).longValue(), this);
+    public TemplateNode addTemplateNode(UnsignedInteger offset, BinaryReader binaryReader) throws IOException {
+        TemplateNode templateNode = new TemplateNode(binaryReader, this);
         templateNodes.put(offset, templateNode);
         return templateNode;
     }
@@ -161,16 +145,11 @@ public class ChunkHeader extends Block implements Iterator<Record> {
 
     private void initNext() {
         try {
-            long offset;
             if (fileLastRecordNumber.equals(recordNumber)) {
                 record = null;
                 return;
-            } else if (record == null) {
-                offset = getOffset() + 0x200;
-            } else {
-                offset = record.getCurrentOffset();
             }
-            record = new Record(dataInputStream, offset, this);
+            record = new Record(getBinaryReader(), this);
             recordNumber = record.getRecordNum();
         } catch (IOException e) {
             e.printStackTrace();

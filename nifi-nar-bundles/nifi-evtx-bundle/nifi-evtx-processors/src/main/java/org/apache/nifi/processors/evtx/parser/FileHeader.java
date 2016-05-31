@@ -3,7 +3,6 @@ package org.apache.nifi.processors.evtx.parser;
 import com.google.common.primitives.UnsignedInteger;
 import com.google.common.primitives.UnsignedLong;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Iterator;
@@ -13,6 +12,7 @@ import java.util.zip.CRC32;
  * Created by brosander on 5/24/16.
  */
 public class FileHeader extends Block implements Iterator<ChunkHeader> {
+    public static final int CHUNK_SIZE = 65536;
     private final String magicString;
     private final UnsignedLong oldestChunk;
     private final UnsignedLong currentChunkNumber;
@@ -27,30 +27,30 @@ public class FileHeader extends Block implements Iterator<ChunkHeader> {
     private final UnsignedInteger checksum;
     private final InputStream inputStream;
     private ChunkHeader next;
+    private int currentOffset;
 
     public FileHeader(InputStream inputStream) throws IOException {
-        super(inputStream, 0);
+        super(new BinaryReader(inputStream, 4096));
         // Bytes will be checksummed
-        byte[] bytes = readBytes(120);
+        BinaryReader binaryReader = getBinaryReader();
+        CRC32 crc32 = new CRC32();
+        crc32.update(binaryReader.peekBytes(120));
+
+        magicString = binaryReader.readString(8);
+        oldestChunk = binaryReader.readQWord();
+        currentChunkNumber = binaryReader.readQWord();
+        nextRecordNumber = binaryReader.readQWord();
+        headerSize = binaryReader.readDWord();
+        minorVersion = binaryReader.readWord();
+        majorVersion = binaryReader.readWord();
+        headerChunkSize = binaryReader.readWord();
+        chunkCount = binaryReader.readWord();
+        unused1 = binaryReader.readString(76);
 
         // Not part of checksum
-        flags = readDWord();
-        checksum = readDWord();
+        flags = binaryReader.readDWord();
+        checksum = binaryReader.readDWord();
 
-        BinaryReader headerReader = new BinaryReader(new ByteArrayInputStream(bytes));
-        magicString = headerReader.readString(8);
-        oldestChunk = headerReader.readQWord();
-        currentChunkNumber = headerReader.readQWord();
-        nextRecordNumber = headerReader.readQWord();
-        headerSize = headerReader.readDWord();
-        minorVersion = headerReader.readWord();
-        majorVersion = headerReader.readWord();
-        headerChunkSize = headerReader.readWord();
-        chunkCount = headerReader.readWord();
-        unused1 = headerReader.readString(76);
-
-        CRC32 crc32 = new CRC32();
-        crc32.update(bytes);
         if (crc32.getValue() != checksum.longValue()) {
             throw new IOException("Invalid checksum");
         }
@@ -64,13 +64,14 @@ public class FileHeader extends Block implements Iterator<ChunkHeader> {
             throw new IOException("Invalid header chunk size");
         }
         this.inputStream = inputStream;
+        currentOffset = 4096;
 
         init();
         initNext();
     }
 
     @Override
-    protected int getEndOfHeader() {
+    protected int getHeaderLength() {
         return 4096;
     }
 
@@ -124,8 +125,9 @@ public class FileHeader extends Block implements Iterator<ChunkHeader> {
 
     private void initNext() {
         try {
-            long offset = getCurrentOffset();
-            next = new ChunkHeader(new ByteArrayInputStream(readBytes(65536)), offset);
+            int currentOffset = this.currentOffset;
+            currentOffset += CHUNK_SIZE;
+            next = new ChunkHeader(new BinaryReader(inputStream, CHUNK_SIZE), currentOffset);
         } catch (IOException e) {
             e.printStackTrace();
         }

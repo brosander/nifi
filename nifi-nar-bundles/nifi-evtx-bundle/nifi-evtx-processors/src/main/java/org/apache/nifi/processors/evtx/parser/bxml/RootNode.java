@@ -1,13 +1,13 @@
 package org.apache.nifi.processors.evtx.parser.bxml;
 
 import com.google.common.primitives.UnsignedInteger;
+import org.apache.nifi.processors.evtx.parser.BinaryReader;
 import org.apache.nifi.processors.evtx.parser.BxmlNodeVisitor;
 import org.apache.nifi.processors.evtx.parser.ChunkHeader;
 import org.apache.nifi.processors.evtx.parser.bxml.value.VariantTypeNode;
 import org.apache.nifi.processors.evtx.parser.bxml.value.VariantTypeNodeFactory;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -19,15 +19,15 @@ public class RootNode extends BxmlNode {
     private final UnsignedInteger substitutionCount;
     private final List<VariantTypeNode> substitutions;
 
-    public RootNode(InputStream inputStream, long offset, ChunkHeader chunkHeader, BxmlNode parent) throws IOException {
-        super(inputStream, offset, chunkHeader, parent);
+    public RootNode(BinaryReader binaryReader, ChunkHeader chunkHeader, BxmlNode parent) throws IOException {
+        super(binaryReader, chunkHeader, parent);
         init();
-        substitutionCount = readDWord();
+        substitutionCount = binaryReader.readDWord();
         List<VariantTypeSizeAndFactory> substitutionVariantFactories = new ArrayList<>(substitutionCount.intValue());
         for (long i = 0; i < substitutionCount.longValue(); i++) {
             try {
-                UnsignedInteger substitionSize = readWord();
-                int substitutionType = readWord().intValue();
+                UnsignedInteger substitionSize = binaryReader.readWord();
+                int substitutionType = binaryReader.readWord().intValue();
                 substitutionVariantFactories.add(new VariantTypeSizeAndFactory(substitionSize.intValue(), ValueNode.factories.get(substitutionType)));
             } catch (Exception e) {
                 System.out.println(i);
@@ -35,7 +35,7 @@ public class RootNode extends BxmlNode {
         }
         List<VariantTypeNode> substitutions = new ArrayList<>();
         for (VariantTypeSizeAndFactory substitutionVariantFactory : substitutionVariantFactories) {
-            substitutions.add(substitutionVariantFactory.factory.create(getInputStream(), getCurrentOffset(), chunkHeader, this, substitutionVariantFactory.size));
+            substitutions.add(substitutionVariantFactory.factory.create(binaryReader, chunkHeader, this, substitutionVariantFactory.size));
         }
         this.substitutions = Collections.unmodifiableList(substitutions);
     }

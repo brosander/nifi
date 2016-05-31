@@ -1,10 +1,10 @@
 package org.apache.nifi.processors.evtx.parser.bxml;
 
+import org.apache.nifi.processors.evtx.parser.BinaryReader;
 import org.apache.nifi.processors.evtx.parser.BxmlNodeVisitor;
 import org.apache.nifi.processors.evtx.parser.ChunkHeader;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.Collections;
 import java.util.List;
 
@@ -12,8 +12,8 @@ import java.util.List;
  * Created by brosander on 5/25/16.
  */
 public class CloseStartElementNode extends BxmlNodeWithToken {
-    public CloseStartElementNode(InputStream inputStream, long offset, ChunkHeader chunkHeader, BxmlNode parent) throws IOException {
-        super(inputStream, offset, chunkHeader, parent);
+    public CloseStartElementNode(BinaryReader binaryReader, ChunkHeader chunkHeader, BxmlNode parent) throws IOException {
+        super(binaryReader, chunkHeader, parent);
         if ((getFlags() & 0x0F) != 0) {
             throw new IOException("Invalid flag");
         }

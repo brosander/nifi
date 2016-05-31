@@ -1,11 +1,11 @@
 package org.apache.nifi.processors.evtx.parser.bxml;
 
 import com.google.common.primitives.UnsignedInteger;
+import org.apache.nifi.processors.evtx.parser.BinaryReader;
 import org.apache.nifi.processors.evtx.parser.BxmlNodeVisitor;
 import org.apache.nifi.processors.evtx.parser.ChunkHeader;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.Collections;
 import java.util.List;
 
@@ -18,12 +18,12 @@ public class ProcessingInstructionDataNode extends BxmlNodeWithToken {
     private final int tagLength;
     private final String data;
 
-    public ProcessingInstructionDataNode(InputStream inputStream, long offset, ChunkHeader chunkHeader, BxmlNode parent) throws IOException {
-        super(inputStream, offset, chunkHeader, parent);
-        stringLength = readDWord();
+    public ProcessingInstructionDataNode(BinaryReader binaryReader, ChunkHeader chunkHeader, BxmlNode parent) throws IOException {
+        super(binaryReader, chunkHeader, parent);
+        stringLength = binaryReader.readDWord();
         tagLength = 3 + (2 * stringLength.intValue());
         if (stringLength.compareTo(UnsignedInteger.ZERO) > 0) {
-            data = readWString(stringLength.intValue());
+            data = binaryReader.readWString(stringLength.intValue());
         } else {
             data = "";
         }

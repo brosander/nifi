@@ -1,12 +1,11 @@
 package org.apache.nifi.processors.evtx.parser.bxml;
 
-import com.google.common.primitives.UnsignedInteger;
+import org.apache.nifi.processors.evtx.parser.BinaryReader;
 import org.apache.nifi.processors.evtx.parser.BxmlNodeVisitor;
 import org.apache.nifi.processors.evtx.parser.ChunkHeader;
 import org.apache.nifi.processors.evtx.parser.bxml.value.*;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -57,18 +56,18 @@ public class ValueNode extends BxmlNodeWithToken {
 
     private final int type;
 
-    public ValueNode(InputStream inputStream, long offset, ChunkHeader chunkHeader, BxmlNode parent) throws IOException {
-        super(inputStream, offset, chunkHeader, parent);
+    public ValueNode(BinaryReader binaryReader, ChunkHeader chunkHeader, BxmlNode parent) throws IOException {
+        super(binaryReader, chunkHeader, parent);
         if ((getFlags() & 0x0B) != 0) {
             throw new IOException("Invalid flag");
         }
-        type = read();
+        type = binaryReader.read();
         init();
     }
 
     @Override
     protected List<BxmlNode> initChildren() throws IOException {
-        VariantTypeNode variantTypeNode = factories.get(type).create(getInputStream(), getCurrentOffset(), getChunkHeader(), this, -1);
+        VariantTypeNode variantTypeNode = factories.get(type).create(getBinaryReader(), getChunkHeader(), this, -1);
         return Collections.singletonList(variantTypeNode);
     }
 
