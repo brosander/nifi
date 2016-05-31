@@ -29,10 +29,6 @@ public abstract class Block {
         return offset;
     }
 
-    /*public long getCurrentOffset() {
-        return offset + getImplicitOffset();
-    }*/
-
     protected void init(boolean clearBinaryReader) throws IOException {
         if (initialized) {
             throw new IOException("Initialize should only be called once");
