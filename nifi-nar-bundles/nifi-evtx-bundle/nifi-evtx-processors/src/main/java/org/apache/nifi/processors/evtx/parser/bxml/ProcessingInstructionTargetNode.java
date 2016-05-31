@@ -1,6 +1,7 @@
 package org.apache.nifi.processors.evtx.parser.bxml;
 
 import com.google.common.primitives.UnsignedInteger;
+import org.apache.nifi.processors.evtx.parser.BxmlNodeVisitor;
 import org.apache.nifi.processors.evtx.parser.ChunkHeader;
 
 import java.io.IOException;
@@ -32,6 +33,11 @@ public class ProcessingInstructionTargetNode extends BxmlNodeWithToken {
     @Override
     protected List<BxmlNode> initChildren() throws IOException {
         return Collections.emptyList();
+    }
+
+    @Override
+    public void accept(BxmlNodeVisitor bxmlNodeVisitor) throws IOException {
+        bxmlNodeVisitor.visit(this);
     }
 
     public String getValue() {

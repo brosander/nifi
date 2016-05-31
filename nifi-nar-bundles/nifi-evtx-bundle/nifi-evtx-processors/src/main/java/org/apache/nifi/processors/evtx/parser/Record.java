@@ -52,4 +52,8 @@ public class Record extends Block {
     public UnsignedLong getRecordNum() {
         return recordNum;
     }
+
+    public RootNode getRootNode() {
+        return rootNode;
+    }
 }

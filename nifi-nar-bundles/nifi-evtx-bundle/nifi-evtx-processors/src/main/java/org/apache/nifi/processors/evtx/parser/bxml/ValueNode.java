@@ -1,6 +1,7 @@
 package org.apache.nifi.processors.evtx.parser.bxml;
 
 import com.google.common.primitives.UnsignedInteger;
+import org.apache.nifi.processors.evtx.parser.BxmlNodeVisitor;
 import org.apache.nifi.processors.evtx.parser.ChunkHeader;
 import org.apache.nifi.processors.evtx.parser.bxml.value.*;
 
@@ -69,5 +70,10 @@ public class ValueNode extends BxmlNodeWithToken {
     protected List<BxmlNode> initChildren() throws IOException {
         VariantTypeNode variantTypeNode = factories.get(type).create(getInputStream(), getCurrentOffset(), getChunkHeader(), this, -1);
         return Collections.singletonList(variantTypeNode);
+    }
+
+    @Override
+    public void accept(BxmlNodeVisitor bxmlNodeVisitor) throws IOException {
+        bxmlNodeVisitor.visit(this);
     }
 }

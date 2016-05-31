@@ -9,7 +9,7 @@ import java.io.InputStream;
 /**
  * Created by brosander on 5/25/16.
  */
-public class BxmlNodeWithTokenAndString extends BxmlNodeWithToken {
+public abstract class BxmlNodeWithTokenAndString extends BxmlNodeWithToken {
     private final UnsignedInteger stringOffset;
     private final String value;
     private final int tagLength;

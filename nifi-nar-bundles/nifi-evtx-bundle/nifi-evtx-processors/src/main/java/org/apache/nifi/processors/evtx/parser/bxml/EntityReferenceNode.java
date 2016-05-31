@@ -1,5 +1,6 @@
 package org.apache.nifi.processors.evtx.parser.bxml;
 
+import org.apache.nifi.processors.evtx.parser.BxmlNodeVisitor;
 import org.apache.nifi.processors.evtx.parser.ChunkHeader;
 
 import java.io.IOException;
@@ -19,6 +20,11 @@ public class EntityReferenceNode extends BxmlNodeWithTokenAndString {
     @Override
     protected List<BxmlNode> initChildren() throws IOException {
         return Collections.emptyList();
+    }
+
+    @Override
+    public void accept(BxmlNodeVisitor bxmlNodeVisitor) throws IOException {
+        bxmlNodeVisitor.visit(this);
     }
 
     public String getValue() {

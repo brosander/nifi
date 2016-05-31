@@ -1,6 +1,7 @@
 package org.apache.nifi.processors.evtx.parser.bxml;
 
 import com.google.common.primitives.UnsignedInteger;
+import org.apache.nifi.processors.evtx.parser.BxmlNodeVisitor;
 import org.apache.nifi.processors.evtx.parser.ChunkHeader;
 import org.apache.nifi.processors.evtx.parser.bxml.value.VariantTypeNode;
 import org.apache.nifi.processors.evtx.parser.bxml.value.VariantTypeNodeFactory;
@@ -37,6 +38,15 @@ public class RootNode extends BxmlNode {
             substitutions.add(substitutionVariantFactory.factory.create(getInputStream(), getCurrentOffset(), chunkHeader, this, substitutionVariantFactory.size));
         }
         this.substitutions = Collections.unmodifiableList(substitutions);
+    }
+
+    @Override
+    public void accept(BxmlNodeVisitor bxmlNodeVisitor) throws IOException {
+        bxmlNodeVisitor.visit(this);
+    }
+
+    public List<VariantTypeNode> getSubstitutions() {
+        return substitutions;
     }
 
     @Override

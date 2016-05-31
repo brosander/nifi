@@ -1,6 +1,7 @@
 package org.apache.nifi.processors.evtx.parser.bxml;
 
 import com.google.common.primitives.UnsignedInteger;
+import org.apache.nifi.processors.evtx.parser.BxmlNodeVisitor;
 import org.apache.nifi.processors.evtx.parser.ChunkHeader;
 
 import java.io.IOException;
@@ -52,5 +53,10 @@ public class OpenStartElementNode extends BxmlNodeWithToken {
     @Override
     protected int[] getEndTokens() {
         return new int[]{CLOSE_EMPTY_ELEMENT_TOKEN, CLOSE_ELEMENT_TOKEN};
+    }
+
+    @Override
+    public void accept(BxmlNodeVisitor bxmlNodeVisitor) throws IOException {
+        bxmlNodeVisitor.visit(this);
     }
 }

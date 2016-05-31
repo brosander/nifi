@@ -18,6 +18,10 @@ public class BXmlTypeNode extends VariantTypeNode {
         rootNode = new RootNode(getInputStream(), offset, chunkHeader, this);
     }
 
+    public RootNode getRootNode() {
+        return rootNode;
+    }
+
     @Override
     public String getValue() {
         return rootNode.toString();
