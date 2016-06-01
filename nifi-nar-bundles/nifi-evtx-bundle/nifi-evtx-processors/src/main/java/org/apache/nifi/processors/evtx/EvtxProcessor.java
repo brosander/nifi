@@ -2,7 +2,6 @@ package org.apache.nifi.processors.evtx;
 
 import com.google.common.net.MediaType;
 import com.google.common.primitives.UnsignedLong;
-import org.apache.nifi.action.Component;
 import org.apache.nifi.components.PropertyDescriptor;
 import org.apache.nifi.flowfile.FlowFile;
 import org.apache.nifi.flowfile.attributes.CoreAttributes;
@@ -87,7 +86,7 @@ public class EvtxProcessor extends AbstractProcessor {
         if (exception == null) {
             session.transfer(updated, REL_SUCCESS);
         } else {
-            logger.error("Unable to process {} due to {}", new Object[] {name, exception}, exception);
+            logger.error("Unable to process {} due to {}", new Object[]{name, exception}, exception);
             session.transfer(updated, REL_FAILURE);
         }
     }

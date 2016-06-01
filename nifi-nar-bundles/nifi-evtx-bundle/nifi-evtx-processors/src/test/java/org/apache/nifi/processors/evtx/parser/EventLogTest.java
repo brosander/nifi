@@ -17,7 +17,7 @@ import static org.junit.Assert.assertEquals;
  * Created by brosander on 5/24/16.
  */
 public class EventLogTest {
-    /*@Test
+    @Test
     public void testParseHeader() throws IOException {
         try (FileInputStream inputStream = new FileInputStream("/Users/brosander/Downloads/winlogs/system-logs.evtx")) {
             FileHeader fileHeader = new FileHeader(inputStream);
@@ -42,9 +42,9 @@ public class EventLogTest {
     @Test
     public void testXmlOutput() throws IOException, XMLStreamException {
 //        try (FileInputStream inputStream = new FileInputStream("/Users/brosander/Downloads/winlogs/system-logs.evtx")) {
-        try (FileInputStream inputStream = new FileInputStream("/Users/brosander/Downloads/winlogs/application-logs.evtx")) {
+        try (FileInputStream inputStream = new FileInputStream("/Users/brosander/Downloads/winlogs/winlogs/application-logs.evtx")) {
             FileHeader fileHeader = new FileHeader(inputStream);
-            *//*assertEquals("ElfFile", fileHeader.getMagicString());
+            /*assertEquals("ElfFile", fileHeader.getMagicString());
             assertEquals(UnsignedLong.fromLongBits(0L), fileHeader.getOldestChunk());
             assertEquals(UnsignedLong.fromLongBits(33L), fileHeader.getCurrentChunkNumber());
             assertEquals(UnsignedLong.fromLongBits(4315L), fileHeader.getNextRecordNumber());
@@ -55,7 +55,7 @@ public class EventLogTest {
             assertEquals(UnsignedInteger.fromIntBits(34), fileHeader.getChunkCount());
             assertEquals("", fileHeader.getUnused1());
             assertEquals(UnsignedInteger.fromIntBits(0), fileHeader.getFlags());
-            assertEquals(UnsignedInteger.valueOf(3575959108L), fileHeader.getChecksum());*//*
+            assertEquals(UnsignedInteger.valueOf(3575959108L), fileHeader.getChecksum());*/
             XMLStreamWriter xmlStreamWriter = XMLOutputFactory.newFactory().createXMLStreamWriter(new FileOutputStream("/Users/brosander/Github/python-evtx/scripts/test.out"), "UTF-8");
             xmlStreamWriter.writeStartDocument();
             xmlStreamWriter.writeStartElement("Events");
@@ -74,5 +74,5 @@ public class EventLogTest {
                 xmlStreamWriter.close();
             }
         }
-    }*/
+    }
 }

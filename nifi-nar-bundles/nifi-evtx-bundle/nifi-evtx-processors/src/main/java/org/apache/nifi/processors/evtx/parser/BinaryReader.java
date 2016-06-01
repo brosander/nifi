@@ -52,40 +52,38 @@ public class BinaryReader {
     }
 
     public byte[] readBytes(int length) throws IOException {
-        try {
-            return peekBytes(length);
-        } finally {
-            position += length;
-        }
+        byte[] result = peekBytes(length);
+        position += length;
+        return result;
     }
 
     public void readBytes(byte[] buf, int offset, int length) throws IOException {
-        try {
-            System.arraycopy(bytes, position, buf, offset, length);
-        } finally {
-            position += length;
-        }
+        System.arraycopy(bytes, position, buf, offset, length);
+        position += length;
     }
 
     public String readGuid() throws IOException {
-        byte[] bytes = readBytes(16);
         int[][] indexArrays = {{3, 2, 1, 0}, {5, 4}, {7, 6}, {8, 9}, {10, 11, 12, 13, 14, 15}};
         StringBuilder result = new StringBuilder();
+        int maxIndex = 0;
         for (int[] indexArray : indexArrays) {
             for (int index : indexArray) {
-                result.append(String.format("%02X", bytes[index]).toLowerCase());
+                maxIndex = Math.max(maxIndex, index);
+                result.append(Integer.toHexString(bytes[position + index]));
             }
             result.append("-");
         }
         result.setLength(result.length() - 1);
+        position += (maxIndex + 1);
         return result.toString();
     }
 
     public String readString(int length) throws IOException {
         StringBuilder result = new StringBuilder(length - 1);
         boolean foundNull = false;
-        byte[] stringBytes = readBytes(length);
-        for (byte b : stringBytes) {
+        int exclusiveLastIndex = position + length;
+        for (int i = position; i < exclusiveLastIndex; i++) {
+            byte b = bytes[i];
             if (b == 0) {
                 foundNull = true;
                 break;
@@ -95,23 +93,33 @@ public class BinaryReader {
         if (!foundNull) {
             throw new IOException("Expected null terminated string");
         }
+        position += length;
         return result.toString();
     }
 
     public String readWString(int length) throws IOException {
-        return new String(readBytes(length * 2), Charsets.UTF_16LE);
+        int numBytes = length * 2;
+        String result = Charsets.UTF_16LE.decode(ByteBuffer.wrap(bytes, position, numBytes)).toString();
+        position += numBytes;
+        return result;
     }
 
     public UnsignedLong readQWord() throws IOException {
-        return UnsignedLong.fromLongBits(ByteBuffer.wrap(readBytes(8)).order(ByteOrder.LITTLE_ENDIAN).getLong());
+        ByteBuffer byteBuffer = ByteBuffer.wrap(bytes, position, 8);
+        position += 8;
+        return UnsignedLong.fromLongBits(byteBuffer.order(ByteOrder.LITTLE_ENDIAN).getLong());
     }
 
     public UnsignedInteger readDWord() throws IOException {
-        return UnsignedInteger.fromIntBits(ByteBuffer.wrap(readBytes(4)).order(ByteOrder.LITTLE_ENDIAN).getInt());
+        ByteBuffer byteBuffer = ByteBuffer.wrap(bytes, position, 4);
+        position += 4;
+        return UnsignedInteger.fromIntBits(byteBuffer.order(ByteOrder.LITTLE_ENDIAN).getInt());
     }
 
     public UnsignedInteger readDWordBE() throws IOException {
-        return UnsignedInteger.fromIntBits(ByteBuffer.wrap(readBytes(4)).order(ByteOrder.BIG_ENDIAN).getInt());
+        ByteBuffer byteBuffer = ByteBuffer.wrap(bytes, position, 4);
+        position += 4;
+        return UnsignedInteger.fromIntBits(byteBuffer.order(ByteOrder.BIG_ENDIAN).getInt());
     }
 
     public UnsignedInteger readWord() throws IOException {
@@ -122,8 +130,9 @@ public class BinaryReader {
 
     public UnsignedInteger readWordBE() throws IOException {
         byte[] bytes = new byte[4];
-        readBytes(bytes, 0, 2);
-        return UnsignedInteger.fromIntBits(ByteBuffer.wrap(bytes).order(ByteOrder.BIG_ENDIAN).getInt());
+        readBytes(bytes, 2, 2);
+        UnsignedInteger result = UnsignedInteger.fromIntBits(ByteBuffer.wrap(bytes).order(ByteOrder.BIG_ENDIAN).getInt());
+        return result;
     }
 
     public Date readFileTime() throws IOException {
