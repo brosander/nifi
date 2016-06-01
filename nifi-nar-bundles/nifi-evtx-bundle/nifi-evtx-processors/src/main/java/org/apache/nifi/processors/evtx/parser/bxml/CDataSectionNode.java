@@ -13,7 +13,7 @@ import java.util.List;
  * Created by brosander on 5/25/16.
  */
 public class CDataSectionNode extends BxmlNodeWithToken {
-    private final UnsignedInteger stringLength;
+    private final int stringLength;
     private final String cdata;
 
     public CDataSectionNode(BinaryReader binaryReader, ChunkHeader chunkHeader, BxmlNode parent) throws IOException {
@@ -25,7 +25,7 @@ public class CDataSectionNode extends BxmlNodeWithToken {
             throw new IOException("Invalid CDataSectionToken");
         }
         stringLength = binaryReader.readWord();
-        cdata = binaryReader.readWString(stringLength.intValue() - 2);
+        cdata = binaryReader.readWString(stringLength - 2);
         init();
     }
 

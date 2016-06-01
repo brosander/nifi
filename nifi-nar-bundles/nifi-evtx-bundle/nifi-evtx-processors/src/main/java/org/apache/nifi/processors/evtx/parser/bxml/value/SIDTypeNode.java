@@ -18,11 +18,11 @@ public class SIDTypeNode extends VariantTypeNode {
         int version = binaryReader.read();
         int num_elements = binaryReader.read();
         UnsignedInteger id_high = binaryReader.readDWordBE();
-        UnsignedInteger id_low = binaryReader.readWordBE();
+        int id_low = binaryReader.readWordBE();
         StringBuilder builder = new StringBuilder("S-");
         builder.append(version);
         builder.append("-");
-        builder.append((id_high.longValue() << 16) ^ id_low.longValue());
+        builder.append((id_high.longValue() << 16) ^ id_low);
         for (int i = 0; i < num_elements; i++) {
             builder.append("-");
             builder.append(binaryReader.readDWord());

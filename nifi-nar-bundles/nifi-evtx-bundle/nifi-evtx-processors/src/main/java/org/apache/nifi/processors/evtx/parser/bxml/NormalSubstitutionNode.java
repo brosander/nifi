@@ -13,7 +13,7 @@ import java.util.List;
  * Created by brosander on 5/25/16.
  */
 public class NormalSubstitutionNode extends BxmlNodeWithToken {
-    private final UnsignedInteger index;
+    private final int index;
     private final int type;
 
     public NormalSubstitutionNode(BinaryReader binaryReader, ChunkHeader chunkHeader, BxmlNode parent) throws IOException {
@@ -34,7 +34,7 @@ public class NormalSubstitutionNode extends BxmlNodeWithToken {
         return Collections.emptyList();
     }
 
-    public UnsignedInteger getIndex() {
+    public int getIndex() {
         return index;
     }
 

@@ -25,12 +25,12 @@ public class ChunkHeader extends Block implements Iterator<Record> {
     private final UnsignedLong logLastRecordNumber;
     private final UnsignedInteger headerSize;
     private final UnsignedInteger lastRecordOffset;
-    private final UnsignedInteger nextRecordOffset;
+    private final int nextRecordOffset;
     private final UnsignedInteger dataChecksum;
     private final String unused;
     private final UnsignedInteger headerChecksum;
-    private final Map<UnsignedInteger, NameStringNode> nameStrings;
-    private final Map<UnsignedInteger, TemplateNode> templateNodes;
+    private final Map<Integer, NameStringNode> nameStrings;
+    private final Map<Integer, TemplateNode> templateNodes;
     private final int chunkNumber;
     private Record record;
     private UnsignedLong recordNumber;
@@ -48,7 +48,7 @@ public class ChunkHeader extends Block implements Iterator<Record> {
         logLastRecordNumber = binaryReader.readQWord();
         headerSize = binaryReader.readDWord();
         lastRecordOffset = binaryReader.readDWord();
-        nextRecordOffset = binaryReader.readDWord();
+        nextRecordOffset = NumberUtil.intValueMax(binaryReader.readDWord(), Integer.MAX_VALUE, "Invalid next record offset.");
         dataChecksum = binaryReader.readDWord();
         unused = binaryReader.readString(68);
 
@@ -70,61 +70,55 @@ public class ChunkHeader extends Block implements Iterator<Record> {
 
         nameStrings = new HashMap<>();
         for (int i = 0; i < 64; i++) {
-            UnsignedInteger offset = binaryReader.readDWord();
-            while (offset.compareTo(UnsignedInteger.ZERO) > 0) {
-                if (offset.compareTo(UnsignedInteger.valueOf(Integer.MAX_VALUE)) > 1) {
-                    throw new IOException("Invalid offset");
-                }
-                NameStringNode nameStringNode = new NameStringNode(new BinaryReader(binaryReader, offset.intValue()), this);
+            int offset = NumberUtil.intValueMax(binaryReader.readDWord(), Integer.MAX_VALUE, "Invalid offset.");
+            while (offset > 0) {
+                NameStringNode nameStringNode = new NameStringNode(new BinaryReader(binaryReader, offset), this);
                 nameStrings.put(offset, nameStringNode);
-                offset = nameStringNode.getNextOffset();
+                offset = NumberUtil.intValueMax(nameStringNode.getNextOffset(), Integer.MAX_VALUE, "Invalid offset.");
             }
         }
 
         templateNodes = new HashMap<>();
         for (int i = 0; i < 32; i++) {
-            UnsignedInteger offset = binaryReader.readDWord();
-            while (offset.compareTo(UnsignedInteger.ZERO) > 0) {
-                if (offset.compareTo(UnsignedInteger.valueOf(Integer.MAX_VALUE)) > 1) {
-                    throw new IOException("Invalid offset");
-                }
-                int token = new BinaryReader(binaryReader, offset.intValue() - 10).read();
+            int offset = NumberUtil.intValueMax(binaryReader.readDWord(), Integer.MAX_VALUE, "Invalid offset.");
+            while (offset > 0) {
+                int token = new BinaryReader(binaryReader, offset - 10).read();
                 if (token != 0x0c) {
-                    logger.warn("Unexpected token when parsing template at offset " + offset.intValue());
+                    logger.warn("Unexpected token when parsing template at offset " + offset);
                     break;
                 }
-                BinaryReader templateReader = new BinaryReader(binaryReader, offset.intValue() - 4);
-                UnsignedInteger pointer = templateReader.readDWord();
-                if (!offset.equals(pointer)) {
-                    logger.warn("Invalid pointer when parsing template at offset " + offset.intValue());
+                BinaryReader templateReader = new BinaryReader(binaryReader, offset - 4);
+                int pointer = NumberUtil.intValueMax(templateReader.readDWord(), Integer.MAX_VALUE, "Invalid pointer.");
+                if (offset != pointer) {
+                    logger.warn("Invalid pointer when parsing template at offset " + offset);
                     break;
                 }
                 TemplateNode templateNode = new TemplateNode(templateReader, this);
                 templateNodes.put(offset, templateNode);
-                offset = templateNode.getNextOffset();
+                offset = NumberUtil.intValueMax(templateNode.getNextOffset(), Integer.MAX_VALUE, "Invalid offset.");
             }
         }
         crc32 = new CRC32();
-        crc32.update(binaryReader.peekBytes(nextRecordOffset.intValue() - 512));
+        crc32.update(binaryReader.peekBytes(nextRecordOffset - 512));
         if (crc32.getValue() != dataChecksum.longValue()) {
             throw new IOException("Invalid data checksum " + this);
         }
         initNext();
     }
 
-    public NameStringNode addNameStringNode(UnsignedInteger offset, BinaryReader binaryReader) throws IOException {
+    public NameStringNode addNameStringNode(int offset, BinaryReader binaryReader) throws IOException {
         NameStringNode nameStringNode = new NameStringNode(binaryReader, this);
         nameStrings.put(offset, nameStringNode);
         return nameStringNode;
     }
 
-    public TemplateNode addTemplateNode(UnsignedInteger offset, BinaryReader binaryReader) throws IOException {
+    public TemplateNode addTemplateNode(int offset, BinaryReader binaryReader) throws IOException {
         TemplateNode templateNode = new TemplateNode(binaryReader, this);
         templateNodes.put(offset, templateNode);
         return templateNode;
     }
 
-    public TemplateNode getTemplateNode(UnsignedInteger offset) {
+    public TemplateNode getTemplateNode(int offset) {
         return templateNodes.get(offset);
     }
 
@@ -163,7 +157,7 @@ public class ChunkHeader extends Block implements Iterator<Record> {
         return record != null;
     }
 
-    public String getString(UnsignedInteger offset) {
+    public String getString(int offset) {
         NameStringNode nameStringNode = nameStrings.get(offset);
         if (nameStringNode == null) {
             return null;

@@ -17,7 +17,7 @@ public class StringTypeNode extends VariantTypeNode {
         if (length >= 0) {
             value = binaryReader.readString(length);
         } else {
-            value = binaryReader.readString(binaryReader.readWord().intValue());
+            value = binaryReader.readString(binaryReader.readWord());
         }
     }
 

@@ -101,12 +101,12 @@ public class XmlBxmlNodeVisitor implements BxmlNodeVisitor {
 
     @Override
     public void visit(ConditionalSubstitutionNode conditionalSubstitutionNode) throws IOException {
-        visit(substitutions.get(conditionalSubstitutionNode.getIndex().intValue()));
+        visit(substitutions.get(conditionalSubstitutionNode.getIndex()));
     }
 
     @Override
     public void visit(NormalSubstitutionNode normalSubstitutionNode) throws IOException {
-        visit(substitutions.get(normalSubstitutionNode.getIndex().intValue()));
+        visit(substitutions.get(normalSubstitutionNode.getIndex()));
     }
 
     @Override
@@ -148,12 +148,12 @@ public class XmlBxmlNodeVisitor implements BxmlNodeVisitor {
 
         @Override
         public void visit(NormalSubstitutionNode normalSubstitutionNode) throws IOException {
-            value = substitutions.get(normalSubstitutionNode.getIndex().intValue()).getValue();
+            value = substitutions.get(normalSubstitutionNode.getIndex()).getValue();
         }
 
         @Override
         public void visit(ConditionalSubstitutionNode conditionalSubstitutionNode) throws IOException {
-            value = substitutions.get(conditionalSubstitutionNode.getIndex().intValue()).getValue();
+            value = substitutions.get(conditionalSubstitutionNode.getIndex()).getValue();
         }
     }
 }

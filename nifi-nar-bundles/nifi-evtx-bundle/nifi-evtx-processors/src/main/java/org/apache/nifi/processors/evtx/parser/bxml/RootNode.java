@@ -1,9 +1,9 @@
 package org.apache.nifi.processors.evtx.parser.bxml;
 
-import com.google.common.primitives.UnsignedInteger;
 import org.apache.nifi.processors.evtx.parser.BinaryReader;
 import org.apache.nifi.processors.evtx.parser.BxmlNodeVisitor;
 import org.apache.nifi.processors.evtx.parser.ChunkHeader;
+import org.apache.nifi.processors.evtx.parser.NumberUtil;
 import org.apache.nifi.processors.evtx.parser.bxml.value.VariantTypeNode;
 import org.apache.nifi.processors.evtx.parser.bxml.value.VariantTypeNodeFactory;
 
@@ -16,19 +16,19 @@ import java.util.List;
  * Created by brosander on 5/25/16.
  */
 public class RootNode extends BxmlNode {
-    private final UnsignedInteger substitutionCount;
+    private final int substitutionCount;
     private final List<VariantTypeNode> substitutions;
 
     public RootNode(BinaryReader binaryReader, ChunkHeader chunkHeader, BxmlNode parent) throws IOException {
         super(binaryReader, chunkHeader, parent);
         init();
-        substitutionCount = binaryReader.readDWord();
-        List<VariantTypeSizeAndFactory> substitutionVariantFactories = new ArrayList<>(substitutionCount.intValue());
-        for (long i = 0; i < substitutionCount.longValue(); i++) {
+        substitutionCount = NumberUtil.intValueMax(binaryReader.readDWord(), Integer.MAX_VALUE, "Invalid substitution count.");
+        List<VariantTypeSizeAndFactory> substitutionVariantFactories = new ArrayList<>(substitutionCount);
+        for (long i = 0; i < substitutionCount; i++) {
             try {
-                UnsignedInteger substitionSize = binaryReader.readWord();
-                int substitutionType = binaryReader.readWord().intValue();
-                substitutionVariantFactories.add(new VariantTypeSizeAndFactory(substitionSize.intValue(), ValueNode.factories.get(substitutionType)));
+                int substitionSize = binaryReader.readWord();
+                int substitutionType = binaryReader.readWord();
+                substitutionVariantFactories.add(new VariantTypeSizeAndFactory(substitionSize, ValueNode.factories.get(substitutionType)));
             } catch (Exception e) {
                 System.out.println(i);
             }

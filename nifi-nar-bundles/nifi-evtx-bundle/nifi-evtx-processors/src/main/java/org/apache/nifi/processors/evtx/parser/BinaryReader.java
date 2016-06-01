@@ -122,17 +122,16 @@ public class BinaryReader {
         return UnsignedInteger.fromIntBits(byteBuffer.order(ByteOrder.BIG_ENDIAN).getInt());
     }
 
-    public UnsignedInteger readWord() throws IOException {
+    public int readWord() throws IOException {
         byte[] bytes = new byte[4];
         readBytes(bytes, 0, 2);
-        return UnsignedInteger.fromIntBits(ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN).getInt());
+        return ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN).getInt();
     }
 
-    public UnsignedInteger readWordBE() throws IOException {
+    public int readWordBE() throws IOException {
         byte[] bytes = new byte[4];
         readBytes(bytes, 2, 2);
-        UnsignedInteger result = UnsignedInteger.fromIntBits(ByteBuffer.wrap(bytes).order(ByteOrder.BIG_ENDIAN).getInt());
-        return result;
+        return ByteBuffer.wrap(bytes).order(ByteOrder.BIG_ENDIAN).getInt();
     }
 
     public Date readFileTime() throws IOException {

@@ -16,26 +16,26 @@ public class SystemtimeTypeNode extends VariantTypeNode {
     private static final SimpleDateFormat FORMAT = initFormat();
     private final String value;
 
-    private static final SimpleDateFormat initFormat() {
-        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
-        simpleDateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
-        return simpleDateFormat;
-    }
-
     public SystemtimeTypeNode(BinaryReader binaryReader, ChunkHeader chunkHeader, BxmlNode parent, int length) throws IOException {
         super(binaryReader, chunkHeader, parent, length);
-        int year = binaryReader.readWord().intValue();
-        int month = binaryReader.readWord().intValue();
-        int dayOfWeek = binaryReader.readWord().intValue();
-        int day = binaryReader.readWord().intValue();
-        int hour = binaryReader.readWord().intValue();
-        int minute = binaryReader.readWord().intValue();
-        int second = binaryReader.readWord().intValue();
-        int microsecond = binaryReader.readWord().intValue();
+        int year = binaryReader.readWord();
+        int month = binaryReader.readWord();
+        int dayOfWeek = binaryReader.readWord();
+        int day = binaryReader.readWord();
+        int hour = binaryReader.readWord();
+        int minute = binaryReader.readWord();
+        int second = binaryReader.readWord();
+        int microsecond = binaryReader.readWord();
         Calendar calendar = Calendar.getInstance();
         calendar.set(year, month, day, hour, minute, second);
         calendar.set(Calendar.MILLISECOND, microsecond / 1000);
         value = FORMAT.format(calendar);
+    }
+
+    private static final SimpleDateFormat initFormat() {
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
+        simpleDateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
+        return simpleDateFormat;
     }
 
     @Override

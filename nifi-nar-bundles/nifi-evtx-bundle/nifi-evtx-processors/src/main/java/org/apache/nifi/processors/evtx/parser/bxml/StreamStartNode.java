@@ -1,9 +1,9 @@
 package org.apache.nifi.processors.evtx.parser.bxml;
 
-import com.google.common.primitives.UnsignedInteger;
 import org.apache.nifi.processors.evtx.parser.BinaryReader;
 import org.apache.nifi.processors.evtx.parser.BxmlNodeVisitor;
 import org.apache.nifi.processors.evtx.parser.ChunkHeader;
+import org.apache.nifi.processors.evtx.parser.NumberUtil;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -14,7 +14,7 @@ import java.util.List;
  */
 public class StreamStartNode extends BxmlNodeWithToken {
     private final int unknown;
-    private final UnsignedInteger unknown2;
+    private final int unknown2;
 
     public StreamStartNode(BinaryReader binaryReader, ChunkHeader chunkHeader, BxmlNode parent) throws IOException {
         super(binaryReader, chunkHeader, parent);
@@ -24,14 +24,8 @@ public class StreamStartNode extends BxmlNodeWithToken {
         if (getToken() != START_OF_STREAM_TOKEN) {
             throw new IOException("Invalid token " + getToken());
         }
-        unknown = binaryReader.read();
-        if (unknown != 1) {
-            throw new IOException("Unexpected value for unknown field");
-        }
-        unknown2 = binaryReader.readWord();
-        if (unknown2.intValue() != 1) {
-            throw new IOException("Unexpected value for unknown field 2");
-        }
+        unknown = NumberUtil.intValueExpected(binaryReader.read(), 1, "Unexpected value for unknown field.");
+        unknown2 = NumberUtil.intValueExpected(binaryReader.readWord(), 1, "Unexpected value for unknown field 2");
         init();
     }
 

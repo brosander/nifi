@@ -2,6 +2,7 @@ package org.apache.nifi.processors.evtx.parser.bxml.value;
 
 import org.apache.nifi.processors.evtx.parser.BinaryReader;
 import org.apache.nifi.processors.evtx.parser.ChunkHeader;
+import org.apache.nifi.processors.evtx.parser.NumberUtil;
 import org.apache.nifi.processors.evtx.parser.bxml.BxmlNode;
 
 import java.io.IOException;
@@ -17,7 +18,7 @@ public class BinaryTypeNode extends VariantTypeNode {
         if (length >= 0) {
             value = binaryReader.readAndBase64EncodeBinary(length);
         } else {
-            value = binaryReader.readAndBase64EncodeBinary(binaryReader.readDWord().intValue());
+            value = binaryReader.readAndBase64EncodeBinary(NumberUtil.intValueMax(binaryReader.readDWord(), Integer.MAX_VALUE, "Invalid string length."));
         }
     }
 

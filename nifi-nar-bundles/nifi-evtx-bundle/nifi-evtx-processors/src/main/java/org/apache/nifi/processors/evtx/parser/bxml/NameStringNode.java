@@ -14,19 +14,16 @@ import java.util.List;
  */
 public class NameStringNode extends BxmlNode {
     private final UnsignedInteger nextOffset;
-    private final UnsignedInteger hash;
+    private final int hash;
     private final String string;
-    private final UnsignedInteger stringLength;
+    private final int stringLength;
 
     public NameStringNode(BinaryReader binaryReader, ChunkHeader chunkHeader) throws IOException {
         super(binaryReader, chunkHeader, null);
         nextOffset = binaryReader.readDWord();
         hash = binaryReader.readWord();
         stringLength = binaryReader.readWord();
-        if (stringLength.compareTo(UnsignedInteger.valueOf(Integer.MAX_VALUE)) > 0) {
-            throw new IOException("Invalid string getLength");
-        }
-        string = binaryReader.readWString(stringLength.intValue());
+        string = binaryReader.readWString(stringLength);
         binaryReader.skip(2);
         init();
     }
@@ -35,7 +32,7 @@ public class NameStringNode extends BxmlNode {
         return nextOffset;
     }
 
-    public UnsignedInteger getHash() {
+    public int getHash() {
         return hash;
     }
 

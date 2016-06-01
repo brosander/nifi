@@ -4,6 +4,7 @@ import com.google.common.primitives.UnsignedInteger;
 import org.apache.nifi.processors.evtx.parser.BinaryReader;
 import org.apache.nifi.processors.evtx.parser.BxmlNodeVisitor;
 import org.apache.nifi.processors.evtx.parser.ChunkHeader;
+import org.apache.nifi.processors.evtx.parser.NumberUtil;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -16,7 +17,7 @@ public class TemplateInstanceNode extends BxmlNodeWithToken {
 
     private final int unknown;
     private final UnsignedInteger templateId;
-    private final UnsignedInteger templateOffset;
+    private final int templateOffset;
     private final boolean isResident;
     private final TemplateNode templateNode;
     private final int templateLength;
@@ -25,8 +26,8 @@ public class TemplateInstanceNode extends BxmlNodeWithToken {
         super(binaryReader, chunkHeader, parent);
         unknown = binaryReader.read();
         templateId = binaryReader.readDWord();
-        templateOffset = binaryReader.readDWord();
-        if (templateOffset.compareTo(UnsignedInteger.valueOf(getOffset() - chunkHeader.getOffset())) > 0) {
+        templateOffset = NumberUtil.intValueMax(binaryReader.readDWord(), Integer.MAX_VALUE, "Invalid template offset.");
+        if (templateOffset > getOffset() - chunkHeader.getOffset()) {
             isResident = true;
             templateNode = chunkHeader.addTemplateNode(templateOffset, binaryReader);
             templateLength = 0;

@@ -24,8 +24,8 @@ public class WStringArrayTypeNode extends VariantTypeNode {
         if (length >= 0) {
             raw = binaryReader.readWString(length / 2);
         } else {
-            UnsignedInteger binaryLength = binaryReader.readWord();
-            raw = binaryReader.readWString(binaryLength.intValue() / 2);
+            int binaryLength = binaryReader.readWord();
+            raw = binaryReader.readWString(binaryLength / 2);
         }
         ByteArrayOutputStream stream = new ByteArrayOutputStream();
         try {

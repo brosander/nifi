@@ -17,7 +17,7 @@ public class WStringTypeNode extends VariantTypeNode {
         if (length >= 0) {
             value = binaryReader.readWString(length / 2);
         } else {
-            int characters = binaryReader.readWord().intValue();
+            int characters = binaryReader.readWord();
             value = binaryReader.readWString(characters);
         }
     }

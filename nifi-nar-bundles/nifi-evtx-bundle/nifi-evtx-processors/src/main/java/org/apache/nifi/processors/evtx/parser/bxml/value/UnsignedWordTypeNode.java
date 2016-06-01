@@ -11,7 +11,7 @@ import java.io.IOException;
  * Created by brosander on 5/26/16.
  */
 public class UnsignedWordTypeNode extends VariantTypeNode {
-    private final UnsignedInteger value;
+    private final int value;
 
     public UnsignedWordTypeNode(BinaryReader binaryReader, ChunkHeader chunkHeader, BxmlNode parent, int length) throws IOException {
         super(binaryReader, chunkHeader, parent, length);
@@ -20,6 +20,6 @@ public class UnsignedWordTypeNode extends VariantTypeNode {
 
     @Override
     public String getValue() {
-        return value.toString();
+        return Integer.toString(value);
     }
 }

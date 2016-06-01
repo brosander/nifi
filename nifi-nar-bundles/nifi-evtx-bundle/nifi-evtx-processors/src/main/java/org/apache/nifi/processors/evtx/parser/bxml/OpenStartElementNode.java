@@ -4,6 +4,7 @@ import com.google.common.primitives.UnsignedInteger;
 import org.apache.nifi.processors.evtx.parser.BinaryReader;
 import org.apache.nifi.processors.evtx.parser.BxmlNodeVisitor;
 import org.apache.nifi.processors.evtx.parser.ChunkHeader;
+import org.apache.nifi.processors.evtx.parser.NumberUtil;
 
 import java.io.IOException;
 
@@ -11,9 +12,9 @@ import java.io.IOException;
  * Created by brosander on 5/25/16.
  */
 public class OpenStartElementNode extends BxmlNodeWithToken {
-    private final UnsignedInteger unknown;
+    private final int unknown;
     private final UnsignedInteger size;
-    private final UnsignedInteger stringOffset;
+    private final int stringOffset;
     private final String tagName;
     private final int tagLength;
 
@@ -24,13 +25,13 @@ public class OpenStartElementNode extends BxmlNodeWithToken {
         }
         unknown = binaryReader.readWord();
         size = binaryReader.readDWord();
-        stringOffset = binaryReader.readDWord();
+        stringOffset = NumberUtil.intValueMax(binaryReader.readDWord(), Integer.MAX_VALUE, "Invalid string offset.");
         int tagLength = 11;
         if ((getFlags() & 0x04) > 0) {
             tagLength += 4;
         }
         String string = getChunkHeader().getString(stringOffset);
-        if (stringOffset.compareTo(UnsignedInteger.valueOf(getOffset() - chunkHeader.getOffset())) > 0) {
+        if (stringOffset > getOffset() - chunkHeader.getOffset()) {
             int initialPosition = binaryReader.getPosition();
             NameStringNode nameStringNode = chunkHeader.addNameStringNode(stringOffset, binaryReader);
             tagLength += binaryReader.getPosition() - initialPosition;

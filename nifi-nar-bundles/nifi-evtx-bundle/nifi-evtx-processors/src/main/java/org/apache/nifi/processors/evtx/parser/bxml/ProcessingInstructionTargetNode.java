@@ -13,20 +13,19 @@ import java.util.List;
  * Created by brosander on 5/25/16.
  */
 public class ProcessingInstructionTargetNode extends BxmlNodeWithToken {
-
-    private final UnsignedInteger stringLength;
+    private final int stringLength;
     private final String instruction;
     private final int tagLength;
 
     public ProcessingInstructionTargetNode(BinaryReader binaryReader, ChunkHeader chunkHeader, BxmlNode parent) throws IOException {
         super(binaryReader, chunkHeader, parent);
         stringLength = binaryReader.readWord();
-        if (stringLength.compareTo(UnsignedInteger.ZERO) > 0) {
-            instruction = binaryReader.readWString(stringLength.intValue());
+        if (stringLength > 0) {
+            instruction = binaryReader.readWString(stringLength);
         } else {
             instruction = "";
         }
-        tagLength = 3 + (2 * stringLength.intValue());
+        tagLength = 3 + (2 * stringLength);
         init();
     }
 

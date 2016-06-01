@@ -18,10 +18,10 @@ public class FileHeader extends Block implements Iterator<ChunkHeader> {
     private final UnsignedLong currentChunkNumber;
     private final UnsignedLong nextRecordNumber;
     private final UnsignedInteger headerSize;
-    private final UnsignedInteger minorVersion;
-    private final UnsignedInteger majorVersion;
-    private final UnsignedInteger headerChunkSize;
-    private final UnsignedInteger chunkCount;
+    private final int minorVersion;
+    private final int majorVersion;
+    private final int headerChunkSize;
+    private final int chunkCount;
     private final String unused1;
     private final UnsignedInteger flags;
     private final UnsignedInteger checksum;
@@ -55,15 +55,9 @@ public class FileHeader extends Block implements Iterator<ChunkHeader> {
         if (crc32.getValue() != checksum.longValue()) {
             throw new IOException("Invalid checksum");
         }
-        if (minorVersion.intValue() != 1) {
-            throw new IOException("Invalid minor version");
-        }
-        if (majorVersion.intValue() != 3) {
-            throw new IOException("Invalid major version");
-        }
-        if (headerChunkSize.intValue() != 4096) {
-            throw new IOException("Invalid header chunk size");
-        }
+        NumberUtil.intValueExpected(minorVersion, 1, "Invalid minor version.");
+        NumberUtil.intValueExpected(majorVersion, 3, "Invalid minor version.");
+        NumberUtil.intValueExpected(headerChunkSize, 4096, "Invalid header chunk size.");
         this.inputStream = inputStream;
         currentOffset = 4096;
 
@@ -96,19 +90,19 @@ public class FileHeader extends Block implements Iterator<ChunkHeader> {
         return headerSize;
     }
 
-    public UnsignedInteger getMinorVersion() {
+    public int getMinorVersion() {
         return minorVersion;
     }
 
-    public UnsignedInteger getMajorVersion() {
+    public int getMajorVersion() {
         return majorVersion;
     }
 
-    public UnsignedInteger getHeaderChunkSize() {
+    public int getHeaderChunkSize() {
         return headerChunkSize;
     }
 
-    public UnsignedInteger getChunkCount() {
+    public int getChunkCount() {
         return chunkCount;
     }
 
@@ -126,7 +120,7 @@ public class FileHeader extends Block implements Iterator<ChunkHeader> {
 
     private void initNext() {
         try {
-            if (count < chunkCount.intValue()) {
+            if (count < chunkCount) {
                 int currentOffset = this.currentOffset;
                 currentOffset += CHUNK_SIZE;
                 next = new ChunkHeader(new BinaryReader(inputStream, CHUNK_SIZE), currentOffset, count);
