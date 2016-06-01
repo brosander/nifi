@@ -15,14 +15,6 @@ import java.util.Map;
  * Created by brosander on 5/25/16.
  */
 public class ValueNode extends BxmlNodeWithToken {
-    /*public static final VariantTypeNodeFactory[] factories = new VariantTypeNodeFactory[]{NullTypeNode::new,
-            WStringTypeNode::new, StringTypeNode::new, SignedByteTypeNode::new, UnsignedByteTypeNode::new,
-            SignedWordTypeNode::new, UnsignedWordTypeNode::new, SignedDWordTypeNode::new, UnsignedDWordTypeNode::new,
-            SignedQWordTypeNode::new, UnsignedQWordTypeNode::new, FloatTypeNode::new, DoubleTypeNode::new,
-            BooleanTypeNode::new, BinaryTypeNode::new, GuidTypeNode::new, SizeTypeNode::new, FiletimeTypeNode::new,
-            SystemtimeTypeNode::new, SIDTypeNode::new, Hex32TypeNode::new, Hex64TypeNode::new, BXmlTypeNode::new,
-            WStringArrayTypeNode::new};*/
-
     public static final Map<Integer, VariantTypeNodeFactory> factories = initFactories();
     private final int type;
 

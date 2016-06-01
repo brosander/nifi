@@ -3,9 +3,8 @@ package org.apache.nifi.processors.evtx.parser.bxml.value;
 import com.google.common.base.Charsets;
 import com.google.common.primitives.UnsignedInteger;
 import org.apache.nifi.processors.evtx.parser.BinaryReader;
+import org.apache.nifi.processors.evtx.parser.bxml.BxmlNodeTestBase;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.runners.MockitoJUnitRunner;
 
 import java.io.IOException;
 import java.util.Base64;
@@ -15,7 +14,7 @@ import static org.junit.Assert.assertEquals;
 /**
  * Created by brosander on 6/1/16.
  */
-public class BinaryTypeNodeTest extends VariantTypeNodeTestBase {
+public class BinaryTypeNodeTest extends BxmlNodeTestBase {
     @Test
     public void testLength() throws IOException {
         String val = "Test String";

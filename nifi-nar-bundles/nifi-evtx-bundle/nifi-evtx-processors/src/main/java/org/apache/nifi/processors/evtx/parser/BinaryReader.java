@@ -17,9 +17,9 @@ import java.util.Date;
  */
 public class BinaryReader {
     public static final long EPOCH_OFFSET = 11644473600000L;
+    public static final int[][] INDEX_ARRAYS = new int[][]{{3, 2, 1, 0}, {5, 4}, {7, 6}, {8, 9}, {10, 11, 12, 13, 14, 15}};
     private final byte[] bytes;
     private int position;
-    public static final int[][] INDEX_ARRAYS = new int[][]{{3, 2, 1, 0}, {5, 4}, {7, 6}, {8, 9}, {10, 11, 12, 13, 14, 15}};
 
     public BinaryReader(BinaryReader binaryReader, int position) {
         this.bytes = binaryReader.bytes;

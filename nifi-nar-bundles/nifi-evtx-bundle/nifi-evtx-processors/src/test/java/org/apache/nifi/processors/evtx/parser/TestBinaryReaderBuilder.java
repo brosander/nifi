@@ -83,12 +83,12 @@ public class TestBinaryReaderBuilder {
     }
 
     public TestBinaryReaderBuilder putWord(int val) {
-        data.add(ByteBuffer.wrap(new byte[2]).order(ByteOrder.LITTLE_ENDIAN).putShort((short)val).array());
+        data.add(ByteBuffer.wrap(new byte[2]).order(ByteOrder.LITTLE_ENDIAN).putShort((short) val).array());
         return this;
     }
 
     public TestBinaryReaderBuilder putWordBE(int val) {
-        data.add(ByteBuffer.wrap(new byte[2]).order(ByteOrder.BIG_ENDIAN).putShort((short)val).array());
+        data.add(ByteBuffer.wrap(new byte[2]).order(ByteOrder.BIG_ENDIAN).putShort((short) val).array());
         return this;
     }
 

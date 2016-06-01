@@ -16,9 +16,13 @@ import java.util.List;
  */
 public abstract class BxmlNode extends Block {
     public static final int END_OF_STREAM_TOKEN = 0x00;
+    public static final int CLOSE_START_ELEMENT_TOKEN = 0x02;
     public static final int CLOSE_EMPTY_ELEMENT_TOKEN = 0x03;
     public static final int CLOSE_ELEMENT_TOKEN = 0x04;
+    public static final int VALUE_TOKEN = 0x05;
+    public static final int ATTRIBUTE_TOKEN = 0x06;
     public static final int C_DATA_SECTION_TOKEN = 0x07;
+    public static final int ENTITY_REFERENCE_TOKEN = 0x08;
     public static final int NORMAL_SUBSTITUTION_TOKEN = 0x0D;
     public static final int CONDITIONAL_SUBSTITUTION_TOKEN = 0x0E;
     public static final int START_OF_STREAM_TOKEN = 0x0F;
