@@ -31,11 +31,13 @@ public class ChunkHeader extends Block implements Iterator<Record> {
     private final UnsignedInteger headerChecksum;
     private final Map<UnsignedInteger, NameStringNode> nameStrings;
     private final Map<UnsignedInteger, TemplateNode> templateNodes;
+    private final int chunkNumber;
     private Record record;
     private UnsignedLong recordNumber;
 
-    public ChunkHeader(BinaryReader binaryReader, int headerOffset) throws IOException {
+    public ChunkHeader(BinaryReader binaryReader, int headerOffset, int chunkNumber) throws IOException {
         super(binaryReader, headerOffset);
+        this.chunkNumber = chunkNumber;
         CRC32 crc32 = new CRC32();
         crc32.update(binaryReader.peekBytes(120));
 
@@ -167,6 +169,10 @@ public class ChunkHeader extends Block implements Iterator<Record> {
             return null;
         }
         return nameStringNode.getString();
+    }
+
+    public int getChunkNumber() {
+        return chunkNumber;
     }
 
     @Override
