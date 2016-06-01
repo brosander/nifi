@@ -69,7 +69,7 @@ public class BinaryReader {
         for (int[] indexArray : indexArrays) {
             for (int index : indexArray) {
                 maxIndex = Math.max(maxIndex, index);
-                result.append(Integer.toHexString(bytes[position + index]));
+                result.append(String.format("%02X", bytes[position + index]).toLowerCase());
             }
             result.append("-");
         }
