@@ -15,15 +15,15 @@ public class FiletimeTypeNode extends VariantTypeNode {
     private static final SimpleDateFormat FORMAT = initFormat();
     private final String value;
 
+    public FiletimeTypeNode(BinaryReader binaryReader, ChunkHeader chunkHeader, BxmlNode parent, int length) throws IOException {
+        super(binaryReader, chunkHeader, parent, length);
+        value = FORMAT.format(binaryReader.readFileTime());
+    }
+
     private static final SimpleDateFormat initFormat() {
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
         simpleDateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
         return simpleDateFormat;
-    }
-
-    public FiletimeTypeNode(BinaryReader binaryReader, ChunkHeader chunkHeader, BxmlNode parent, int length) throws IOException {
-        super(binaryReader, chunkHeader, parent, length);
-        value = FORMAT.format(binaryReader.readFileTime());
     }
 
     @Override

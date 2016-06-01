@@ -1,6 +1,5 @@
 package org.apache.nifi.processors.evtx.parser.bxml;
 
-import com.google.common.primitives.UnsignedInteger;
 import org.apache.nifi.processors.evtx.parser.BinaryReader;
 import org.apache.nifi.processors.evtx.parser.BxmlNodeVisitor;
 import org.apache.nifi.processors.evtx.parser.ChunkHeader;

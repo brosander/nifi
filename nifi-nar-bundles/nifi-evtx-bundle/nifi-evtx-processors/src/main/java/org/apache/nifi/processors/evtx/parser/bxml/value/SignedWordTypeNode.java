@@ -1,6 +1,5 @@
 package org.apache.nifi.processors.evtx.parser.bxml.value;
 
-import com.google.common.primitives.UnsignedInteger;
 import org.apache.nifi.processors.evtx.parser.BinaryReader;
 import org.apache.nifi.processors.evtx.parser.ChunkHeader;
 import org.apache.nifi.processors.evtx.parser.bxml.BxmlNode;
@@ -20,6 +19,6 @@ public class SignedWordTypeNode extends VariantTypeNode {
 
     @Override
     public String getValue() {
-        return Short.toString((short)value);
+        return Short.toString((short) value);
     }
 }

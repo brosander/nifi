@@ -30,8 +30,8 @@ public abstract class BxmlNode extends Block {
             ConditionalSubstitutionNode::new, StreamStartNode::new};
     private final ChunkHeader chunkHeader;
     private final BxmlNode parent;
-    private boolean hasEndOfStream = false;
     protected List<BxmlNode> children;
+    private boolean hasEndOfStream = false;
 
     protected BxmlNode(BinaryReader binaryReader, ChunkHeader chunkHeader, BxmlNode parent) {
         super(binaryReader, chunkHeader.getOffset() + binaryReader.getPosition());

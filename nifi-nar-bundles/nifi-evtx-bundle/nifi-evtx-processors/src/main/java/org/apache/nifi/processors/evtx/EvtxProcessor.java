@@ -33,13 +33,13 @@ public class EvtxProcessor extends AbstractProcessor {
     public static final String FILE = "File";
     public static final String EVENTS = "Events";
     public static final XMLOutputFactory XML_OUTPUT_FACTORY = XMLOutputFactory.newFactory();
+    public static final String EVTX = ".evtx";
     private static final Relationship REL_SUCCESS = new Relationship.Builder().name("success").build();
     private static final Relationship REL_FAILURE = new Relationship.Builder().name("failure").build();
     private static final Relationship REL_ORIGINAL = new Relationship.Builder().name("original").build();
     public static final Set<Relationship> RELATIONSHIPS = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(REL_SUCCESS, REL_FAILURE, REL_ORIGINAL)));
     private static final PropertyDescriptor GRANULARITY = new PropertyDescriptor.Builder().name("Granularity").description("Output flow file for each Record, Chunk, or File encountered in the event log").allowableValues(RECORD, CHUNK, FILE).build();
     public static final List<PropertyDescriptor> PROPERTY_DESCRIPTORS = Collections.unmodifiableList(Arrays.asList(GRANULARITY));
-    public static final String EVTX = ".evtx";
 
     private XMLStreamWriter createWriter(OutputStream outputStream) throws XMLStreamException {
         XMLStreamWriter xmlStreamWriter = XML_OUTPUT_FACTORY.createXMLStreamWriter(outputStream, "UTF-8");

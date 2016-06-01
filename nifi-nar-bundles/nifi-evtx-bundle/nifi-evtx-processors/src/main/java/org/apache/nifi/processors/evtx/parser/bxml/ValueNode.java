@@ -24,6 +24,16 @@ public class ValueNode extends BxmlNodeWithToken {
             WStringArrayTypeNode::new};*/
 
     public static final Map<Integer, VariantTypeNodeFactory> factories = initFactories();
+    private final int type;
+
+    public ValueNode(BinaryReader binaryReader, ChunkHeader chunkHeader, BxmlNode parent) throws IOException {
+        super(binaryReader, chunkHeader, parent);
+        if ((getFlags() & 0x0B) != 0) {
+            throw new IOException("Invalid flag");
+        }
+        type = binaryReader.read();
+        init();
+    }
 
     private static final Map<Integer, VariantTypeNodeFactory> initFactories() {
         Map<Integer, VariantTypeNodeFactory> result = new HashMap<>();
@@ -52,17 +62,6 @@ public class ValueNode extends BxmlNodeWithToken {
         result.put(33, BXmlTypeNode::new);
         result.put(129, WStringArrayTypeNode::new);
         return Collections.unmodifiableMap(result);
-    }
-
-    private final int type;
-
-    public ValueNode(BinaryReader binaryReader, ChunkHeader chunkHeader, BxmlNode parent) throws IOException {
-        super(binaryReader, chunkHeader, parent);
-        if ((getFlags() & 0x0B) != 0) {
-            throw new IOException("Invalid flag");
-        }
-        type = binaryReader.read();
-        init();
     }
 
     @Override
