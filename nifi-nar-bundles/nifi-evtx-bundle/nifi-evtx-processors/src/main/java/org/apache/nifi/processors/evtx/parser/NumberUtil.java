@@ -8,6 +8,8 @@ import java.io.IOException;
  * Created by brosander on 6/1/16.
  */
 public class NumberUtil {
+    public static final String EXPECTED_TEXT = " Expected %s got %s.";
+
     public static int intValueExpected(Number number, int expected, String errorMessage, Object... args) throws IOException {
         int result = number.intValue();
         if (result != expected) {
@@ -24,6 +26,6 @@ public class NumberUtil {
     }
 
     private static IOException createException(String errorMessage, Object[] args, Object expected, Object actual) {
-        return new IOException(String.format(errorMessage, args) + String.format(" Expected {} got {}.", expected, actual));
+        return new IOException(String.format(errorMessage, args) + String.format(EXPECTED_TEXT, expected, actual));
     }
 }

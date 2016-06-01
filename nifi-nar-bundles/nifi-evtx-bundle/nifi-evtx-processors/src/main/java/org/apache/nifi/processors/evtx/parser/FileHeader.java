@@ -123,8 +123,7 @@ public class FileHeader extends Block implements Iterator<ChunkHeader> {
             if (count < chunkCount) {
                 int currentOffset = this.currentOffset;
                 currentOffset += CHUNK_SIZE;
-                next = new ChunkHeader(new BinaryReader(inputStream, CHUNK_SIZE), currentOffset, count);
-                count++;
+                next = new ChunkHeader(new BinaryReader(inputStream, CHUNK_SIZE), currentOffset, count++);
             } else {
                 next = null;
             }

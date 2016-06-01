@@ -16,8 +16,10 @@ import java.util.Date;
  * Created by brosander on 5/26/16.
  */
 public class BinaryReader {
+    public static final long EPOCH_OFFSET = 11644473600000L;
     private final byte[] bytes;
     private int position;
+    public static final int[][] INDEX_ARRAYS = new int[][]{{3, 2, 1, 0}, {5, 4}, {7, 6}, {8, 9}, {10, 11, 12, 13, 14, 15}};
 
     public BinaryReader(BinaryReader binaryReader, int position) {
         this.bytes = binaryReader.bytes;
@@ -63,10 +65,9 @@ public class BinaryReader {
     }
 
     public String readGuid() throws IOException {
-        int[][] indexArrays = {{3, 2, 1, 0}, {5, 4}, {7, 6}, {8, 9}, {10, 11, 12, 13, 14, 15}};
         StringBuilder result = new StringBuilder();
         int maxIndex = 0;
-        for (int[] indexArray : indexArrays) {
+        for (int[] indexArray : INDEX_ARRAYS) {
             for (int index : indexArray) {
                 maxIndex = Math.max(maxIndex, index);
                 result.append(String.format("%02X", bytes[position + index]).toLowerCase());
@@ -138,7 +139,7 @@ public class BinaryReader {
         //see http://integriography.wordpress.com/2010/01/16/using-phython-to-parse-and-present-windows-64-bit-timestamps/
         UnsignedLong hundredsOfNanosecondsSinceJan11601 = readQWord();
         long millisecondsSinceJan11601 = hundredsOfNanosecondsSinceJan11601.dividedBy(UnsignedLong.valueOf(10000)).longValue();
-        long millisecondsSinceEpoch = millisecondsSinceJan11601 - 11644473600000L;
+        long millisecondsSinceEpoch = millisecondsSinceJan11601 - EPOCH_OFFSET;
         return new Date(millisecondsSinceEpoch);
     }
 

@@ -13,7 +13,6 @@ import java.util.TimeZone;
  * Created by brosander on 5/26/16.
  */
 public class SystemtimeTypeNode extends VariantTypeNode {
-    private static final SimpleDateFormat FORMAT = initFormat();
     private final String value;
 
     public SystemtimeTypeNode(BinaryReader binaryReader, ChunkHeader chunkHeader, BxmlNode parent, int length) throws IOException {
@@ -25,14 +24,14 @@ public class SystemtimeTypeNode extends VariantTypeNode {
         int hour = binaryReader.readWord();
         int minute = binaryReader.readWord();
         int second = binaryReader.readWord();
-        int microsecond = binaryReader.readWord();
+        int millisecond = binaryReader.readWord();
         Calendar calendar = Calendar.getInstance();
         calendar.set(year, month, day, hour, minute, second);
-        calendar.set(Calendar.MILLISECOND, microsecond / 1000);
-        value = FORMAT.format(calendar);
+        calendar.set(Calendar.MILLISECOND, millisecond);
+        value = getFormat().format(calendar.getTime());
     }
 
-    private static final SimpleDateFormat initFormat() {
+    public static final SimpleDateFormat getFormat() {
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
         simpleDateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
         return simpleDateFormat;

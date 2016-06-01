@@ -14,7 +14,7 @@ public class UnsignedByteTypeNode extends VariantTypeNode {
 
     public UnsignedByteTypeNode(BinaryReader binaryReader, ChunkHeader chunkHeader, BxmlNode parent, int length) throws IOException {
         super(binaryReader, chunkHeader, parent, length);
-        value = binaryReader.read();
+        value = Byte.toUnsignedInt((byte) binaryReader.read());
     }
 
     @Override
