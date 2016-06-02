@@ -11,20 +11,9 @@ import java.util.List;
 /**
  * Created by brosander on 5/25/16.
  */
-public class ProcessingInstructionTargetNode extends BxmlNodeWithToken {
-    private final int stringLength;
-    private final String instruction;
-    private final int tagLength;
-
+public class ProcessingInstructionTargetNode extends BxmlNodeWithTokenAndString {
     public ProcessingInstructionTargetNode(BinaryReader binaryReader, ChunkHeader chunkHeader, BxmlNode parent) throws IOException {
         super(binaryReader, chunkHeader, parent);
-        stringLength = binaryReader.readWord();
-        if (stringLength > 0) {
-            instruction = binaryReader.readWString(stringLength);
-        } else {
-            instruction = "";
-        }
-        tagLength = 3 + (2 * stringLength);
         init();
     }
 
@@ -39,6 +28,6 @@ public class ProcessingInstructionTargetNode extends BxmlNodeWithToken {
     }
 
     public String getValue() {
-        return instruction + "?>";
+        return "<?" + super.getStringValue();
     }
 }

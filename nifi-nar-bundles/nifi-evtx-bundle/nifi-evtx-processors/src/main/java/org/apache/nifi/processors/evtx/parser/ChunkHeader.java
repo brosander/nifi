@@ -95,7 +95,7 @@ public class ChunkHeader extends Block implements Iterator<Record> {
                 }
                 TemplateNode templateNode = new TemplateNode(templateReader, this);
                 templateNodes.put(offset, templateNode);
-                offset = NumberUtil.intValueMax(templateNode.getNextOffset(), Integer.MAX_VALUE, "Invalid offset.");
+                offset = templateNode.getNextOffset();
             }
         }
         crc32 = new CRC32();

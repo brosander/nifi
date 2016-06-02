@@ -4,6 +4,7 @@ import com.google.common.primitives.UnsignedInteger;
 import org.apache.nifi.processors.evtx.parser.BinaryReader;
 import org.apache.nifi.processors.evtx.parser.BxmlNodeVisitor;
 import org.apache.nifi.processors.evtx.parser.ChunkHeader;
+import org.apache.nifi.processors.evtx.parser.NumberUtil;
 
 import java.io.IOException;
 
@@ -11,20 +12,19 @@ import java.io.IOException;
  * Created by brosander on 5/25/16.
  */
 public class TemplateNode extends BxmlNode {
-    private final UnsignedInteger nextOffset;
+    private final int nextOffset;
     private final UnsignedInteger templateId;
     private final String guid;
-    private final UnsignedInteger dataLength;
+    private final int dataLength;
 
     public TemplateNode(BinaryReader binaryReader, ChunkHeader chunkHeader) throws IOException {
         super(binaryReader, chunkHeader, null);
-        nextOffset = binaryReader.readDWord();
+        nextOffset = NumberUtil.intValueMax(binaryReader.readDWord(), Integer.MAX_VALUE, "Invalid offset.");
+
+        //TemplateId and Guid overlap
         templateId = new BinaryReader(binaryReader, binaryReader.getPosition()).readDWord();
         guid = binaryReader.readGuid();
-        dataLength = binaryReader.readDWord();
-        if (dataLength.plus(UnsignedInteger.valueOf(0x18)).compareTo(UnsignedInteger.valueOf(Integer.MAX_VALUE)) > 1) {
-            throw new IOException("Data getLength is too large");
-        }
+        dataLength = NumberUtil.intValueMax(binaryReader.readDWord(), Integer.MAX_VALUE - 0x18, "Data length too large.");
         init();
     }
 
@@ -38,7 +38,7 @@ public class TemplateNode extends BxmlNode {
                 '}';
     }
 
-    public UnsignedInteger getNextOffset() {
+    public int getNextOffset() {
         return nextOffset;
     }
 
@@ -50,7 +50,7 @@ public class TemplateNode extends BxmlNode {
         return guid;
     }
 
-    public UnsignedInteger getDataLength() {
+    public int getDataLength() {
         return dataLength;
     }
 

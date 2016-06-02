@@ -3,7 +3,6 @@ package org.apache.nifi.processors.evtx.parser.bxml;
 import org.apache.nifi.processors.evtx.parser.BinaryReader;
 import org.apache.nifi.processors.evtx.parser.BxmlNodeVisitor;
 import org.apache.nifi.processors.evtx.parser.ChunkHeader;
-import org.apache.nifi.processors.evtx.parser.NumberUtil;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -19,7 +18,7 @@ public class ProcessingInstructionDataNode extends BxmlNodeWithToken {
 
     public ProcessingInstructionDataNode(BinaryReader binaryReader, ChunkHeader chunkHeader, BxmlNode parent) throws IOException {
         super(binaryReader, chunkHeader, parent);
-        stringLength = NumberUtil.intValueMax(binaryReader.readDWord(), Integer.MAX_VALUE, "Invalid string length.");
+        stringLength = binaryReader.readWord();
         tagLength = 3 + (2 * stringLength);
         if (stringLength > 0) {
             data = binaryReader.readWString(stringLength);

@@ -29,13 +29,13 @@ public class TemplateInstanceNode extends BxmlNodeWithToken {
         templateOffset = NumberUtil.intValueMax(binaryReader.readDWord(), Integer.MAX_VALUE, "Invalid template offset.");
         if (templateOffset > getOffset() - chunkHeader.getOffset()) {
             isResident = true;
+            int initialPosition = binaryReader.getPosition();
             templateNode = chunkHeader.addTemplateNode(templateOffset, binaryReader);
-            templateLength = 0;
+            templateLength = binaryReader.getPosition() - initialPosition;
         } else {
             isResident = false;
-            int initialPosition = binaryReader.getPosition();
             templateNode = chunkHeader.getTemplateNode(templateOffset);
-            templateLength = binaryReader.getPosition() - initialPosition;
+            templateLength = 0;
         }
 
         if (templateNode != null && !templateId.equals(templateNode.getTemplateId())) {
