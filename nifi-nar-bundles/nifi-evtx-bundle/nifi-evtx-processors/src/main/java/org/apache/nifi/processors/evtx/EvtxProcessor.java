@@ -1,5 +1,6 @@
 package org.apache.nifi.processors.evtx;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.net.MediaType;
 import com.google.common.primitives.UnsignedLong;
 import org.apache.nifi.components.PropertyDescriptor;
@@ -34,26 +35,30 @@ public class EvtxProcessor extends AbstractProcessor {
     public static final String EVENTS = "Events";
     public static final XMLOutputFactory XML_OUTPUT_FACTORY = XMLOutputFactory.newFactory();
     public static final String EVTX = ".evtx";
-    private static final Relationship REL_SUCCESS = new Relationship.Builder().name("success").build();
-    private static final Relationship REL_FAILURE = new Relationship.Builder().name("failure").build();
-    private static final Relationship REL_ORIGINAL = new Relationship.Builder().name("original").build();
+    static final Relationship REL_SUCCESS = new Relationship.Builder().name("success").build();
+    static final Relationship REL_FAILURE = new Relationship.Builder().name("failure").build();
+    static final Relationship REL_ORIGINAL = new Relationship.Builder().name("original").build();
     public static final Set<Relationship> RELATIONSHIPS = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(REL_SUCCESS, REL_FAILURE, REL_ORIGINAL)));
     private static final PropertyDescriptor GRANULARITY = new PropertyDescriptor.Builder().name("Granularity").description("Output flow file for each Record, Chunk, or File encountered in the event log").allowableValues(RECORD, CHUNK, FILE).build();
     public static final List<PropertyDescriptor> PROPERTY_DESCRIPTORS = Collections.unmodifiableList(Arrays.asList(GRANULARITY));
+    public static final String UNABLE_TO_PROCESS_DUE_TO = "Unable to process {} due to {}";
 
-    private XMLStreamWriter createWriter(OutputStream outputStream) throws XMLStreamException {
+    @VisibleForTesting
+    static XMLStreamWriter createWriter(OutputStream outputStream) throws XMLStreamException {
         XMLStreamWriter xmlStreamWriter = XML_OUTPUT_FACTORY.createXMLStreamWriter(outputStream, "UTF-8");
         xmlStreamWriter.writeStartDocument();
         xmlStreamWriter.writeStartElement(EVENTS);
         return xmlStreamWriter;
     }
 
-    private void close(XMLStreamWriter xmlStreamWriter) throws XMLStreamException {
+    @VisibleForTesting
+    static void close(XMLStreamWriter xmlStreamWriter) throws XMLStreamException {
         xmlStreamWriter.writeEndElement();
         xmlStreamWriter.close();
     }
 
-    private String getName(String basename, Object chunkNumber, Object recordNumber) {
+    @VisibleForTesting
+    static String getName(String basename, Object chunkNumber, Object recordNumber) {
         StringBuilder stringBuilder = new StringBuilder(basename);
         if (chunkNumber != null) {
             stringBuilder.append("-chunk");
@@ -67,7 +72,8 @@ public class EvtxProcessor extends AbstractProcessor {
         return stringBuilder.toString();
     }
 
-    private String getBasename(FlowFile flowFile, ComponentLog logger) {
+    @VisibleForTesting
+    static String getBasename(FlowFile flowFile, ComponentLog logger) {
         String basename = flowFile.getAttribute(CoreAttributes.FILENAME.key());
         if (basename.endsWith(EVTX)) {
             return basename.substring(0, basename.length() - EVTX.length());
@@ -77,7 +83,8 @@ public class EvtxProcessor extends AbstractProcessor {
         }
     }
 
-    private void processResult(ProcessSession session, ComponentLog logger, FlowFile updated, Exception exception, String basename, ChunkHeader chunkHeader, Record record) {
+    @VisibleForTesting
+    static void processResult(ProcessSession session, ComponentLog logger, FlowFile updated, Exception exception, String basename, ChunkHeader chunkHeader, Record record) {
         Integer chunkNum = chunkHeader == null ? null : chunkHeader.getChunkNumber();
         UnsignedLong recordNum = record == null ? null : record.getRecordNum();
         String name = getName(basename, chunkNum, recordNum);
@@ -86,7 +93,7 @@ public class EvtxProcessor extends AbstractProcessor {
         if (exception == null) {
             session.transfer(updated, REL_SUCCESS);
         } else {
-            logger.error("Unable to process {} due to {}", new Object[]{name, exception}, exception);
+            logger.error(UNABLE_TO_PROCESS_DUE_TO, new Object[]{name, exception}, exception);
             session.transfer(updated, REL_FAILURE);
         }
     }
