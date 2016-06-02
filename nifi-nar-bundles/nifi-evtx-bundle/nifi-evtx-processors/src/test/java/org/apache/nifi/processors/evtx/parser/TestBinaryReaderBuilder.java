@@ -116,10 +116,26 @@ public class TestBinaryReaderBuilder {
     }
 
     public BinaryReader build() throws IOException {
+        return new BinaryReader(toByteArray());
+    }
+
+    public byte[] toByteArray() throws IOException {
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
         for (byte[] bytes : data) {
             byteArrayOutputStream.write(bytes);
         }
-        return new BinaryReader(byteArrayOutputStream.toByteArray());
+        return byteArrayOutputStream.toByteArray();
+    }
+
+    public byte[] toByteArray(int size) throws IOException {
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+        for (byte[] bytes : data) {
+            byteArrayOutputStream.write(bytes);
+        }
+        int missing = size - byteArrayOutputStream.size();
+        if (missing > 0) {
+            byteArrayOutputStream.write(new byte[missing]);
+        }
+        return byteArrayOutputStream.toByteArray();
     }
 }

@@ -13,6 +13,7 @@ import java.util.zip.CRC32;
  */
 public class FileHeader extends Block implements Iterator<ChunkHeader> {
     public static final int CHUNK_SIZE = 65536;
+    public static final String ELF_FILE = "ElfFile";
     private final String magicString;
     private final UnsignedLong oldestChunk;
     private final UnsignedLong currentChunkNumber;
@@ -38,6 +39,9 @@ public class FileHeader extends Block implements Iterator<ChunkHeader> {
         crc32.update(binaryReader.peekBytes(120));
 
         magicString = binaryReader.readString(8);
+        if (!ELF_FILE.equals(magicString)) {
+            throw new IOException("Invalid magic string. Expected " + ELF_FILE + " got " + magicString);
+        }
         oldestChunk = binaryReader.readQWord();
         currentChunkNumber = binaryReader.readQWord();
         nextRecordNumber = binaryReader.readQWord();

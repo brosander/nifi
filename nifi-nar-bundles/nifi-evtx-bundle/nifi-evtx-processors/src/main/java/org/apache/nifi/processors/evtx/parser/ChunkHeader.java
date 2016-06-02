@@ -18,6 +18,7 @@ import java.util.zip.CRC32;
  */
 public class ChunkHeader extends Block implements Iterator<Record> {
     private static final Logger logger = LoggerFactory.getLogger(ChunkHeader.class);
+    public static final String ELF_CHNK = "ElfChnk";
     private final String magicString;
     private final UnsignedLong fileFirstRecordNumber;
     private final UnsignedLong fileLastRecordNumber;
@@ -52,7 +53,7 @@ public class ChunkHeader extends Block implements Iterator<Record> {
         dataChecksum = binaryReader.readDWord();
         unused = binaryReader.readString(68);
 
-        if (!"ElfChnk".equals(magicString)) {
+        if (!ELF_CHNK.equals(magicString)) {
             throw new IOException("Invalid magic string " + this);
         }
 

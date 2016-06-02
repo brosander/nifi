@@ -30,7 +30,7 @@ public class RootNode extends BxmlNode {
                 int substitutionType = binaryReader.readWord();
                 substitutionVariantFactories.add(new VariantTypeSizeAndFactory(substitionSize, ValueNode.factories.get(substitutionType)));
             } catch (Exception e) {
-                System.out.println(i);
+                throw new IOException(e);
             }
         }
         List<VariantTypeNode> substitutions = new ArrayList<>();
