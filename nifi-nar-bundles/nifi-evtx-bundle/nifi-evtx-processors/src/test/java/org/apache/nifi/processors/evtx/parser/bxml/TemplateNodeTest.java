@@ -2,6 +2,7 @@ package org.apache.nifi.processors.evtx.parser.bxml;
 
 import com.google.common.primitives.UnsignedInteger;
 import org.apache.nifi.processors.evtx.parser.BxmlNodeVisitor;
+import org.apache.nifi.processors.evtx.parser.TestBinaryReaderBuilder;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -25,11 +26,16 @@ public class TemplateNodeTest extends BxmlNodeTestBase {
     @Override
     public void setup() throws IOException {
         super.setup();
+        putNode(testBinaryReaderBuilder, nextOffset, guid, dataLength);
+        testBinaryReaderBuilder.put((byte) BxmlNode.END_OF_STREAM_TOKEN);
+        templateNode = new TemplateNode(testBinaryReaderBuilder.build(), chunkHeader);
+    }
+
+    public static int putNode(TestBinaryReaderBuilder testBinaryReaderBuilder, int nextOffset, String guid, int dataLength) {
         testBinaryReaderBuilder.putDWord(nextOffset);
         testBinaryReaderBuilder.putGuid(guid);
         testBinaryReaderBuilder.putDWord(dataLength);
-        testBinaryReaderBuilder.put((byte) BxmlNode.END_OF_STREAM_TOKEN);
-        templateNode = new TemplateNode(testBinaryReaderBuilder.build(), chunkHeader);
+        return 24;
     }
 
     @Test

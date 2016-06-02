@@ -2,6 +2,7 @@ package org.apache.nifi.processors.evtx.parser.bxml;
 
 import com.google.common.primitives.UnsignedInteger;
 import org.apache.nifi.processors.evtx.parser.BxmlNodeVisitor;
+import org.apache.nifi.processors.evtx.parser.TestBinaryReaderBuilder;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -18,13 +19,18 @@ public class NameStringNodeTest extends BxmlNodeTestBase {
     private String string = "test string";
     private NameStringNode nameStringNode;
 
-    @Override
-    public void setup() throws IOException {
-        super.setup();
+    public static int putNode(TestBinaryReaderBuilder testBinaryReaderBuilder, int nextOffset, int hash, String string) throws IOException {
         testBinaryReaderBuilder.putDWord(nextOffset);
         testBinaryReaderBuilder.putWord(hash);
         testBinaryReaderBuilder.putWord(string.length());
         testBinaryReaderBuilder.putWString(string);
+        return 8 + (2 * string.length());
+    }
+
+    @Override
+    public void setup() throws IOException {
+        super.setup();
+        putNode(testBinaryReaderBuilder, nextOffset, hash, string);
         nameStringNode = new NameStringNode(testBinaryReaderBuilder.build(), chunkHeader);
     }
 

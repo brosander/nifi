@@ -69,6 +69,11 @@ public class TestBinaryReaderBuilder {
         return this;
     }
 
+    public TestBinaryReaderBuilder putDWordAt(int intBits, int position) throws IOException {
+        ByteBuffer.wrap(toByteArray(), position, 4).order(ByteOrder.LITTLE_ENDIAN).putInt(intBits);
+        return this;
+    }
+
     public TestBinaryReaderBuilder putDWord(UnsignedInteger val) {
         return putDWord(val.intValue());
     }
@@ -120,22 +125,26 @@ public class TestBinaryReaderBuilder {
     }
 
     public byte[] toByteArray() throws IOException {
-        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-        for (byte[] bytes : data) {
-            byteArrayOutputStream.write(bytes);
+        if (data.size() == 0) {
+            return new byte[0];
+        } else  if (data.size() == 1) {
+            return data.get(0);
+        } else {
+            ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+            for (byte[] bytes : data) {
+                byteArrayOutputStream.write(bytes);
+            }
+            byte[] bytes = byteArrayOutputStream.toByteArray();
+            data.clear();
+            data.add(bytes);
+            return bytes;
         }
-        return byteArrayOutputStream.toByteArray();
     }
 
     public byte[] toByteArray(int size) throws IOException {
-        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-        for (byte[] bytes : data) {
-            byteArrayOutputStream.write(bytes);
-        }
-        int missing = size - byteArrayOutputStream.size();
-        if (missing > 0) {
-            byteArrayOutputStream.write(new byte[missing]);
-        }
-        return byteArrayOutputStream.toByteArray();
+        byte[] bytes = toByteArray();
+        byte[] result = new byte[size];
+        System.arraycopy(bytes, 0, result, 0, Math.min(bytes.length, result.length));
+        return result;
     }
 }

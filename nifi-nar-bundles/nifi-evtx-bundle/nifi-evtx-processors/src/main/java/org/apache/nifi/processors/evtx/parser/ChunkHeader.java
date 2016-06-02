@@ -1,5 +1,6 @@
 package org.apache.nifi.processors.evtx.parser;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.primitives.UnsignedInteger;
 import com.google.common.primitives.UnsignedLong;
 import org.apache.nifi.processors.evtx.parser.bxml.NameStringNode;
@@ -8,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -164,6 +166,11 @@ public class ChunkHeader extends Block implements Iterator<Record> {
             return null;
         }
         return nameStringNode.getString();
+    }
+
+    @VisibleForTesting
+    Map<Integer, NameStringNode> getNameStrings() {
+        return Collections.unmodifiableMap(nameStrings);
     }
 
     public int getChunkNumber() {
