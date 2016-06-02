@@ -6,10 +6,10 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.util.Date;
-import java.util.Random;
+import java.util.*;
 import java.util.zip.CRC32;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -29,6 +29,7 @@ public class ChunkHeaderTest {
     private int lastRecordOffset = 12380;
     private int nextRecordOffset = 2380;
     private int dataChecksum = 1111;
+    private List<String> guids;
 
     @Before
     public void setup() throws IOException {
@@ -58,6 +59,7 @@ public class ChunkHeaderTest {
             offset += NameStringNodeTest.putNode(dataBuilder, 0, string.hashCode(), string);
         }
 
+        guids = new ArrayList<>();
         for (int i = 0; i < 32; i++) {
             testBinaryReaderBuilder.putDWord(offset + 10);
             dataBuilder.put((byte) 0x0C);
@@ -65,7 +67,9 @@ public class ChunkHeaderTest {
             dataBuilder.putDWord(offset + 10);
             byte[] guidBytes = new byte[16];
             random.nextBytes(guidBytes);
-            offset += TemplateNodeTest.putNode(dataBuilder, 0, new TestBinaryReaderBuilder().put(guidBytes).build().readGuid(), i);
+            String guid = new TestBinaryReaderBuilder().put(guidBytes).build().readGuid();
+            guids.add(guid);
+            offset += TemplateNodeTest.putNode(dataBuilder, 0, guid, i);
             dataBuilder.put((byte) BxmlNode.END_OF_STREAM_TOKEN);
             offset += 11;
         }
@@ -88,8 +92,26 @@ public class ChunkHeaderTest {
 
     @Test
     public void testInit() {
+        int count = 0;
+        for (Map.Entry<Integer, NameStringNode> integerNameStringNodeEntry : new TreeMap<>(chunkHeader.getNameStrings()).entrySet()) {
+            assertEquals(Integer.toString(count++), integerNameStringNodeEntry.getValue().getString());
+        }
+
+        Iterator<String> iterator = guids.iterator();
+        for (Map.Entry<Integer, TemplateNode> integerTemplateNodeEntry : new TreeMap<>(chunkHeader.getTemplateNodes()).entrySet()) {
+            assertEquals(iterator.next(), integerTemplateNodeEntry.getValue().getGuid());
+        }
+
         assertTrue(chunkHeader.hasNext());
+
         Record next = chunkHeader.next();
+        assertEquals(fileLastRecordNumber, next.getRecordNum().intValue());
+        RootNode rootNode = next.getRootNode();
+        List<BxmlNode> children = rootNode.getChildren();
+        assertEquals(1, children.size());
+        assertTrue(children.get(0) instanceof EndOfStreamNode);
+        assertEquals(0, rootNode.getSubstitutions().size());
+
         assertFalse(chunkHeader.hasNext());
     }
 }

@@ -173,6 +173,11 @@ public class ChunkHeader extends Block implements Iterator<Record> {
         return Collections.unmodifiableMap(nameStrings);
     }
 
+    @VisibleForTesting
+    Map<Integer, TemplateNode> getTemplateNodes() {
+        return Collections.unmodifiableMap(templateNodes);
+    }
+
     public int getChunkNumber() {
         return chunkNumber;
     }
