@@ -1,6 +1,16 @@
 package org.apache.nifi.processors.evtx.parser;
 
-import org.apache.nifi.processors.evtx.parser.bxml.*;
+import org.apache.nifi.processors.evtx.parser.bxml.AttributeNode;
+import org.apache.nifi.processors.evtx.parser.bxml.BxmlNode;
+import org.apache.nifi.processors.evtx.parser.bxml.CDataSectionNode;
+import org.apache.nifi.processors.evtx.parser.bxml.ConditionalSubstitutionNode;
+import org.apache.nifi.processors.evtx.parser.bxml.EntityReferenceNode;
+import org.apache.nifi.processors.evtx.parser.bxml.NormalSubstitutionNode;
+import org.apache.nifi.processors.evtx.parser.bxml.OpenStartElementNode;
+import org.apache.nifi.processors.evtx.parser.bxml.RootNode;
+import org.apache.nifi.processors.evtx.parser.bxml.TemplateInstanceNode;
+import org.apache.nifi.processors.evtx.parser.bxml.TemplateNode;
+import org.apache.nifi.processors.evtx.parser.bxml.ValueNode;
 import org.apache.nifi.processors.evtx.parser.bxml.value.BXmlTypeNode;
 import org.apache.nifi.processors.evtx.parser.bxml.value.VariantTypeNode;
 import org.junit.Before;
@@ -20,7 +30,12 @@ import java.util.List;
 
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * Created by brosander on 6/2/16.

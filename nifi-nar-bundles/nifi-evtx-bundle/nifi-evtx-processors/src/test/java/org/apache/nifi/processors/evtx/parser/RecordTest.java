@@ -27,14 +27,6 @@ public class RecordTest {
     private Record record;
     private int recordNum = 120;
 
-    @Before
-    public void setup() throws IOException {
-        TestBinaryReaderBuilder testBinaryReaderBuilder = new TestBinaryReaderBuilder();
-        putNode(testBinaryReaderBuilder, recordNum, new Date());
-
-        record = new Record(testBinaryReaderBuilder.build(), chunkHeader);
-    }
-
     public static void putNode(TestBinaryReaderBuilder testBinaryReaderBuilder, int recordNum, Date fileTime) {
         testBinaryReaderBuilder.putDWord(10794);
         int size = 20;
@@ -45,6 +37,14 @@ public class RecordTest {
         testBinaryReaderBuilder.put((byte) BxmlNode.END_OF_STREAM_TOKEN);
         testBinaryReaderBuilder.putDWord(0);
         testBinaryReaderBuilder.putDWord(size);
+    }
+
+    @Before
+    public void setup() throws IOException {
+        TestBinaryReaderBuilder testBinaryReaderBuilder = new TestBinaryReaderBuilder();
+        putNode(testBinaryReaderBuilder, recordNum, new Date());
+
+        record = new Record(testBinaryReaderBuilder.build(), chunkHeader);
     }
 
     @Test

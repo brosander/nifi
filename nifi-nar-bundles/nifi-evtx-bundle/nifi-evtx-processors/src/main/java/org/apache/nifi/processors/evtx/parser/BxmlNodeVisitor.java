@@ -1,6 +1,23 @@
 package org.apache.nifi.processors.evtx.parser;
 
-import org.apache.nifi.processors.evtx.parser.bxml.*;
+import org.apache.nifi.processors.evtx.parser.bxml.AttributeNode;
+import org.apache.nifi.processors.evtx.parser.bxml.CDataSectionNode;
+import org.apache.nifi.processors.evtx.parser.bxml.CloseElementNode;
+import org.apache.nifi.processors.evtx.parser.bxml.CloseEmptyElementNode;
+import org.apache.nifi.processors.evtx.parser.bxml.CloseStartElementNode;
+import org.apache.nifi.processors.evtx.parser.bxml.ConditionalSubstitutionNode;
+import org.apache.nifi.processors.evtx.parser.bxml.EndOfStreamNode;
+import org.apache.nifi.processors.evtx.parser.bxml.EntityReferenceNode;
+import org.apache.nifi.processors.evtx.parser.bxml.NameStringNode;
+import org.apache.nifi.processors.evtx.parser.bxml.NormalSubstitutionNode;
+import org.apache.nifi.processors.evtx.parser.bxml.OpenStartElementNode;
+import org.apache.nifi.processors.evtx.parser.bxml.ProcessingInstructionDataNode;
+import org.apache.nifi.processors.evtx.parser.bxml.ProcessingInstructionTargetNode;
+import org.apache.nifi.processors.evtx.parser.bxml.RootNode;
+import org.apache.nifi.processors.evtx.parser.bxml.StreamStartNode;
+import org.apache.nifi.processors.evtx.parser.bxml.TemplateInstanceNode;
+import org.apache.nifi.processors.evtx.parser.bxml.TemplateNode;
+import org.apache.nifi.processors.evtx.parser.bxml.ValueNode;
 import org.apache.nifi.processors.evtx.parser.bxml.value.VariantTypeNode;
 
 import java.io.IOException;

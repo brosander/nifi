@@ -22,7 +22,7 @@ public class ValueNodeTest extends BxmlNodeWithTokenTestBase {
     @Override
     public void setup() throws IOException {
         super.setup();
-        testBinaryReaderBuilder.put((byte)0);
+        testBinaryReaderBuilder.put((byte) 0);
         valueNode = new ValueNode(testBinaryReaderBuilder.build(), chunkHeader, parent);
     }
 

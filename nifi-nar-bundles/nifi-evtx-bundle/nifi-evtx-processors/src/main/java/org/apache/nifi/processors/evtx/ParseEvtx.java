@@ -19,7 +19,12 @@ import org.apache.nifi.processor.ProcessContext;
 import org.apache.nifi.processor.ProcessSession;
 import org.apache.nifi.processor.Relationship;
 import org.apache.nifi.processor.exception.ProcessException;
-import org.apache.nifi.processors.evtx.parser.*;
+import org.apache.nifi.processors.evtx.parser.ChunkHeader;
+import org.apache.nifi.processors.evtx.parser.FileHeader;
+import org.apache.nifi.processors.evtx.parser.FileHeaderFactory;
+import org.apache.nifi.processors.evtx.parser.MalformedChunkException;
+import org.apache.nifi.processors.evtx.parser.Record;
+import org.apache.nifi.processors.evtx.parser.XmlBxmlNodeVisitor;
 import org.apache.nifi.processors.evtx.parser.bxml.RootNode;
 
 import javax.xml.stream.XMLOutputFactory;
@@ -28,7 +33,11 @@ import javax.xml.stream.XMLStreamWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -51,17 +60,39 @@ public class ParseEvtx extends AbstractProcessor {
     public static final String XML_EXTENSION = ".xml";
 
     @VisibleForTesting
-    static final Relationship REL_SUCCESS = new Relationship.Builder().name("success").build();
+    static final Relationship REL_SUCCESS = new Relationship.Builder()
+            .name("success")
+            .description("Any FlowFile that was successfully converted from evtx to xml")
+            .build();
+
     @VisibleForTesting
-    static final Relationship REL_FAILURE = new Relationship.Builder().name("failure").build();
+    static final Relationship REL_FAILURE = new Relationship.Builder()
+            .name("failure")
+            .description("Any FlowFile that encountered an exception during conversion will be transferred to this relationship with as much parsing as possible done")
+            .build();
+
     @VisibleForTesting
-    static final Relationship REL_BAD_CHUNK = new Relationship.Builder().name("bad chunk").build();
+    static final Relationship REL_BAD_CHUNK = new Relationship.Builder()
+            .name("bad chunk")
+            .description("Any bad chunks of records will be transferred to this relationship in their original binary form")
+            .build();
+
     @VisibleForTesting
-    static final Relationship REL_ORIGINAL = new Relationship.Builder().name("original").build();
+    static final Relationship REL_ORIGINAL = new Relationship.Builder()
+            .name("original")
+            .description("The unmodified input FlowFile will be transferred to this relationship")
+            .build();
+
     @VisibleForTesting
     static final Set<Relationship> RELATIONSHIPS = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(REL_SUCCESS, REL_FAILURE, REL_ORIGINAL, REL_BAD_CHUNK)));
+
     @VisibleForTesting
-    static final PropertyDescriptor GRANULARITY = new PropertyDescriptor.Builder().required(true).name("Granularity").description("Output flow file for each Record, Chunk, or File encountered in the event log").allowableValues(RECORD, CHUNK, FILE).build();
+    static final PropertyDescriptor GRANULARITY = new PropertyDescriptor.Builder().required(true)
+            .name("Granularity")
+            .description("Output flow file for each Record, Chunk, or File encountered in the event log")
+            .allowableValues(RECORD, CHUNK, FILE)
+            .build();
+
     @VisibleForTesting
     static final List<PropertyDescriptor> PROPERTY_DESCRIPTORS = Collections.unmodifiableList(Arrays.asList(GRANULARITY));
 
@@ -72,11 +103,13 @@ public class ParseEvtx extends AbstractProcessor {
     private final ResultProcessor resultProcessor;
 
     public ParseEvtx() {
-        this(FileHeader::new, ParseEvtx::handleMalformedChunkException, XmlBxmlNodeVisitor::new, ParseEvtx::createWriter, ParseEvtx::processResult);
+        this(FileHeader::new, ParseEvtx::handleMalformedChunkException, XmlBxmlNodeVisitor::new,
+                ParseEvtx::createWriter, ParseEvtx::processResult);
     }
 
     @VisibleForTesting
-    ParseEvtx(FileHeaderFactory fileHeaderFactory, MalformedChunkHandler malformedChunkHandler, RootNodeHandler rootNodeHandler, XMLStreamWriterFactory xmlStreamWriterFactory, ResultProcessor resultProcessor) {
+    ParseEvtx(FileHeaderFactory fileHeaderFactory, MalformedChunkHandler malformedChunkHandler, RootNodeHandler rootNodeHandler,
+              XMLStreamWriterFactory xmlStreamWriterFactory, ResultProcessor resultProcessor) {
         this.fileHeaderFactory = fileHeaderFactory;
         this.malformedChunkHandler = malformedChunkHandler;
         this.rootNodeHandler = rootNodeHandler;

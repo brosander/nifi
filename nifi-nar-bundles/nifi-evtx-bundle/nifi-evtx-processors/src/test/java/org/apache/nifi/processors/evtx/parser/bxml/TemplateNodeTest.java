@@ -23,19 +23,19 @@ public class TemplateNodeTest extends BxmlNodeTestBase {
     private int dataLength = 102;
     private TemplateNode templateNode;
 
+    public static int putNode(TestBinaryReaderBuilder testBinaryReaderBuilder, int nextOffset, String guid, int dataLength) {
+        testBinaryReaderBuilder.putDWord(nextOffset);
+        testBinaryReaderBuilder.putGuid(guid);
+        testBinaryReaderBuilder.putDWord(dataLength);
+        return 24;
+    }
+
     @Override
     public void setup() throws IOException {
         super.setup();
         putNode(testBinaryReaderBuilder, nextOffset, guid, dataLength);
         testBinaryReaderBuilder.put((byte) BxmlNode.END_OF_STREAM_TOKEN);
         templateNode = new TemplateNode(testBinaryReaderBuilder.build(), chunkHeader);
-    }
-
-    public static int putNode(TestBinaryReaderBuilder testBinaryReaderBuilder, int nextOffset, String guid, int dataLength) {
-        testBinaryReaderBuilder.putDWord(nextOffset);
-        testBinaryReaderBuilder.putGuid(guid);
-        testBinaryReaderBuilder.putDWord(dataLength);
-        return 24;
     }
 
     @Test

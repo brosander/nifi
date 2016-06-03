@@ -8,7 +8,11 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.List;
 
 /**
  * Created by brosander on 6/1/16.
@@ -127,7 +131,7 @@ public class TestBinaryReaderBuilder {
     public byte[] toByteArray() throws IOException {
         if (data.size() == 0) {
             return new byte[0];
-        } else  if (data.size() == 1) {
+        } else if (data.size() == 1) {
             return data.get(0);
         } else {
             ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();

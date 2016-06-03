@@ -8,7 +8,11 @@ import org.apache.nifi.flowfile.attributes.CoreAttributes;
 import org.apache.nifi.logging.ComponentLog;
 import org.apache.nifi.processor.ProcessSession;
 import org.apache.nifi.processor.io.OutputStreamCallback;
-import org.apache.nifi.processors.evtx.parser.*;
+import org.apache.nifi.processors.evtx.parser.ChunkHeader;
+import org.apache.nifi.processors.evtx.parser.FileHeader;
+import org.apache.nifi.processors.evtx.parser.FileHeaderFactory;
+import org.apache.nifi.processors.evtx.parser.MalformedChunkException;
+import org.apache.nifi.processors.evtx.parser.Record;
 import org.apache.nifi.processors.evtx.parser.bxml.RootNode;
 import org.junit.Before;
 import org.junit.Test;
@@ -25,8 +29,17 @@ import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.anyString;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.isA;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.when;
 
 /**
  * Created by brosander on 6/2/16.
@@ -269,12 +282,12 @@ public class ParseEvtxTest {
         when(session.create(flowFile)).thenReturn(created1).thenReturn(created2).thenReturn(null);
 
         when(session.write(eq(created1), any(OutputStreamCallback.class))).thenAnswer(invocation -> {
-            ((OutputStreamCallback)invocation.getArguments()[1]).process(out);
+            ((OutputStreamCallback) invocation.getArguments()[1]).process(out);
             return updated1;
         });
 
         when(session.write(eq(created2), any(OutputStreamCallback.class))).thenAnswer(invocation -> {
-            ((OutputStreamCallback)invocation.getArguments()[1]).process(out2);
+            ((OutputStreamCallback) invocation.getArguments()[1]).process(out2);
             return updated2;
         });
 
@@ -335,17 +348,17 @@ public class ParseEvtxTest {
         when(session.create(flowFile)).thenReturn(created1).thenReturn(created2).thenReturn(created3).thenReturn(null);
 
         when(session.write(eq(created1), any(OutputStreamCallback.class))).thenAnswer(invocation -> {
-            ((OutputStreamCallback)invocation.getArguments()[1]).process(out);
+            ((OutputStreamCallback) invocation.getArguments()[1]).process(out);
             return updated1;
         });
 
         when(session.write(eq(created2), any(OutputStreamCallback.class))).thenAnswer(invocation -> {
-            ((OutputStreamCallback)invocation.getArguments()[1]).process(out2);
+            ((OutputStreamCallback) invocation.getArguments()[1]).process(out2);
             return updated2;
         });
 
         when(session.write(eq(created3), any(OutputStreamCallback.class))).thenAnswer(invocation -> {
-            ((OutputStreamCallback)invocation.getArguments()[1]).process(out3);
+            ((OutputStreamCallback) invocation.getArguments()[1]).process(out3);
             return updated3;
         });
 

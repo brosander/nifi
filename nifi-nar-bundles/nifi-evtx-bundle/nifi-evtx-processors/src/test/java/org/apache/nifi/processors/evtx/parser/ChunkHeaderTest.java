@@ -1,12 +1,24 @@
 package org.apache.nifi.processors.evtx.parser;
 
 import com.google.common.primitives.UnsignedInteger;
-import org.apache.nifi.processors.evtx.parser.bxml.*;
+import org.apache.nifi.processors.evtx.parser.bxml.BxmlNode;
+import org.apache.nifi.processors.evtx.parser.bxml.EndOfStreamNode;
+import org.apache.nifi.processors.evtx.parser.bxml.NameStringNode;
+import org.apache.nifi.processors.evtx.parser.bxml.NameStringNodeTest;
+import org.apache.nifi.processors.evtx.parser.bxml.RootNode;
+import org.apache.nifi.processors.evtx.parser.bxml.TemplateNode;
+import org.apache.nifi.processors.evtx.parser.bxml.TemplateNodeTest;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.TreeMap;
 import java.util.zip.CRC32;
 
 import static org.junit.Assert.assertEquals;
