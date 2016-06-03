@@ -19,6 +19,7 @@ package org.apache.nifi.processors.evtx.parser;
 
 import com.google.common.primitives.UnsignedInteger;
 import com.google.common.primitives.UnsignedLong;
+import org.apache.nifi.logging.ComponentLog;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -43,11 +44,13 @@ public class FileHeader extends Block {
     private final UnsignedInteger flags;
     private final UnsignedInteger checksum;
     private final InputStream inputStream;
+    private final ComponentLog log;
     private long currentOffset;
     private int count = 0;
 
-    public FileHeader(InputStream inputStream) throws IOException {
+    public FileHeader(InputStream inputStream, ComponentLog log) throws IOException {
         super(new BinaryReader(inputStream, 4096));
+        this.log = log;
         // Bytes will be checksummed
         BinaryReader binaryReader = getBinaryReader();
         CRC32 crc32 = new CRC32();
@@ -146,7 +149,7 @@ public class FileHeader extends Block {
             currentOffset += CHUNK_SIZE;
             BinaryReader binaryReader = new BinaryReader(inputStream, CHUNK_SIZE);
             try {
-                return new ChunkHeader(binaryReader, currentOffset, count++);
+                return new ChunkHeader(binaryReader, log, currentOffset, count++);
             } catch (IOException e) {
                 throw new MalformedChunkException("Malformed chunk, unable to parse", e, currentOffset, count, binaryReader.getBytes());
             }
