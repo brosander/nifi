@@ -5,13 +5,12 @@ import com.google.common.primitives.UnsignedLong;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Iterator;
 import java.util.zip.CRC32;
 
 /**
  * Created by brosander on 5/24/16.
  */
-public class FileHeader extends Block implements Iterator<ChunkHeader> {
+public class FileHeader extends Block {
     public static final int CHUNK_SIZE = 65536;
     public static final String ELF_FILE = "ElfFile";
     private final String magicString;
@@ -27,8 +26,7 @@ public class FileHeader extends Block implements Iterator<ChunkHeader> {
     private final UnsignedInteger flags;
     private final UnsignedInteger checksum;
     private final InputStream inputStream;
-    private ChunkHeader next;
-    private int currentOffset;
+    private long currentOffset;
     private int count = 0;
 
     public FileHeader(InputStream inputStream) throws IOException {
@@ -66,7 +64,6 @@ public class FileHeader extends Block implements Iterator<ChunkHeader> {
         currentOffset = 4096;
 
         init();
-        initNext();
     }
 
     @Override
@@ -122,29 +119,22 @@ public class FileHeader extends Block implements Iterator<ChunkHeader> {
         return checksum;
     }
 
-    private void initNext() {
-        try {
-            if (count < chunkCount) {
-                int currentOffset = this.currentOffset;
-                currentOffset += CHUNK_SIZE;
-                next = new ChunkHeader(new BinaryReader(inputStream, CHUNK_SIZE), currentOffset, count++);
-            } else {
-                next = null;
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    @Override
     public boolean hasNext() {
-        return next != null;
+        return count < chunkCount;
     }
 
-    @Override
-    public ChunkHeader next() {
-        ChunkHeader result = next;
-        initNext();
-        return result;
+    public ChunkHeader next() throws IOException, MalformedChunkException {
+        if (count < chunkCount) {
+            long currentOffset = this.currentOffset;
+            currentOffset += CHUNK_SIZE;
+            BinaryReader binaryReader = new BinaryReader(inputStream, CHUNK_SIZE);
+            try {
+                return new ChunkHeader(binaryReader, currentOffset, count++);
+            } catch (IOException e) {
+                throw new MalformedChunkException("Malformed chunk, unable to parse", e, currentOffset, count, binaryReader.getBytes());
+            }
+        } else {
+            return null;
+        }
     }
 }

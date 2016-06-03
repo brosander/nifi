@@ -91,7 +91,7 @@ public class ChunkHeaderTest {
     }
 
     @Test
-    public void testInit() {
+    public void testInit() throws IOException {
         int count = 0;
         for (Map.Entry<Integer, NameStringNode> integerNameStringNodeEntry : new TreeMap<>(chunkHeader.getNameStrings()).entrySet()) {
             assertEquals(Integer.toString(count++), integerNameStringNodeEntry.getValue().getString());

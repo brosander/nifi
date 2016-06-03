@@ -11,16 +11,15 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.zip.CRC32;
 
 /**
  * Created by brosander on 5/24/16.
  */
-public class ChunkHeader extends Block implements Iterator<Record> {
-    private static final Logger logger = LoggerFactory.getLogger(ChunkHeader.class);
+public class ChunkHeader extends Block {
     public static final String ELF_CHNK = "ElfChnk";
+    private static final Logger logger = LoggerFactory.getLogger(ChunkHeader.class);
     private final String magicString;
     private final UnsignedLong fileFirstRecordNumber;
     private final UnsignedLong fileLastRecordNumber;
@@ -38,7 +37,7 @@ public class ChunkHeader extends Block implements Iterator<Record> {
     private Record record;
     private UnsignedLong recordNumber;
 
-    public ChunkHeader(BinaryReader binaryReader, int headerOffset, int chunkNumber) throws IOException {
+    public ChunkHeader(BinaryReader binaryReader, long headerOffset, int chunkNumber) throws IOException {
         super(binaryReader, headerOffset);
         this.chunkNumber = chunkNumber;
         CRC32 crc32 = new CRC32();
@@ -106,7 +105,7 @@ public class ChunkHeader extends Block implements Iterator<Record> {
         if (crc32.getValue() != dataChecksum.longValue()) {
             throw new IOException("Invalid data checksum " + this);
         }
-        initNext();
+        recordNumber = fileFirstRecordNumber.minus(UnsignedLong.ONE);
     }
 
     public NameStringNode addNameStringNode(int offset, BinaryReader binaryReader) throws IOException {
@@ -142,22 +141,8 @@ public class ChunkHeader extends Block implements Iterator<Record> {
                 '}';
     }
 
-    private void initNext() {
-        try {
-            if (fileLastRecordNumber.equals(recordNumber)) {
-                record = null;
-                return;
-            }
-            record = new Record(getBinaryReader(), this);
-            recordNumber = record.getRecordNum();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    @Override
     public boolean hasNext() {
-        return record != null;
+        return fileLastRecordNumber.compareTo(recordNumber) > 0;
     }
 
     public String getString(int offset) {
@@ -182,10 +167,17 @@ public class ChunkHeader extends Block implements Iterator<Record> {
         return chunkNumber;
     }
 
-    @Override
-    public Record next() {
-        Record current = this.record;
-        initNext();
-        return current;
+    public Record next() throws IOException {
+        if (!hasNext()) {
+            return null;
+        }
+        try {
+            Record record = new Record(getBinaryReader(), this);
+            recordNumber = record.getRecordNum();
+            return record;
+        } catch (IOException e) {
+            recordNumber = fileLastRecordNumber;
+            throw e;
+        }
     }
 }

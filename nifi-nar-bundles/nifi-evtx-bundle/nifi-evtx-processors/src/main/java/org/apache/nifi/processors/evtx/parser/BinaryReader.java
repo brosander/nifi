@@ -154,4 +154,8 @@ public class BinaryReader {
     public int getPosition() {
         return position;
     }
+
+    public byte[] getBytes() {
+        return bytes;
+    }
 }

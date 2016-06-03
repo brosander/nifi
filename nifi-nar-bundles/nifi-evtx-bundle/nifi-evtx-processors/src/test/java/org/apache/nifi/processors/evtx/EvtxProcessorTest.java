@@ -34,19 +34,19 @@ public class EvtxProcessorTest {
     @Test
     public void testGetNameFile() {
         String basename = "basename";
-        assertEquals(basename + ".xml", EvtxProcessor.getName(basename, null, null));
+        assertEquals(basename + ".xml", EvtxProcessor.getName(basename, null, null, EvtxProcessor.XML_EXTENSION));
     }
 
     @Test
     public void testGetNameFileChunk() {
         String basename = "basename";
-        assertEquals(basename + "-chunk1.xml", EvtxProcessor.getName(basename, 1, null));
+        assertEquals(basename + "-chunk1.xml", EvtxProcessor.getName(basename, 1, null, EvtxProcessor.XML_EXTENSION));
     }
 
     @Test
     public void testGetNameFileChunkRecord() {
         String basename = "basename";
-        assertEquals(basename + "-chunk1-record2.xml", EvtxProcessor.getName(basename, 1, 2));
+        assertEquals(basename + "-chunk1-record2.xml", EvtxProcessor.getName(basename, 1, 2, EvtxProcessor.XML_EXTENSION));
     }
 
     @Test
@@ -86,7 +86,7 @@ public class EvtxProcessorTest {
         when(processSession.putAttribute(eq(flowFile), anyString(), anyString())).thenReturn(flowFile);
 
         EvtxProcessor.processResult(processSession, componentLog, flowFile, exception, basename, chunkHeader, record);
-        verify(processSession).putAttribute(flowFile, CoreAttributes.FILENAME.key(), EvtxProcessor.getName(basename, chunkHeader, record));
+        verify(processSession).putAttribute(flowFile, CoreAttributes.FILENAME.key(), EvtxProcessor.getName(basename, chunkHeader, record, EvtxProcessor.XML_EXTENSION));
         verify(processSession).putAttribute(flowFile, CoreAttributes.MIME_TYPE.key(), MediaType.APPLICATION_XML_UTF_8.toString());
         verify(processSession).transfer(flowFile, EvtxProcessor.REL_SUCCESS);
         verifyNoMoreInteractions(componentLog);
@@ -107,7 +107,7 @@ public class EvtxProcessorTest {
         when(record.getRecordNum()).thenReturn(UnsignedLong.valueOf(22));
 
         EvtxProcessor.processResult(processSession, componentLog, flowFile, exception, basename, chunkHeader, record);
-        verify(processSession).putAttribute(flowFile, CoreAttributes.FILENAME.key(), EvtxProcessor.getName(basename, chunkHeader.getChunkNumber(), record.getRecordNum()));
+        verify(processSession).putAttribute(flowFile, CoreAttributes.FILENAME.key(), EvtxProcessor.getName(basename, chunkHeader.getChunkNumber(), record.getRecordNum(), EvtxProcessor.XML_EXTENSION));
         verify(processSession).putAttribute(flowFile, CoreAttributes.MIME_TYPE.key(), MediaType.APPLICATION_XML_UTF_8.toString());
         verify(processSession).transfer(flowFile, EvtxProcessor.REL_FAILURE);
         verify(componentLog).error(eq(EvtxProcessor.UNABLE_TO_PROCESS_DUE_TO), any(Object[].class), eq(exception));
