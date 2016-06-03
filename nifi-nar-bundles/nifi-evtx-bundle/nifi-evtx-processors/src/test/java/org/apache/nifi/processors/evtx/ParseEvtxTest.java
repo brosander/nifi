@@ -32,21 +32,21 @@ import static org.mockito.Mockito.*;
  * Created by brosander on 6/2/16.
  */
 @RunWith(MockitoJUnitRunner.class)
-public class EvtxProcessorTest {
+public class ParseEvtxTest {
     @Mock
     FileHeaderFactory fileHeaderFactory;
 
     @Mock
-    EvtxProcessor.MalformedChunkHandler malformedChunkHandler;
+    ParseEvtx.MalformedChunkHandler malformedChunkHandler;
 
     @Mock
-    EvtxProcessor.RootNodeHandler rootNodeHandler;
+    ParseEvtx.RootNodeHandler rootNodeHandler;
 
     @Mock
-    EvtxProcessor.XMLStreamWriterFactory xmlStreamWriterFactory;
+    ParseEvtx.XMLStreamWriterFactory xmlStreamWriterFactory;
 
     @Mock
-    EvtxProcessor.ResultProcessor resultProcessor;
+    ParseEvtx.ResultProcessor resultProcessor;
 
     @Mock
     InputStream in;
@@ -60,11 +60,11 @@ public class EvtxProcessorTest {
     @Mock
     XMLStreamWriter xmlStreamWriter;
 
-    EvtxProcessor evtxProcessor;
+    ParseEvtx parseEvtx;
 
     @Before
     public void setup() throws XMLStreamException, IOException {
-        evtxProcessor = new EvtxProcessor(fileHeaderFactory, malformedChunkHandler, rootNodeHandler, xmlStreamWriterFactory, resultProcessor);
+        parseEvtx = new ParseEvtx(fileHeaderFactory, malformedChunkHandler, rootNodeHandler, xmlStreamWriterFactory, resultProcessor);
         when(xmlStreamWriterFactory.create(out)).thenReturn(xmlStreamWriter);
         when(fileHeaderFactory.create(in)).thenReturn(fileHeader);
     }
@@ -72,7 +72,7 @@ public class EvtxProcessorTest {
     @Test
     public void testCreateCloseWriter() throws XMLStreamException {
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        EvtxProcessor.close(EvtxProcessor.createWriter(outputStream));
+        ParseEvtx.close(ParseEvtx.createWriter(outputStream));
         String toString = Charsets.UTF_8.decode(ByteBuffer.wrap(outputStream.toByteArray())).toString();
         assertTrue(toString.endsWith("<Events></Events>"));
     }
@@ -80,19 +80,19 @@ public class EvtxProcessorTest {
     @Test
     public void testGetNameFile() {
         String basename = "basename";
-        assertEquals(basename + ".xml", EvtxProcessor.getName(basename, null, null, EvtxProcessor.XML_EXTENSION));
+        assertEquals(basename + ".xml", ParseEvtx.getName(basename, null, null, ParseEvtx.XML_EXTENSION));
     }
 
     @Test
     public void testGetNameFileChunk() {
         String basename = "basename";
-        assertEquals(basename + "-chunk1.xml", EvtxProcessor.getName(basename, 1, null, EvtxProcessor.XML_EXTENSION));
+        assertEquals(basename + "-chunk1.xml", ParseEvtx.getName(basename, 1, null, ParseEvtx.XML_EXTENSION));
     }
 
     @Test
     public void testGetNameFileChunkRecord() {
         String basename = "basename";
-        assertEquals(basename + "-chunk1-record2.xml", EvtxProcessor.getName(basename, 1, 2, EvtxProcessor.XML_EXTENSION));
+        assertEquals(basename + "-chunk1-record2.xml", ParseEvtx.getName(basename, 1, 2, ParseEvtx.XML_EXTENSION));
     }
 
     @Test
@@ -103,7 +103,7 @@ public class EvtxProcessorTest {
 
         when(flowFile.getAttribute(CoreAttributes.FILENAME.key())).thenReturn(basename + ".evtx");
 
-        assertEquals(basename, EvtxProcessor.getBasename(flowFile, componentLog));
+        assertEquals(basename, ParseEvtx.getBasename(flowFile, componentLog));
         verifyNoMoreInteractions(componentLog);
     }
 
@@ -115,7 +115,7 @@ public class EvtxProcessorTest {
 
         when(flowFile.getAttribute(CoreAttributes.FILENAME.key())).thenReturn(basename);
 
-        assertEquals(basename, EvtxProcessor.getBasename(flowFile, componentLog));
+        assertEquals(basename, ParseEvtx.getBasename(flowFile, componentLog));
         verify(componentLog).warn(anyString(), isA(Object[].class));
     }
 
@@ -131,10 +131,10 @@ public class EvtxProcessorTest {
 
         when(processSession.putAttribute(eq(flowFile), anyString(), anyString())).thenReturn(flowFile);
 
-        EvtxProcessor.processResult(processSession, componentLog, flowFile, exception, basename, chunkHeader, record);
-        verify(processSession).putAttribute(flowFile, CoreAttributes.FILENAME.key(), EvtxProcessor.getName(basename, chunkHeader, record, EvtxProcessor.XML_EXTENSION));
+        ParseEvtx.processResult(processSession, componentLog, flowFile, exception, basename, chunkHeader, record);
+        verify(processSession).putAttribute(flowFile, CoreAttributes.FILENAME.key(), ParseEvtx.getName(basename, chunkHeader, record, ParseEvtx.XML_EXTENSION));
         verify(processSession).putAttribute(flowFile, CoreAttributes.MIME_TYPE.key(), MediaType.APPLICATION_XML_UTF_8.toString());
-        verify(processSession).transfer(flowFile, EvtxProcessor.REL_SUCCESS);
+        verify(processSession).transfer(flowFile, ParseEvtx.REL_SUCCESS);
         verifyNoMoreInteractions(componentLog);
     }
 
@@ -152,21 +152,21 @@ public class EvtxProcessorTest {
         when(chunkHeader.getChunkNumber()).thenReturn(2);
         when(record.getRecordNum()).thenReturn(UnsignedLong.valueOf(22));
 
-        EvtxProcessor.processResult(processSession, componentLog, flowFile, exception, basename, chunkHeader, record);
-        verify(processSession).putAttribute(flowFile, CoreAttributes.FILENAME.key(), EvtxProcessor.getName(basename, chunkHeader.getChunkNumber(), record.getRecordNum(), EvtxProcessor.XML_EXTENSION));
+        ParseEvtx.processResult(processSession, componentLog, flowFile, exception, basename, chunkHeader, record);
+        verify(processSession).putAttribute(flowFile, CoreAttributes.FILENAME.key(), ParseEvtx.getName(basename, chunkHeader.getChunkNumber(), record.getRecordNum(), ParseEvtx.XML_EXTENSION));
         verify(processSession).putAttribute(flowFile, CoreAttributes.MIME_TYPE.key(), MediaType.APPLICATION_XML_UTF_8.toString());
-        verify(processSession).transfer(flowFile, EvtxProcessor.REL_FAILURE);
-        verify(componentLog).error(eq(EvtxProcessor.UNABLE_TO_PROCESS_DUE_TO), any(Object[].class), eq(exception));
+        verify(processSession).transfer(flowFile, ParseEvtx.REL_FAILURE);
+        verify(componentLog).error(eq(ParseEvtx.UNABLE_TO_PROCESS_DUE_TO), any(Object[].class), eq(exception));
     }
 
     @Test
     public void testGetRelationships() {
-        assertEquals(EvtxProcessor.RELATIONSHIPS, evtxProcessor.getRelationships());
+        assertEquals(ParseEvtx.RELATIONSHIPS, parseEvtx.getRelationships());
     }
 
     @Test
     public void testGetSupportedPropertyDescriptors() {
-        assertEquals(EvtxProcessor.PROPERTY_DESCRIPTORS, evtxProcessor.getSupportedPropertyDescriptors());
+        assertEquals(ParseEvtx.PROPERTY_DESCRIPTORS, parseEvtx.getSupportedPropertyDescriptors());
     }
 
     @Test
@@ -184,7 +184,7 @@ public class EvtxProcessorTest {
         ProcessSession session = mock(ProcessSession.class);
 
         when(session.create(original)).thenReturn(updated1);
-        when(session.putAttribute(updated1, CoreAttributes.FILENAME.key(), evtxProcessor.getName(basename, 5, null, EvtxProcessor.EVTX_EXTENSION))).thenReturn(updated2);
+        when(session.putAttribute(updated1, CoreAttributes.FILENAME.key(), parseEvtx.getName(basename, 5, null, ParseEvtx.EVTX_EXTENSION))).thenReturn(updated2);
         when(session.putAttribute(updated2, CoreAttributes.MIME_TYPE.key(), MediaType.APPLICATION_BINARY.toString())).thenReturn(updated3);
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         when(session.write(eq(updated3), any(OutputStreamCallback.class))).thenAnswer(invocation -> {
@@ -192,9 +192,9 @@ public class EvtxProcessorTest {
             return updated4;
         });
 
-        EvtxProcessor.handleMalformedChunkException(original, session, basename, malformedChunkException);
+        ParseEvtx.handleMalformedChunkException(original, session, basename, malformedChunkException);
 
-        verify(session).transfer(updated4, EvtxProcessor.REL_BAD_CHUNK);
+        verify(session).transfer(updated4, ParseEvtx.REL_BAD_CHUNK);
         assertArrayEquals(badChunk, out.toByteArray());
     }
 
@@ -231,7 +231,7 @@ public class EvtxProcessorTest {
         when(chunkHeader2.hasNext()).thenReturn(true).thenReturn(true).thenReturn(false);
         when(chunkHeader2.next()).thenReturn(record2).thenReturn(record3).thenReturn(null);
 
-        evtxProcessor.processFileGranularity(session, flowFile, basename, reference, in, out);
+        parseEvtx.processFileGranularity(session, flowFile, basename, reference, in, out);
 
         verify(malformedChunkHandler).handle(flowFile, session, basename, malformedChunkException);
         verify(rootNodeHandler).handle(xmlStreamWriter, rootNode1);
@@ -293,7 +293,7 @@ public class EvtxProcessorTest {
         when(chunkHeader2.hasNext()).thenReturn(true).thenReturn(true).thenReturn(false);
         when(chunkHeader2.next()).thenReturn(record2).thenReturn(record3).thenReturn(null);
 
-        evtxProcessor.processChunkGranularity(session, componentLog, flowFile, basename, in);
+        parseEvtx.processChunkGranularity(session, componentLog, flowFile, basename, in);
 
         verify(malformedChunkHandler).handle(flowFile, session, basename, malformedChunkException);
         verify(rootNodeHandler).handle(xmlStreamWriter, rootNode1);
@@ -365,7 +365,7 @@ public class EvtxProcessorTest {
         when(chunkHeader2.hasNext()).thenReturn(true).thenReturn(true).thenReturn(false);
         when(chunkHeader2.next()).thenReturn(record2).thenReturn(record3).thenReturn(null);
 
-        evtxProcessor.processRecordGranularity(session, componentLog, flowFile, basename, in);
+        parseEvtx.processRecordGranularity(session, componentLog, flowFile, basename, in);
 
         verify(malformedChunkHandler).handle(flowFile, session, basename, malformedChunkException);
         verify(rootNodeHandler).handle(xmlStreamWriter, rootNode1);

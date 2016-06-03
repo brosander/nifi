@@ -3,6 +3,13 @@ package org.apache.nifi.processors.evtx;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.net.MediaType;
 import com.google.common.primitives.UnsignedLong;
+import org.apache.nifi.annotation.behavior.EventDriven;
+import org.apache.nifi.annotation.behavior.InputRequirement;
+import org.apache.nifi.annotation.behavior.InputRequirement.Requirement;
+import org.apache.nifi.annotation.behavior.SideEffectFree;
+import org.apache.nifi.annotation.behavior.SupportsBatching;
+import org.apache.nifi.annotation.documentation.CapabilityDescription;
+import org.apache.nifi.annotation.documentation.Tags;
 import org.apache.nifi.components.PropertyDescriptor;
 import org.apache.nifi.flowfile.FlowFile;
 import org.apache.nifi.flowfile.attributes.CoreAttributes;
@@ -27,7 +34,13 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * Created by brosander on 5/24/16.
  */
-public class EvtxProcessor extends AbstractProcessor {
+@SideEffectFree
+@EventDriven
+@SupportsBatching
+@InputRequirement(Requirement.INPUT_REQUIRED)
+@Tags({"logs", "windows", "event", "evtx", "message", "file"})
+@CapabilityDescription("Parses the contents of a Windows Event Log file (evtx) and writes the resulting xml to the FlowFile")
+public class ParseEvtx extends AbstractProcessor {
     public static final String RECORD = "Record";
     public static final String CHUNK = "Chunk";
     public static final String FILE = "File";
@@ -48,7 +61,7 @@ public class EvtxProcessor extends AbstractProcessor {
     @VisibleForTesting
     static final Set<Relationship> RELATIONSHIPS = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(REL_SUCCESS, REL_FAILURE, REL_ORIGINAL, REL_BAD_CHUNK)));
     @VisibleForTesting
-    static final PropertyDescriptor GRANULARITY = new PropertyDescriptor.Builder().name("Granularity").description("Output flow file for each Record, Chunk, or File encountered in the event log").allowableValues(RECORD, CHUNK, FILE).build();
+    static final PropertyDescriptor GRANULARITY = new PropertyDescriptor.Builder().required(true).name("Granularity").description("Output flow file for each Record, Chunk, or File encountered in the event log").allowableValues(RECORD, CHUNK, FILE).build();
     @VisibleForTesting
     static final List<PropertyDescriptor> PROPERTY_DESCRIPTORS = Collections.unmodifiableList(Arrays.asList(GRANULARITY));
 
@@ -58,12 +71,12 @@ public class EvtxProcessor extends AbstractProcessor {
     private final XMLStreamWriterFactory xmlStreamWriterFactory;
     private final ResultProcessor resultProcessor;
 
-    public EvtxProcessor() {
-        this(FileHeader::new, EvtxProcessor::handleMalformedChunkException, XmlBxmlNodeVisitor::new, EvtxProcessor::createWriter, EvtxProcessor::processResult);
+    public ParseEvtx() {
+        this(FileHeader::new, ParseEvtx::handleMalformedChunkException, XmlBxmlNodeVisitor::new, ParseEvtx::createWriter, ParseEvtx::processResult);
     }
 
     @VisibleForTesting
-    EvtxProcessor(FileHeaderFactory fileHeaderFactory, MalformedChunkHandler malformedChunkHandler, RootNodeHandler rootNodeHandler, XMLStreamWriterFactory xmlStreamWriterFactory, ResultProcessor resultProcessor) {
+    ParseEvtx(FileHeaderFactory fileHeaderFactory, MalformedChunkHandler malformedChunkHandler, RootNodeHandler rootNodeHandler, XMLStreamWriterFactory xmlStreamWriterFactory, ResultProcessor resultProcessor) {
         this.fileHeaderFactory = fileHeaderFactory;
         this.malformedChunkHandler = malformedChunkHandler;
         this.rootNodeHandler = rootNodeHandler;
