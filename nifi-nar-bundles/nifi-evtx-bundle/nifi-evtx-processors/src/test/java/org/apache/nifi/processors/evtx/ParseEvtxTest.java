@@ -79,6 +79,9 @@ public class ParseEvtxTest {
     ParseEvtx.ResultProcessor resultProcessor;
 
     @Mock
+    ComponentLog componentLog;
+
+    @Mock
     InputStream in;
 
     @Mock
@@ -96,7 +99,7 @@ public class ParseEvtxTest {
     public void setup() throws XMLStreamException, IOException {
         parseEvtx = new ParseEvtx(fileHeaderFactory, malformedChunkHandler, rootNodeHandler, xmlStreamWriterFactory, resultProcessor);
         when(xmlStreamWriterFactory.create(out)).thenReturn(xmlStreamWriter);
-        when(fileHeaderFactory.create(in)).thenReturn(fileHeader);
+        when(fileHeaderFactory.create(in, componentLog)).thenReturn(fileHeader);
     }
 
     @Test
@@ -129,7 +132,6 @@ public class ParseEvtxTest {
     public void testGetBasenameEvtxExtension() {
         String basename = "basename";
         FlowFile flowFile = mock(FlowFile.class);
-        ComponentLog componentLog = mock(ComponentLog.class);
 
         when(flowFile.getAttribute(CoreAttributes.FILENAME.key())).thenReturn(basename + ".evtx");
 
@@ -261,7 +263,7 @@ public class ParseEvtxTest {
         when(chunkHeader2.hasNext()).thenReturn(true).thenReturn(true).thenReturn(false);
         when(chunkHeader2.next()).thenReturn(record2).thenReturn(record3).thenReturn(null);
 
-        parseEvtx.processFileGranularity(session, flowFile, basename, reference, in, out);
+        parseEvtx.processFileGranularity(session, componentLog, flowFile, basename, reference, in, out);
 
         verify(malformedChunkHandler).handle(flowFile, session, basename, malformedChunkException);
         verify(rootNodeHandler).handle(xmlStreamWriter, rootNode1);
@@ -277,7 +279,6 @@ public class ParseEvtxTest {
         int offset = 10001;
         byte[] badChunk = {8};
 
-        ComponentLog componentLog = mock(ComponentLog.class);
         ChunkHeader chunkHeader1 = mock(ChunkHeader.class);
         ChunkHeader chunkHeader2 = mock(ChunkHeader.class);
         Record record1 = mock(Record.class);
@@ -339,7 +340,6 @@ public class ParseEvtxTest {
         int offset = 10001;
         byte[] badChunk = {8};
 
-        ComponentLog componentLog = mock(ComponentLog.class);
         ChunkHeader chunkHeader1 = mock(ChunkHeader.class);
         ChunkHeader chunkHeader2 = mock(ChunkHeader.class);
         Record record1 = mock(Record.class);

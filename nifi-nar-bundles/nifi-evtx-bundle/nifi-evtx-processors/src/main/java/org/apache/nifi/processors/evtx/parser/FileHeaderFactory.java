@@ -17,6 +17,8 @@
 
 package org.apache.nifi.processors.evtx.parser;
 
+import org.apache.nifi.logging.ComponentLog;
+
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -24,5 +26,5 @@ import java.io.InputStream;
  * Created by brosander on 6/3/16.
  */
 public interface FileHeaderFactory {
-    FileHeader create(InputStream inputStream) throws IOException;
+    FileHeader create(InputStream inputStream, ComponentLog componentLog) throws IOException;
 }

@@ -18,6 +18,7 @@
 package org.apache.nifi.processors.evtx.parser;
 
 import com.google.common.primitives.UnsignedInteger;
+import org.apache.nifi.logging.ComponentLog;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -27,6 +28,7 @@ import java.util.Random;
 import java.util.zip.CRC32;
 
 import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.mock;
 
 /**
  * Created by brosander on 6/1/16.
@@ -67,7 +69,7 @@ public class FileHeaderTest {
         testBinaryReaderBuilder.putDWord(flags);
         testBinaryReaderBuilder.putDWord(UnsignedInteger.valueOf(crc32.getValue()));
 
-        fileHeader = new FileHeader(new ByteArrayInputStream(testBinaryReaderBuilder.toByteArray(4096)));
+        fileHeader = new FileHeader(new ByteArrayInputStream(testBinaryReaderBuilder.toByteArray(4096)), mock(ComponentLog.class));
     }
 
     @Test

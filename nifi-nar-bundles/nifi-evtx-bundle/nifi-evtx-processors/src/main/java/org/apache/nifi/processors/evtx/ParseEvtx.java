@@ -211,7 +211,7 @@ public class ParseEvtx extends AbstractProcessor {
             FlowFile original = session.clone(flowFile);
             AtomicReference<Exception> exceptionReference = new AtomicReference<>(null);
             FlowFile updated = session.write(flowFile, (in, out) -> {
-                processFileGranularity(session, original, basename, exceptionReference, in, out);
+                processFileGranularity(session, logger, original, basename, exceptionReference, in, out);
             });
             session.transfer(original, REL_ORIGINAL);
             resultProcessor.process(session, logger, updated, exceptionReference.get(), basename, null, null);
@@ -228,8 +228,9 @@ public class ParseEvtx extends AbstractProcessor {
     }
 
     @VisibleForTesting
-    void processFileGranularity(ProcessSession session, FlowFile original, String basename, AtomicReference<Exception> exceptionReference, InputStream in, OutputStream out) throws IOException {
-        FileHeader fileHeader = fileHeaderFactory.create(in);
+    void processFileGranularity(ProcessSession session, ComponentLog componentLog, FlowFile original, String basename,
+                                AtomicReference<Exception> exceptionReference, InputStream in, OutputStream out) throws IOException {
+        FileHeader fileHeader = fileHeaderFactory.create(in, componentLog);
         try {
             XMLStreamWriter writer = xmlStreamWriterFactory.create(out);
             try {
@@ -254,8 +255,8 @@ public class ParseEvtx extends AbstractProcessor {
     }
 
     @VisibleForTesting
-    void processChunkGranularity(ProcessSession session, ComponentLog logger, FlowFile flowFile, String basename, InputStream in) throws IOException {
-        FileHeader fileHeader = fileHeaderFactory.create(in);
+    void processChunkGranularity(ProcessSession session, ComponentLog componentLog, FlowFile flowFile, String basename, InputStream in) throws IOException {
+        FileHeader fileHeader = fileHeaderFactory.create(in, componentLog);
         while (fileHeader.hasNext()) {
             try {
                 ChunkHeader chunkHeader = fileHeader.next();
@@ -280,7 +281,7 @@ public class ParseEvtx extends AbstractProcessor {
                         exceptionReference.set(e);
                     }
                 });
-                resultProcessor.process(session, logger, updated, exceptionReference.get(), basename, chunkHeader, null);
+                resultProcessor.process(session, componentLog, updated, exceptionReference.get(), basename, chunkHeader, null);
             } catch (MalformedChunkException e) {
                 malformedChunkHandler.handle(flowFile, session, basename, e);
             }
@@ -288,8 +289,8 @@ public class ParseEvtx extends AbstractProcessor {
     }
 
     @VisibleForTesting
-    void processRecordGranularity(ProcessSession session, ComponentLog logger, FlowFile flowFile, String basename, InputStream in) throws IOException {
-        FileHeader fileHeader = fileHeaderFactory.create(in);
+    void processRecordGranularity(ProcessSession session, ComponentLog componentLog, FlowFile flowFile, String basename, InputStream in) throws IOException {
+        FileHeader fileHeader = fileHeaderFactory.create(in, componentLog);
         while (fileHeader.hasNext()) {
             try {
                 ChunkHeader chunkHeader = fileHeader.next();
@@ -311,7 +312,7 @@ public class ParseEvtx extends AbstractProcessor {
                             exceptionReference.set(e);
                         }
                     });
-                    resultProcessor.process(session, logger, updated, exceptionReference.get(), basename, chunkHeader, record);
+                    resultProcessor.process(session, componentLog, updated, exceptionReference.get(), basename, chunkHeader, record);
                 }
             } catch (MalformedChunkException e) {
                 malformedChunkHandler.handle(flowFile, session, basename, e);

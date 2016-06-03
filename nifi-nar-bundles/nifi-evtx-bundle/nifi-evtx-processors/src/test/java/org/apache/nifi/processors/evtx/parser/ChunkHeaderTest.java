@@ -18,6 +18,7 @@
 package org.apache.nifi.processors.evtx.parser;
 
 import com.google.common.primitives.UnsignedInteger;
+import org.apache.nifi.logging.ComponentLog;
 import org.apache.nifi.processors.evtx.parser.bxml.BxmlNode;
 import org.apache.nifi.processors.evtx.parser.bxml.EndOfStreamNode;
 import org.apache.nifi.processors.evtx.parser.bxml.NameStringNode;
@@ -41,6 +42,7 @@ import java.util.zip.CRC32;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
 
 /**
  * Created by brosander on 6/2/16.
@@ -116,7 +118,7 @@ public class ChunkHeaderTest {
         headerChecksum.update(array, 0, 120);
         headerChecksum.update(array, 128, 384);
         testBinaryReaderBuilder.putDWordAt(UnsignedInteger.valueOf(headerChecksum.getValue()).intValue(), 124);
-        chunkHeader = new ChunkHeader(testBinaryReaderBuilder.build(), headerOffset, chunkNumber);
+        chunkHeader = new ChunkHeader(testBinaryReaderBuilder.build(), mock(ComponentLog.class), headerOffset, chunkNumber);
     }
 
     @Test

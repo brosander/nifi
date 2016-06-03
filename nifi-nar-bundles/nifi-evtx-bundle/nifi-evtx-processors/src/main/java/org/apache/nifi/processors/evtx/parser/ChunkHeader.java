@@ -23,8 +23,6 @@ import com.google.common.primitives.UnsignedLong;
 import org.apache.nifi.logging.ComponentLog;
 import org.apache.nifi.processors.evtx.parser.bxml.NameStringNode;
 import org.apache.nifi.processors.evtx.parser.bxml.TemplateNode;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Collections;
