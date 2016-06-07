@@ -760,6 +760,16 @@ The following binary components are provided under the Apache Software License v
 
         Licensed under the Apache License, Version 2.0
 
+    (ASLv2) Java Native Access
+      The following NOTICE information applies:
+         Java Native Access
+         Copyright 2015 Java Native Access
+
+    (ASLv2) Guava
+        The following NOTICE information applies:
+          Guava
+          Copyright 2015 The Guava Authors
+
     (ASLv2) HTrace Core
       The following NOTICE information applies:
         In addition, this product includes software dependencies. See
