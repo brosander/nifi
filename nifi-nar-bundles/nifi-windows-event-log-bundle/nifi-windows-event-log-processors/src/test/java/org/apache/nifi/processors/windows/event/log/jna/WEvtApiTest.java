@@ -15,16 +15,19 @@
  * limitations under the License.
  */
 
-package org.apache.nifi.processors.windows.event.log;
+package org.apache.nifi.processors.windows.event.log.jna;
 
-import org.apache.nifi.processor.AbstractProcessor;
-import org.apache.nifi.processor.ProcessContext;
-import org.apache.nifi.processor.ProcessSession;
-import org.apache.nifi.processor.exception.ProcessException;
+import com.sun.jna.Pointer;
+import org.junit.Test;
 
-public class EvtSubscribe extends AbstractProcessor {
-    @Override
-    public void onTrigger(ProcessContext context, ProcessSession session) throws ProcessException {
-
+public class WEvtApiTest {
+    @Test
+    public void testWevtapi() {
+        WEvtApi.INSTANCE.EvtSubscribe(null, null, "system", null, null, null, new WEvtApi.EVT_SUBSCRIBE_CALLBACK() {
+            @Override
+            public Pointer onSubscribe(int evtSubscribeNotifyAction, Pointer userContext, Pointer eventHandle) {
+                return null;
+            }
+        }, WEvtApi.EvtSubscribeFlags.START_AT_OLDEST.getValue());
     }
 }
