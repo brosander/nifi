@@ -24,10 +24,12 @@ import org.junit.Test;
 
 import java.nio.ByteBuffer;
 
+import static org.junit.Assert.assertNotNull;
+
 public class WEvtApiTest {
     @Test
     public void testWevtapi() throws InterruptedException {
-        WEvtApi.INSTANCE.EvtSubscribe(null, null, "system", null, null, null, (evtSubscribeNotifyAction, userContext, eventHandle) -> {
+        Pointer subscriptionHandle = WEvtApi.INSTANCE.EvtSubscribe(null, null, "system", "*", null, null, (evtSubscribeNotifyAction, userContext, eventHandle) -> {
             int size = 1024 * 128;
             Memory buffer = new Memory(size);
             Memory used = new Memory(4);
@@ -37,6 +39,8 @@ public class WEvtApiTest {
             System.out.println(Charsets.UTF_16LE.decode(buffer.getByteBuffer(0, usedBytes)).toString());
             return 0;
         }, WEvtApi.EvtSubscribeFlags.START_AT_OLDEST.getValue());
+        assertNotNull(subscriptionHandle);
+        System.out.println(subscriptionHandle);
         while (true) {
             Thread.sleep(500);
         }
