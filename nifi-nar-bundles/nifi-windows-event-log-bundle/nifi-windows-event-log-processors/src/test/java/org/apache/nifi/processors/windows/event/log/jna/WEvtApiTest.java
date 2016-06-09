@@ -29,7 +29,7 @@ import static org.junit.Assert.assertNotNull;
 public class WEvtApiTest {
     @Test
     public void testWevtapi() throws InterruptedException {
-        Pointer subscriptionHandle = WEvtApi.INSTANCE.EvtSubscribe(null, null, "system", "*", null, null, (evtSubscribeNotifyAction, userContext, eventHandle) -> {
+        WEvtApi.EVT_SUBSCRIBE_CALLBACK evt_subscribe_callback = (evtSubscribeNotifyAction, userContext, eventHandle) -> {
             int size = 1024 * 128;
             Memory buffer = new Memory(size);
             Memory used = new Memory(4);
@@ -38,7 +38,8 @@ public class WEvtApiTest {
             int usedBytes = used.getInt(0);
             System.out.println(Charsets.UTF_16LE.decode(buffer.getByteBuffer(0, usedBytes)).toString());
             return 0;
-        }, WEvtApi.EvtSubscribeFlags.START_AT_OLDEST.getValue());
+        };
+        Pointer subscriptionHandle = WEvtApi.INSTANCE.EvtSubscribe(null, null, "system", "*", null, null, evt_subscribe_callback, WEvtApi.EvtSubscribeFlags.START_AT_OLDEST.getValue());
         assertNotNull(subscriptionHandle);
         System.out.println(subscriptionHandle);
         while (true) {
