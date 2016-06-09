@@ -41,6 +41,7 @@ public class WEvtApiTest {
         WinNT.HANDLE subscriptionHandle = WEvtApi.INSTANCE.EvtSubscribe(null, null, "System", "*", null, null, evt_subscribe_callback, WEvtApi.EvtSubscribeFlags.START_AT_OLDEST.getValue());
         assertNotNull(subscriptionHandle);
         System.out.println(subscriptionHandle);
+        System.out.println("Now we wait");
         while (true) {
             Thread.sleep(500);
         }
