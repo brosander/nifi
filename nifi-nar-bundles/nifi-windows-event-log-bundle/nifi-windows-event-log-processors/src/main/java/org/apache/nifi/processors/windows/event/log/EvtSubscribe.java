@@ -47,11 +47,16 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class EvtSubscribe extends AbstractSessionFactoryProcessor {
+    public static final String DEFAULT_CHANNEL = "System";
+    public static final String DEFAULT_XPATH = "*";
+    public static final int DEFAULT_MAX_BUFFER = 1024 * 1024;
+    public static final int DEFAULT_MAX_QUEUE_SIZE = 1024;
+
     public static final PropertyDescriptor CHANNEL = new PropertyDescriptor.Builder()
             .name("channel")
             .displayName("Channel")
             .required(true)
-            .defaultValue("System")
+            .defaultValue(DEFAULT_CHANNEL)
             .description("The Windows Event Log Channel to listen to")
             .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
             .build();
@@ -60,7 +65,7 @@ public class EvtSubscribe extends AbstractSessionFactoryProcessor {
             .name("query")
             .displayName("XPath Query")
             .required(true)
-            .defaultValue("*")
+            .defaultValue(DEFAULT_XPATH)
             .description("XPath Query to filter events (See https://msdn.microsoft.com/en-us/library/windows/desktop/dd996910(v=vs.85).aspx for examples)")
             .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
             .build();
@@ -69,15 +74,14 @@ public class EvtSubscribe extends AbstractSessionFactoryProcessor {
             .name("maxBuffer")
             .displayName("Maximum Buffer Size")
             .required(true)
-            .defaultValue(Integer.toString(1024 * 1024))
+            .defaultValue(Integer.toString(DEFAULT_MAX_BUFFER))
             .description("The individual Event Log XMLs are rendered to a buffer.  This specifies the maximum size in bytes that the buffer will be allowed to grow to.")
             .addValidator(StandardValidators.POSITIVE_INTEGER_VALIDATOR)
             .build();
-
     public static final PropertyDescriptor MAX_EVENT_QUEUE_SIZE = new PropertyDescriptor.Builder()
             .name("maxQueue")
             .displayName("Maximum queue size")
-            .defaultValue("1024")
+            .defaultValue(Integer.toString(DEFAULT_MAX_QUEUE_SIZE))
             .description("Maximum number of events to Queue for transformation into FlowFiles before the Processor starts running")
             .addValidator(StandardValidators.POSITIVE_INTEGER_VALIDATOR)
             .build();
@@ -92,7 +96,7 @@ public class EvtSubscribe extends AbstractSessionFactoryProcessor {
     public static final Set<Relationship> RELATIONSHIPS = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(REL_SUCCESS)));
 
     private final AtomicReference<ProcessSessionFactory> sessionFactoryReference;
-    private final Queue<String> renderedXmls;
+    private final Queue<String> renderedXMLs;
     private final WEvtApi wEvtApi;
     private final Kernel32 kernel32;
 
@@ -107,7 +111,7 @@ public class EvtSubscribe extends AbstractSessionFactoryProcessor {
         this.wEvtApi = wEvtApi;
         this.kernel32 = kernel32;
         this.sessionFactoryReference = new AtomicReference<>();
-        this.renderedXmls = new LinkedList<>();
+        this.renderedXMLs = new LinkedList<>();
     }
 
     @OnScheduled
@@ -134,12 +138,15 @@ public class EvtSubscribe extends AbstractSessionFactoryProcessor {
      * @param maxEventQueueSize
      */
     protected void addRenderedXml(String s, int maxEventQueueSize) {
-        renderedXmls.add(s);
-        while (renderedXmls.size() > maxEventQueueSize) {
-            renderedXmls.poll();
+        renderedXMLs.add(s);
+        while (renderedXMLs.size() > maxEventQueueSize) {
+            renderedXMLs.poll();
         }
     }
 
+    /**
+     * Cleanup native subscription
+     */
     @OnStopped
     public void closeSubscriptionHandle() {
         kernel32.CloseHandle(subscriptionHandle);
@@ -159,10 +166,11 @@ public class EvtSubscribe extends AbstractSessionFactoryProcessor {
         synchronized (evtSubscribeCallback) {
             sessionFactoryReference.compareAndSet(null, sessionFactory);
             String renderedXml;
-            while ((renderedXml = renderedXmls.poll()) != null) {
+            while ((renderedXml = renderedXMLs.poll()) != null) {
                 createAndTransferEventFlowFile(session, renderedXml);
             }
         }
+        context.yield();
     }
 
     @VisibleForTesting

@@ -62,17 +62,15 @@ public class EventSubscribeXmlRenderingCallback implements WEvtApi.EVT_SUBSCRIBE
         } else if (evtSubscribeNotifyAction == WEvtApi.EvtSubscribeNotifyAction.DELIVER.ordinal()) {
             wEvtApi.EvtRender(null, eventHandle, WEvtApi.EvtRenderFlags.EVENT_XML.ordinal(), size, buffer, used, propertyCount);
             if (kernel32.GetLastError() == W32Errors.ERROR_INSUFFICIENT_BUFFER) {
-                if (size < maxBufferSize) {
-                    int newMaxSize = used.getInt(0);
-                    // Check for overflow or too big
-                    if (newMaxSize < size || newMaxSize > maxBufferSize) {
-                        logger.error("Dropping event " + eventHandle + " because it couldn't be rendered within " + maxBufferSize + " bytes.");
-                        return 0;
-                    }
-                    size = newMaxSize;
-                    buffer = new Memory(size);
-                    wEvtApi.EvtRender(null, eventHandle, WEvtApi.EvtRenderFlags.EVENT_XML.ordinal(), size, buffer, used, propertyCount);
+                int newMaxSize = used.getInt(0);
+                // Check for overflow or too big
+                if (newMaxSize < size || newMaxSize > maxBufferSize) {
+                    logger.error("Dropping event " + eventHandle + " because it couldn't be rendered within " + maxBufferSize + " bytes.");
+                    return 0;
                 }
+                size = newMaxSize;
+                buffer = new Memory(size);
+                wEvtApi.EvtRender(null, eventHandle, WEvtApi.EvtRenderFlags.EVENT_XML.ordinal(), size, buffer, used, propertyCount);
             }
             int lastError = kernel32.GetLastError();
             if (lastError == W32Errors.ERROR_SUCCESS) {

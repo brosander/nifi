@@ -18,10 +18,13 @@
 package org.apache.nifi.processors.windows.event.log;
 
 import com.google.common.net.MediaType;
+import com.sun.jna.Pointer;
 import com.sun.jna.platform.win32.Kernel32;
+import com.sun.jna.platform.win32.W32Errors;
 import com.sun.jna.platform.win32.WinDef;
 import com.sun.jna.platform.win32.WinNT;
 import org.apache.commons.io.Charsets;
+import org.apache.nifi.annotation.lifecycle.OnScheduled;
 import org.apache.nifi.components.PropertyValue;
 import org.apache.nifi.flowfile.FlowFile;
 import org.apache.nifi.flowfile.attributes.CoreAttributes;
@@ -31,6 +34,11 @@ import org.apache.nifi.processor.ProcessSessionFactory;
 import org.apache.nifi.processor.io.OutputStreamCallback;
 import org.apache.nifi.processors.windows.event.log.jna.EventSubscribeXmlRenderingCallback;
 import org.apache.nifi.processors.windows.event.log.jna.WEvtApi;
+import org.apache.nifi.util.MockFlowFile;
+import org.apache.nifi.util.MockProcessContext;
+import org.apache.nifi.util.ReflectionUtils;
+import org.apache.nifi.util.TestRunner;
+import org.apache.nifi.util.TestRunners;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -38,17 +46,22 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 
 import java.io.ByteArrayOutputStream;
+import java.lang.reflect.InvocationTargetException;
 import java.nio.ByteBuffer;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Matchers.isA;
 import static org.mockito.Matchers.isNull;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -157,6 +170,7 @@ public class EvtSubscribeTest {
         evtSubscribe.onTrigger(processContext, processSessionFactory);
         verify(processSession).transfer(flowFile3, EvtSubscribe.REL_SUCCESS);
         verify(processSession, times(1)).transfer(any(FlowFile.class), eq(EvtSubscribe.REL_SUCCESS));
+        verify(processContext).yield();
 
         assertEquals(processSessionFactory, evtSubscribe.getProcessSessionFactory());
         assertEquals(MediaType.APPLICATION_XML_UTF_8.toString(), mimeType1.get());
@@ -170,6 +184,69 @@ public class EvtSubscribeTest {
         verify(processSession, times(2)).transfer(any(FlowFile.class), eq(EvtSubscribe.REL_SUCCESS));
 
         evtSubscribe.closeSubscriptionHandle();
+        verify(kernel32).CloseHandle(subscriptionHandle);
+    }
+
+    @Test
+    public void testLifecycle() throws InvocationTargetException, IllegalAccessException {
+        WinNT.HANDLE subscriptionHandle = mock(WinNT.HANDLE.class);
+        when(wEvtApi.EvtSubscribe(isNull(WinNT.HANDLE.class), isNull(WinNT.HANDLE.class), eq(EvtSubscribe.DEFAULT_CHANNEL), eq(EvtSubscribe.DEFAULT_XPATH),
+                isNull(WinNT.HANDLE.class), isNull(WinDef.PVOID.class), isA(EventSubscribeXmlRenderingCallback.class),
+                eq(WEvtApi.EvtSubscribeFlags.SUBSCRIBE_TO_FUTURE.getValue())))
+                .thenReturn(subscriptionHandle);
+
+        TestRunner testRunner = TestRunners.newTestRunner(evtSubscribe);
+
+        // Want to test things that can happen after schedule but before trigger
+        ProcessContext context = testRunner.getProcessContext();
+        ((MockProcessContext)context).assertValid();
+        ((MockProcessContext)context).enableExpressionValidation();
+        ReflectionUtils.invokeMethodsWithAnnotation(OnScheduled.class, evtSubscribe, context);
+
+        ArgumentCaptor<EventSubscribeXmlRenderingCallback> callbackArgumentCaptor = ArgumentCaptor.forClass(EventSubscribeXmlRenderingCallback.class);
+        verify(wEvtApi).EvtSubscribe(isNull(WinNT.HANDLE.class), isNull(WinNT.HANDLE.class), eq(EvtSubscribe.DEFAULT_CHANNEL), eq(EvtSubscribe.DEFAULT_XPATH),
+                isNull(WinNT.HANDLE.class), isNull(WinDef.PVOID.class), callbackArgumentCaptor.capture(),
+                eq(WEvtApi.EvtSubscribeFlags.SUBSCRIBE_TO_FUTURE.getValue()));
+
+        EventSubscribeXmlRenderingCallback renderingCallback = callbackArgumentCaptor.getValue();
+        AtomicInteger bufferSize = new AtomicInteger(EventSubscribeXmlRenderingCallback.INITIAL_BUFFER_SIZE - 512);
+        for (int i = 0; i < 1025; i++) {
+            int expectedRenderCalls = 0;
+            WinNT.HANDLE eventHandle = mock(WinNT.HANDLE.class);
+            int finalI = i;
+            when(wEvtApi.EvtRender(isNull(WinNT.HANDLE.class), eq(eventHandle), eq(WEvtApi.EvtRenderFlags.EVENT_XML.ordinal()), anyInt(), any(Pointer.class), any(Pointer.class), any(Pointer.class))).thenAnswer(invocation -> {
+                Object[] arguments = invocation.getArguments();
+                Pointer bufferUsed = (Pointer) arguments[5];
+                if (bufferSize.get() > (int) arguments[3]) {
+                    when(kernel32.GetLastError()).thenReturn(W32Errors.ERROR_INSUFFICIENT_BUFFER).thenReturn(W32Errors.ERROR_SUCCESS);
+                    bufferUsed.setInt(0, bufferSize.get());
+                } else {
+                    byte[] array = Charsets.UTF_16LE.encode(Integer.toString(finalI)).array();
+                    ((Pointer)arguments[4]).write(0, array, 0, array.length);
+                    bufferUsed.setInt(0, array.length);
+                }
+                return false;
+            });
+            renderingCallback.onEvent(WEvtApi.EvtSubscribeNotifyAction.DELIVER.ordinal(), null, eventHandle);
+            expectedRenderCalls++;
+            if (bufferSize.get() > EventSubscribeXmlRenderingCallback.INITIAL_BUFFER_SIZE) {
+                expectedRenderCalls++;
+            }
+            verify(wEvtApi, times(expectedRenderCalls)).EvtRender(isNull(WinNT.HANDLE.class), eq(eventHandle), eq(WEvtApi.EvtRenderFlags.EVENT_XML.ordinal()), anyInt(), any(Pointer.class), any(Pointer.class), any(Pointer.class));
+            bufferSize.incrementAndGet();
+        }
+
+        testRunner.run(1, false, false);
+
+        List<MockFlowFile> successFlowFiles = testRunner.getFlowFilesForRelationship(EvtSubscribe.REL_SUCCESS);
+        assertEquals(1024, successFlowFiles.size());
+        for (int i = 0; i < 1024; i++) {
+            successFlowFiles.get(i).assertContentEquals(Integer.toString(i+1));
+        }
+
+        verify(kernel32, never()).CloseHandle(subscriptionHandle);
+
+        testRunner.run(1, true, false);
         verify(kernel32).CloseHandle(subscriptionHandle);
     }
 
