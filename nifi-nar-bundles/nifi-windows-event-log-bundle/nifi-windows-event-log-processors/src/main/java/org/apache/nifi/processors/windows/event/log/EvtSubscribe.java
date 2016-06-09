@@ -17,6 +17,7 @@
 
 package org.apache.nifi.processors.windows.event.log;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.net.MediaType;
 import com.sun.jna.platform.win32.Kernel32;
 import com.sun.jna.platform.win32.WinNT;
@@ -24,7 +25,6 @@ import org.apache.commons.io.Charsets;
 import org.apache.nifi.annotation.lifecycle.OnScheduled;
 import org.apache.nifi.annotation.lifecycle.OnStopped;
 import org.apache.nifi.components.PropertyDescriptor;
-import org.apache.nifi.components.PropertyValue;
 import org.apache.nifi.flowfile.FlowFile;
 import org.apache.nifi.flowfile.attributes.CoreAttributes;
 import org.apache.nifi.processor.AbstractSessionFactoryProcessor;
@@ -37,8 +37,13 @@ import org.apache.nifi.processor.util.StandardValidators;
 import org.apache.nifi.processors.windows.event.log.jna.EventSubscribeXmlRenderingCallback;
 import org.apache.nifi.processors.windows.event.log.jna.WEvtApi;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Queue;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class EvtSubscribe extends AbstractSessionFactoryProcessor {
@@ -77,7 +82,14 @@ public class EvtSubscribe extends AbstractSessionFactoryProcessor {
             .addValidator(StandardValidators.POSITIVE_INTEGER_VALIDATOR)
             .build();
 
-    public static final Relationship REL_SUCCESS = new Relationship.Builder().build();
+    public static final List<PropertyDescriptor> PROPERTY_DESCRIPTORS = Collections.unmodifiableList(Arrays.asList(CHANNEL, QUERY, MAX_BUFFER_SIZE, MAX_EVENT_QUEUE_SIZE));
+
+    public static final Relationship REL_SUCCESS = new Relationship.Builder()
+            .name("success")
+            .description("Relationship for successfully formatted events")
+            .build();
+
+    public static final Set<Relationship> RELATIONSHIPS = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(REL_SUCCESS)));
 
     private final AtomicReference<ProcessSessionFactory> sessionFactoryReference;
     private final Queue<String> renderedXmls;
@@ -100,14 +112,11 @@ public class EvtSubscribe extends AbstractSessionFactoryProcessor {
 
     @OnScheduled
     public void subscribeToEvents(ProcessContext context) throws Exception {
-        PropertyValue maxEventQueueSize = context.getProperty(MAX_EVENT_QUEUE_SIZE);
+        int maxEventQueueSize = context.getProperty(MAX_EVENT_QUEUE_SIZE).asInteger();
         evtSubscribeCallback = new EventSubscribeXmlRenderingCallback(getLogger(), s -> {
             ProcessSessionFactory processSessionFactory = sessionFactoryReference.get();
             if (processSessionFactory == null) {
-                renderedXmls.add(s);
-                while (renderedXmls.size() > maxEventQueueSize.asInteger()) {
-                    renderedXmls.poll();
-                }
+                addRenderedXml(s, maxEventQueueSize);
             } else {
                 createAndTransferEventFlowFile(processSessionFactory.createSession(), s);
             }
@@ -115,6 +124,20 @@ public class EvtSubscribe extends AbstractSessionFactoryProcessor {
         subscriptionHandle = wEvtApi.EvtSubscribe(null, null,
                 context.getProperty(CHANNEL).getValue(), context.getProperty(QUERY).getValue(), null, null,
                 evtSubscribeCallback, WEvtApi.EvtSubscribeFlags.SUBSCRIBE_TO_FUTURE.getValue());
+    }
+
+    /**
+     * Adds a rendered xml to the queue to be processed.
+     * Should only be called within block synchronized on evtSubscribeCallback before the sessionFactoryReference is set
+     *
+     * @param s
+     * @param maxEventQueueSize
+     */
+    protected void addRenderedXml(String s, int maxEventQueueSize) {
+        renderedXmls.add(s);
+        while (renderedXmls.size() > maxEventQueueSize) {
+            renderedXmls.poll();
+        }
     }
 
     @OnStopped
@@ -140,5 +163,20 @@ public class EvtSubscribe extends AbstractSessionFactoryProcessor {
                 createAndTransferEventFlowFile(session, renderedXml);
             }
         }
+    }
+
+    @VisibleForTesting
+    protected ProcessSessionFactory getProcessSessionFactory() {
+        return sessionFactoryReference.get();
+    }
+
+    @Override
+    protected List<PropertyDescriptor> getSupportedPropertyDescriptors() {
+        return PROPERTY_DESCRIPTORS;
+    }
+
+    @Override
+    public Set<Relationship> getRelationships() {
+        return RELATIONSHIPS;
     }
 }

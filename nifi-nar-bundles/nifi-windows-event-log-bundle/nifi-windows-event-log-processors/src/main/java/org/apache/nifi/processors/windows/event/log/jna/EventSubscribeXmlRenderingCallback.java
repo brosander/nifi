@@ -17,6 +17,7 @@
 
 package org.apache.nifi.processors.windows.event.log.jna;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.sun.jna.Memory;
 import com.sun.jna.platform.win32.Kernel32;
 import com.sun.jna.platform.win32.W32Errors;
@@ -82,5 +83,10 @@ public class EventSubscribeXmlRenderingCallback implements WEvtApi.EVT_SUBSCRIBE
             }
         }
         return 0;
+    }
+
+    @VisibleForTesting
+    public Consumer<String> getConsumer() {
+        return consumer;
     }
 }
