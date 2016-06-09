@@ -24,8 +24,6 @@ import com.sun.jna.platform.win32.WinNT;
 import com.sun.jna.win32.StdCallLibrary;
 import com.sun.jna.win32.W32APIOptions;
 
-import java.nio.ByteBuffer;
-
 public interface WEvtApi extends StdCallLibrary {
     WEvtApi INSTANCE = (WEvtApi) Native.loadLibrary("wevtapi", WEvtApi.class, W32APIOptions.DEFAULT_OPTIONS);
 
@@ -56,6 +54,6 @@ public interface WEvtApi extends StdCallLibrary {
     }
 
     interface EVT_SUBSCRIBE_CALLBACK extends StdCallCallback {
-        int onSubscribe(int evtSubscribeNotifyAction, WinDef.PVOID userContext, WinNT.HANDLE eventHandle);
+        int onEvent(int evtSubscribeNotifyAction, WinDef.PVOID userContext, WinNT.HANDLE eventHandle);
     }
 }

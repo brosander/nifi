@@ -173,7 +173,7 @@ import static org.apache.nifi.attribute.expression.language.antlr.AttributeExpre
 import static org.apache.nifi.attribute.expression.language.antlr.AttributeExpressionParser.RANDOM;
 import static org.apache.nifi.attribute.expression.language.antlr.AttributeExpressionParser.REPLACE_ALL;
 import static org.apache.nifi.attribute.expression.language.antlr.AttributeExpressionParser.REPLACE_EMPTY;
-import static org.apache.nifi.attribute.expression.language.antlr.AttributeExpressionParser.REPLACE_FIRST;
+//import static org.apache.nifi.attribute.expression.language.antlr.AttributeExpressionParser.REPLACE_FIRST;
 import static org.apache.nifi.attribute.expression.language.antlr.AttributeExpressionParser.REPLACE_NULL;
 import static org.apache.nifi.attribute.expression.language.antlr.AttributeExpressionParser.STARTS_WITH;
 import static org.apache.nifi.attribute.expression.language.antlr.AttributeExpressionParser.STRING_LITERAL;
@@ -1128,12 +1128,12 @@ public class Query {
                     toStringEvaluator(argEvaluators.get(0), "first argument to replace"),
                     toStringEvaluator(argEvaluators.get(1), "second argument to replace")), "replace");
             }
-            case REPLACE_FIRST: {
+            /*case REPLACE_FIRST: {
                 verifyArgCount(argEvaluators, 2, "replaceFirst");
                 return addToken(new ReplaceFirstEvaluator(toStringEvaluator(subjectEvaluator),
                         toStringEvaluator(argEvaluators.get(0), "first argument to replaceFirst"),
                         toStringEvaluator(argEvaluators.get(1), "second argument to replaceFirst")), "replaceFirst");
-            }
+            }*/
             case REPLACE_ALL: {
                 verifyArgCount(argEvaluators, 2, "replaceAll");
                 return addToken(new ReplaceAllEvaluator(toStringEvaluator(subjectEvaluator),
