@@ -19,6 +19,8 @@ package org.apache.nifi.processors.windows.event.log.jna;
 
 import com.sun.jna.Native;
 import com.sun.jna.Pointer;
+import com.sun.jna.platform.win32.WinDef;
+import com.sun.jna.platform.win32.WinNT;
 import com.sun.jna.win32.StdCallLibrary;
 import com.sun.jna.win32.W32APIOptions;
 
@@ -27,9 +29,9 @@ import java.nio.ByteBuffer;
 public interface WEvtApi extends StdCallLibrary {
     WEvtApi INSTANCE = (WEvtApi) Native.loadLibrary("wevtapi", WEvtApi.class, W32APIOptions.DEFAULT_OPTIONS);
 
-    Pointer EvtSubscribe(Pointer session, Pointer signalEvent, String channelName, String xpathQuery, Pointer bookmark, Pointer context, EVT_SUBSCRIBE_CALLBACK evtSubscribeCallback, int flags);
+    WinNT.HANDLE EvtSubscribe(WinNT.HANDLE session, WinNT.HANDLE signalEvent, String channelName, String xpathQuery, WinNT.HANDLE bookmark, WinDef.PVOID context, EVT_SUBSCRIBE_CALLBACK evtSubscribeCallback, int flags);
 
-    boolean EvtRender(Pointer context, Pointer fragment, int flags, int bufferSize, Pointer buffer, Pointer bufferUsed, Pointer propertyCount);
+    boolean EvtRender(WinNT.HANDLE context, WinNT.HANDLE fragment, int flags, int bufferSize, Pointer buffer, Pointer bufferUsed, Pointer propertyCount);
 
     enum EvtSubscribeNotifyAction {
         ERROR, DELIVER;
@@ -54,6 +56,6 @@ public interface WEvtApi extends StdCallLibrary {
     }
 
     interface EVT_SUBSCRIBE_CALLBACK extends StdCallCallback {
-        int onSubscribe(int evtSubscribeNotifyAction, Pointer userContext, Pointer eventHandle);
+        int onSubscribe(int evtSubscribeNotifyAction, WinDef.PVOID userContext, WinNT.HANDLE eventHandle);
     }
 }

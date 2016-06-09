@@ -18,11 +18,9 @@
 package org.apache.nifi.processors.windows.event.log.jna;
 
 import com.sun.jna.Memory;
-import com.sun.jna.Pointer;
+import com.sun.jna.platform.win32.WinNT;
 import org.apache.commons.io.Charsets;
 import org.junit.Test;
-
-import java.nio.ByteBuffer;
 
 import static org.junit.Assert.assertNotNull;
 
@@ -30,6 +28,7 @@ public class WEvtApiTest {
     @Test
     public void testWevtapi() throws InterruptedException {
         WEvtApi.EVT_SUBSCRIBE_CALLBACK evt_subscribe_callback = (evtSubscribeNotifyAction, userContext, eventHandle) -> {
+            System.out.println("She called");
             int size = 1024 * 128;
             Memory buffer = new Memory(size);
             Memory used = new Memory(4);
@@ -39,7 +38,7 @@ public class WEvtApiTest {
             System.out.println(Charsets.UTF_16LE.decode(buffer.getByteBuffer(0, usedBytes)).toString());
             return 0;
         };
-        Pointer subscriptionHandle = WEvtApi.INSTANCE.EvtSubscribe(null, null, "System", "*", null, null, evt_subscribe_callback, WEvtApi.EvtSubscribeFlags.START_AT_OLDEST.getValue());
+        WinNT.HANDLE subscriptionHandle = WEvtApi.INSTANCE.EvtSubscribe(null, null, "System", "*", null, null, evt_subscribe_callback, WEvtApi.EvtSubscribeFlags.START_AT_OLDEST.getValue());
         assertNotNull(subscriptionHandle);
         System.out.println(subscriptionHandle);
         while (true) {
