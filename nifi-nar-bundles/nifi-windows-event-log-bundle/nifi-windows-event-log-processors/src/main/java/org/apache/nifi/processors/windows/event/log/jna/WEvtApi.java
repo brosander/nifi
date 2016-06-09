@@ -22,6 +22,8 @@ import com.sun.jna.Pointer;
 import com.sun.jna.win32.StdCallLibrary;
 import com.sun.jna.win32.W32APIOptions;
 
+import java.nio.ByteBuffer;
+
 public interface WEvtApi extends StdCallLibrary {
     WEvtApi INSTANCE = (WEvtApi) Native.loadLibrary("wevtapi", WEvtApi.class, W32APIOptions.DEFAULT_OPTIONS);
 
@@ -47,7 +49,11 @@ public interface WEvtApi extends StdCallLibrary {
         }
     }
 
+    enum EvtRenderFlags {
+        EVENT_VALUES, EVENT_XML, EVENT_BOOKMARK;
+    }
+
     interface EVT_SUBSCRIBE_CALLBACK extends StdCallCallback {
-        Pointer onSubscribe(int evtSubscribeNotifyAction, Pointer userContext, Pointer eventHandle);
+        int onSubscribe(int evtSubscribeNotifyAction, Pointer userContext, Pointer eventHandle);
     }
 }

@@ -17,17 +17,28 @@
 
 package org.apache.nifi.processors.windows.event.log.jna;
 
+import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
+import org.apache.commons.io.Charsets;
 import org.junit.Test;
+
+import java.nio.ByteBuffer;
 
 public class WEvtApiTest {
     @Test
-    public void testWevtapi() {
-        WEvtApi.INSTANCE.EvtSubscribe(null, null, "system", null, null, null, new WEvtApi.EVT_SUBSCRIBE_CALLBACK() {
-            @Override
-            public Pointer onSubscribe(int evtSubscribeNotifyAction, Pointer userContext, Pointer eventHandle) {
-                return null;
-            }
+    public void testWevtapi() throws InterruptedException {
+        WEvtApi.INSTANCE.EvtSubscribe(null, null, "system", null, null, null, (evtSubscribeNotifyAction, userContext, eventHandle) -> {
+            int size = 1024 * 128;
+            Memory buffer = new Memory(size);
+            Memory used = new Memory(4);
+            Memory propertyCount = new Memory(4);
+            WEvtApi.INSTANCE.EvtRender(null, eventHandle, WEvtApi.EvtRenderFlags.EVENT_XML.ordinal(), size, buffer, used, propertyCount);
+            int usedBytes = used.getInt(0);
+            System.out.println(Charsets.UTF_16LE.decode(buffer.getByteBuffer(0, usedBytes)).toString());
+            return 0;
         }, WEvtApi.EvtSubscribeFlags.START_AT_OLDEST.getValue());
+        while (true) {
+            Thread.sleep(500);
+        }
     }
 }
