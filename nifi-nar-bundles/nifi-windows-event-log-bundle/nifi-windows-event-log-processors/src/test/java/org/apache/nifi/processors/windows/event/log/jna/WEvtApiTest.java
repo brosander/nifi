@@ -39,7 +39,7 @@ public class WEvtApiTest {
             System.out.println(Charsets.UTF_16LE.decode(buffer.getByteBuffer(0, usedBytes)).toString());
             return 0;
         };
-        Pointer subscriptionHandle = WEvtApi.INSTANCE.EvtSubscribe(null, null, "system", "*", null, null, evt_subscribe_callback, WEvtApi.EvtSubscribeFlags.START_AT_OLDEST.getValue());
+        Pointer subscriptionHandle = WEvtApi.INSTANCE.EvtSubscribe(null, null, "System", "*", null, null, evt_subscribe_callback, WEvtApi.EvtSubscribeFlags.START_AT_OLDEST.getValue());
         assertNotNull(subscriptionHandle);
         System.out.println(subscriptionHandle);
         while (true) {
