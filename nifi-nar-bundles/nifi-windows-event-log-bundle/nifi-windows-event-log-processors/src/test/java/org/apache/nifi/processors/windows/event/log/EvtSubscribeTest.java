@@ -236,6 +236,27 @@ public class EvtSubscribeTest {
             bufferSize.incrementAndGet();
         }
 
+        // Test event that requires more than max buffer size, shouldn't make it into flow files
+        WinNT.HANDLE eventHandle = mock(WinNT.HANDLE.class);
+        when(wEvtApi.EvtRender(isNull(WinNT.HANDLE.class), eq(eventHandle), eq(WEvtApi.EvtRenderFlags.EVENT_XML.ordinal()), anyInt(), any(Pointer.class), any(Pointer.class), any(Pointer.class))).thenAnswer(invocation -> {
+            Object[] arguments = invocation.getArguments();
+            when(kernel32.GetLastError()).thenReturn(W32Errors.ERROR_INSUFFICIENT_BUFFER);
+            Pointer bufferUsed = (Pointer) arguments[5];
+            bufferUsed.setInt(0, context.getProperty(EvtSubscribe.MAX_BUFFER_SIZE).asInteger() + 1);
+            return false;
+        });
+        renderingCallback.onEvent(WEvtApi.EvtSubscribeNotifyAction.DELIVER.ordinal(), null, eventHandle);
+        verify(wEvtApi, times(1)).EvtRender(isNull(WinNT.HANDLE.class), eq(eventHandle), eq(WEvtApi.EvtRenderFlags.EVENT_XML.ordinal()), anyInt(), any(Pointer.class), any(Pointer.class), any(Pointer.class));
+
+        // Test error handling, this shouldn't make it into the flow files
+        eventHandle = mock(WinNT.HANDLE.class);
+        when(wEvtApi.EvtRender(isNull(WinNT.HANDLE.class), eq(eventHandle), eq(WEvtApi.EvtRenderFlags.EVENT_XML.ordinal()), anyInt(), any(Pointer.class), any(Pointer.class), any(Pointer.class))).thenAnswer(invocation -> {
+            when(kernel32.GetLastError()).thenReturn(W32Errors.ERROR_ACCESS_DENIED);
+            return false;
+        });
+        renderingCallback.onEvent(WEvtApi.EvtSubscribeNotifyAction.DELIVER.ordinal(), null, eventHandle);
+        verify(wEvtApi, times(1)).EvtRender(isNull(WinNT.HANDLE.class), eq(eventHandle), eq(WEvtApi.EvtRenderFlags.EVENT_XML.ordinal()), anyInt(), any(Pointer.class), any(Pointer.class), any(Pointer.class));
+
         testRunner.run(1, false, false);
 
         List<MockFlowFile> successFlowFiles = testRunner.getFlowFilesForRelationship(EvtSubscribe.REL_SUCCESS);
