@@ -94,6 +94,7 @@ public class EvtSubscribe extends AbstractSessionFactoryProcessor {
             .description("The individual Event Log XMLs are rendered to a buffer.  This specifies the maximum size in bytes that the buffer will be allowed to grow to.")
             .addValidator(StandardValidators.POSITIVE_INTEGER_VALIDATOR)
             .build();
+    
     public static final PropertyDescriptor MAX_EVENT_QUEUE_SIZE = new PropertyDescriptor.Builder()
             .name("maxQueue")
             .displayName("Maximum queue size")
