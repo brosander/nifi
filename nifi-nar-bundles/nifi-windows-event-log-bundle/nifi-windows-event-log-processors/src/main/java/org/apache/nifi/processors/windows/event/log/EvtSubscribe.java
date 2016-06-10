@@ -152,7 +152,7 @@ public class EvtSubscribe extends AbstractSessionFactoryProcessor {
         }, context.getProperty(MAX_BUFFER_SIZE).asInteger(), wEvtApi, kernel32);
         subscriptionHandle = wEvtApi.EvtSubscribe(null, null,
                 context.getProperty(CHANNEL).getValue(), context.getProperty(QUERY).getValue(), null, null,
-                evtSubscribeCallback, WEvtApi.EvtSubscribeFlags.SUBSCRIBE_TO_FUTURE.getValue());
+                evtSubscribeCallback, WEvtApi.EvtSubscribeFlags.SUBSCRIBE_TO_FUTURE);
     }
 
     /**

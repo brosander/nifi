@@ -147,7 +147,7 @@ public class EvtSubscribeTest {
         WinNT.HANDLE subscriptionHandle = mock(WinNT.HANDLE.class);
         when(wEvtApi.EvtSubscribe(isNull(WinNT.HANDLE.class), isNull(WinNT.HANDLE.class), eq(testChannel), eq(testQuery),
                 isNull(WinNT.HANDLE.class), isNull(WinDef.PVOID.class), isA(EventSubscribeXmlRenderingCallback.class),
-                eq(WEvtApi.EvtSubscribeFlags.SUBSCRIBE_TO_FUTURE.getValue())))
+                eq(WEvtApi.EvtSubscribeFlags.SUBSCRIBE_TO_FUTURE)))
                 .thenReturn(subscriptionHandle);
 
         when(processContext.getProperty(EvtSubscribe.MAX_EVENT_QUEUE_SIZE)).thenReturn(maxEventSize);
@@ -159,7 +159,7 @@ public class EvtSubscribeTest {
         ArgumentCaptor<EventSubscribeXmlRenderingCallback> callbackArgumentCaptor = ArgumentCaptor.forClass(EventSubscribeXmlRenderingCallback.class);
         verify(wEvtApi).EvtSubscribe(isNull(WinNT.HANDLE.class), isNull(WinNT.HANDLE.class), eq(testChannel), eq(testQuery),
                 isNull(WinNT.HANDLE.class), isNull(WinDef.PVOID.class), callbackArgumentCaptor.capture(),
-                eq(WEvtApi.EvtSubscribeFlags.SUBSCRIBE_TO_FUTURE.getValue()));
+                eq(WEvtApi.EvtSubscribeFlags.SUBSCRIBE_TO_FUTURE));
 
         EventSubscribeXmlRenderingCallback callback = callbackArgumentCaptor.getValue();
         Consumer<String> consumer = callback.getConsumer();
@@ -192,21 +192,21 @@ public class EvtSubscribeTest {
         WinNT.HANDLE subscriptionHandle = mock(WinNT.HANDLE.class);
         when(wEvtApi.EvtSubscribe(isNull(WinNT.HANDLE.class), isNull(WinNT.HANDLE.class), eq(EvtSubscribe.DEFAULT_CHANNEL), eq(EvtSubscribe.DEFAULT_XPATH),
                 isNull(WinNT.HANDLE.class), isNull(WinDef.PVOID.class), isA(EventSubscribeXmlRenderingCallback.class),
-                eq(WEvtApi.EvtSubscribeFlags.SUBSCRIBE_TO_FUTURE.getValue())))
+                eq(WEvtApi.EvtSubscribeFlags.SUBSCRIBE_TO_FUTURE)))
                 .thenReturn(subscriptionHandle);
 
         TestRunner testRunner = TestRunners.newTestRunner(evtSubscribe);
 
         // Want to test things that can happen after schedule but before trigger
         ProcessContext context = testRunner.getProcessContext();
-        ((MockProcessContext)context).assertValid();
-        ((MockProcessContext)context).enableExpressionValidation();
+        ((MockProcessContext) context).assertValid();
+        ((MockProcessContext) context).enableExpressionValidation();
         ReflectionUtils.invokeMethodsWithAnnotation(OnScheduled.class, evtSubscribe, context);
 
         ArgumentCaptor<EventSubscribeXmlRenderingCallback> callbackArgumentCaptor = ArgumentCaptor.forClass(EventSubscribeXmlRenderingCallback.class);
         verify(wEvtApi).EvtSubscribe(isNull(WinNT.HANDLE.class), isNull(WinNT.HANDLE.class), eq(EvtSubscribe.DEFAULT_CHANNEL), eq(EvtSubscribe.DEFAULT_XPATH),
                 isNull(WinNT.HANDLE.class), isNull(WinDef.PVOID.class), callbackArgumentCaptor.capture(),
-                eq(WEvtApi.EvtSubscribeFlags.SUBSCRIBE_TO_FUTURE.getValue()));
+                eq(WEvtApi.EvtSubscribeFlags.SUBSCRIBE_TO_FUTURE));
 
         EventSubscribeXmlRenderingCallback renderingCallback = callbackArgumentCaptor.getValue();
         AtomicInteger bufferSize = new AtomicInteger(EventSubscribeXmlRenderingCallback.INITIAL_BUFFER_SIZE - 512);
@@ -214,7 +214,7 @@ public class EvtSubscribeTest {
             int expectedRenderCalls = 0;
             WinNT.HANDLE eventHandle = mock(WinNT.HANDLE.class);
             int finalI = i;
-            when(wEvtApi.EvtRender(isNull(WinNT.HANDLE.class), eq(eventHandle), eq(WEvtApi.EvtRenderFlags.EVENT_XML.ordinal()),
+            when(wEvtApi.EvtRender(isNull(WinNT.HANDLE.class), eq(eventHandle), eq(WEvtApi.EvtRenderFlags.EVENT_XML),
                     anyInt(), any(Pointer.class), any(Pointer.class), any(Pointer.class))).thenAnswer(invocation -> {
                 Object[] arguments = invocation.getArguments();
                 Pointer bufferUsed = (Pointer) arguments[5];
@@ -223,24 +223,24 @@ public class EvtSubscribeTest {
                     bufferUsed.setInt(0, bufferSize.get());
                 } else {
                     byte[] array = Charsets.UTF_16LE.encode(Integer.toString(finalI)).array();
-                    ((Pointer)arguments[4]).write(0, array, 0, array.length);
+                    ((Pointer) arguments[4]).write(0, array, 0, array.length);
                     bufferUsed.setInt(0, array.length);
                 }
                 return false;
             });
-            renderingCallback.onEvent(WEvtApi.EvtSubscribeNotifyAction.DELIVER.ordinal(), null, eventHandle);
+            renderingCallback.onEvent(WEvtApi.EvtSubscribeNotifyAction.DELIVER, null, eventHandle);
             expectedRenderCalls++;
             if (bufferSize.get() > EventSubscribeXmlRenderingCallback.INITIAL_BUFFER_SIZE) {
                 expectedRenderCalls++;
             }
-            verify(wEvtApi, times(expectedRenderCalls)).EvtRender(isNull(WinNT.HANDLE.class), eq(eventHandle),eq(WEvtApi.EvtRenderFlags.EVENT_XML.ordinal()),
+            verify(wEvtApi, times(expectedRenderCalls)).EvtRender(isNull(WinNT.HANDLE.class), eq(eventHandle), eq(WEvtApi.EvtRenderFlags.EVENT_XML),
                     anyInt(), any(Pointer.class), any(Pointer.class), any(Pointer.class));
             bufferSize.incrementAndGet();
         }
 
         // Test event that requires more than max buffer size, shouldn't make it into flow files
         WinNT.HANDLE eventHandle = mock(WinNT.HANDLE.class);
-        when(wEvtApi.EvtRender(isNull(WinNT.HANDLE.class), eq(eventHandle), eq(WEvtApi.EvtRenderFlags.EVENT_XML.ordinal()), anyInt(), any(Pointer.class),
+        when(wEvtApi.EvtRender(isNull(WinNT.HANDLE.class), eq(eventHandle), eq(WEvtApi.EvtRenderFlags.EVENT_XML), anyInt(), any(Pointer.class),
                 any(Pointer.class), any(Pointer.class))).thenAnswer(invocation -> {
             Object[] arguments = invocation.getArguments();
             when(kernel32.GetLastError()).thenReturn(W32Errors.ERROR_INSUFFICIENT_BUFFER);
@@ -248,19 +248,19 @@ public class EvtSubscribeTest {
             bufferUsed.setInt(0, context.getProperty(EvtSubscribe.MAX_BUFFER_SIZE).asInteger() + 1);
             return false;
         });
-        renderingCallback.onEvent(WEvtApi.EvtSubscribeNotifyAction.DELIVER.ordinal(), null, eventHandle);
-        verify(wEvtApi, times(1)).EvtRender(isNull(WinNT.HANDLE.class), eq(eventHandle), eq(WEvtApi.EvtRenderFlags.EVENT_XML.ordinal()),
+        renderingCallback.onEvent(WEvtApi.EvtSubscribeNotifyAction.DELIVER, null, eventHandle);
+        verify(wEvtApi, times(1)).EvtRender(isNull(WinNT.HANDLE.class), eq(eventHandle), eq(WEvtApi.EvtRenderFlags.EVENT_XML),
                 anyInt(), any(Pointer.class), any(Pointer.class), any(Pointer.class));
 
         // Test error handling, this shouldn't make it into the flow files
         eventHandle = mock(WinNT.HANDLE.class);
-        when(wEvtApi.EvtRender(isNull(WinNT.HANDLE.class), eq(eventHandle), eq(WEvtApi.EvtRenderFlags.EVENT_XML.ordinal()), anyInt(),
+        when(wEvtApi.EvtRender(isNull(WinNT.HANDLE.class), eq(eventHandle), eq(WEvtApi.EvtRenderFlags.EVENT_XML), anyInt(),
                 any(Pointer.class), any(Pointer.class), any(Pointer.class))).thenAnswer(invocation -> {
             when(kernel32.GetLastError()).thenReturn(W32Errors.ERROR_ACCESS_DENIED);
             return false;
         });
-        renderingCallback.onEvent(WEvtApi.EvtSubscribeNotifyAction.DELIVER.ordinal(), null, eventHandle);
-        verify(wEvtApi, times(1)).EvtRender(isNull(WinNT.HANDLE.class), eq(eventHandle), eq(WEvtApi.EvtRenderFlags.EVENT_XML.ordinal()),
+        renderingCallback.onEvent(WEvtApi.EvtSubscribeNotifyAction.DELIVER, null, eventHandle);
+        verify(wEvtApi, times(1)).EvtRender(isNull(WinNT.HANDLE.class), eq(eventHandle), eq(WEvtApi.EvtRenderFlags.EVENT_XML),
                 anyInt(), any(Pointer.class), any(Pointer.class), any(Pointer.class));
 
         testRunner.run(1, false, false);
@@ -268,7 +268,7 @@ public class EvtSubscribeTest {
         List<MockFlowFile> successFlowFiles = testRunner.getFlowFilesForRelationship(EvtSubscribe.REL_SUCCESS);
         assertEquals(1024, successFlowFiles.size());
         for (int i = 0; i < 1024; i++) {
-            successFlowFiles.get(i).assertContentEquals(Integer.toString(i+1));
+            successFlowFiles.get(i).assertContentEquals(Integer.toString(i + 1));
         }
 
         verify(kernel32, never()).CloseHandle(subscriptionHandle);

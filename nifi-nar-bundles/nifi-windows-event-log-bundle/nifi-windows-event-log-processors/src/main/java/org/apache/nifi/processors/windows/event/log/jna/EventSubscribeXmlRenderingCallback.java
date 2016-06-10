@@ -57,10 +57,10 @@ public class EventSubscribeXmlRenderingCallback implements WEvtApi.EVT_SUBSCRIBE
 
     @Override
     public synchronized int onEvent(int evtSubscribeNotifyAction, WinDef.PVOID userContext, WinNT.HANDLE eventHandle) {
-        if (evtSubscribeNotifyAction == WEvtApi.EvtSubscribeNotifyAction.ERROR.ordinal()) {
+        if (evtSubscribeNotifyAction == WEvtApi.EvtSubscribeNotifyAction.ERROR) {
             logger.error(RECEIVED_THE_FOLLOWING_WIN32_ERROR + eventHandle.getPointer().getInt(0));
-        } else if (evtSubscribeNotifyAction == WEvtApi.EvtSubscribeNotifyAction.DELIVER.ordinal()) {
-            wEvtApi.EvtRender(null, eventHandle, WEvtApi.EvtRenderFlags.EVENT_XML.ordinal(), size, buffer, used, propertyCount);
+        } else if (evtSubscribeNotifyAction == WEvtApi.EvtSubscribeNotifyAction.DELIVER) {
+            wEvtApi.EvtRender(null, eventHandle, WEvtApi.EvtRenderFlags.EVENT_XML, size, buffer, used, propertyCount);
             if (kernel32.GetLastError() == W32Errors.ERROR_INSUFFICIENT_BUFFER) {
                 int newMaxSize = used.getInt(0);
                 // Check for overflow or too big
@@ -70,7 +70,7 @@ public class EventSubscribeXmlRenderingCallback implements WEvtApi.EVT_SUBSCRIBE
                 }
                 size = newMaxSize;
                 buffer = new Memory(size);
-                wEvtApi.EvtRender(null, eventHandle, WEvtApi.EvtRenderFlags.EVENT_XML.ordinal(), size, buffer, used, propertyCount);
+                wEvtApi.EvtRender(null, eventHandle, WEvtApi.EvtRenderFlags.EVENT_XML, size, buffer, used, propertyCount);
             }
             int lastError = kernel32.GetLastError();
             if (lastError == W32Errors.ERROR_SUCCESS) {

@@ -32,26 +32,24 @@ public interface WEvtApi extends StdCallLibrary {
 
     boolean EvtRender(WinNT.HANDLE context, WinNT.HANDLE fragment, int flags, int bufferSize, Pointer buffer, Pointer bufferUsed, Pointer propertyCount);
 
-    enum EvtSubscribeNotifyAction {
-        ERROR, DELIVER;
+    interface EvtSubscribeNotifyAction {
+        int ERROR = 0;
+        int DELIVER = 1;
     }
 
-    enum EvtSubscribeFlags {
-        SUBSCRIBE_TO_FUTURE(1), START_AT_OLDEST(2), START_AFTER_BOOKMARK(3), ORIGIN_MASK(0x3), TOLERATE_QUERY_ERRORS(0x1000), STRICT(0x10000);
-
-        private final int value;
-
-        EvtSubscribeFlags(int value) {
-            this.value = value;
-        }
-
-        public int getValue() {
-            return value;
-        }
+    interface EvtSubscribeFlags {
+        int SUBSCRIBE_TO_FUTURE = 1;
+        int START_AT_OLDEST = 2;
+        int START_AFTER_BOOKMARK = 3;
+        int ORIGIN_MASK = 0x3;
+        int TOLERATE_QUERY_ERRORS = 0x1000;
+        int STRICT = 0x10000;
     }
 
-    enum EvtRenderFlags {
-        EVENT_VALUES, EVENT_XML, EVENT_BOOKMARK;
+    interface EvtRenderFlags {
+        int EVENT_VALUES = 0;
+        int EVENT_XML = 1;
+        int EVENT_BOOKMARK = 2;
     }
 
     interface EVT_SUBSCRIBE_CALLBACK extends StdCallCallback {
