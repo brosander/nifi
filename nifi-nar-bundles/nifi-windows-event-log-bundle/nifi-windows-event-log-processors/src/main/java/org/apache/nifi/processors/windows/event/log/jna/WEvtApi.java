@@ -24,6 +24,10 @@ import com.sun.jna.platform.win32.WinNT;
 import com.sun.jna.win32.StdCallLibrary;
 import com.sun.jna.win32.W32APIOptions;
 
+/**
+ * JNA will create the instance of this interface with Native.loadLibrary().
+ * Please see https://msdn.microsoft.com/en-us/library/windows/desktop/aa385772(v=vs.85).aspx for documentation on the methods and data structures.
+ */
 public interface WEvtApi extends StdCallLibrary {
     WEvtApi INSTANCE = (WEvtApi) Native.loadLibrary("wevtapi", WEvtApi.class, W32APIOptions.DEFAULT_OPTIONS);
 

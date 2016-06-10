@@ -64,6 +64,8 @@ public class EventSubscribeXmlRenderingCallback implements WEvtApi.EVT_SUBSCRIBE
             logger.error(RECEIVED_THE_FOLLOWING_WIN32_ERROR + eventHandle.getPointer().getInt(0));
         } else if (evtSubscribeNotifyAction == WEvtApi.EvtSubscribeNotifyAction.DELIVER) {
             wEvtApi.EvtRender(null, eventHandle, WEvtApi.EvtRenderFlags.EVENT_XML, size, buffer, used, propertyCount);
+
+            // Not enough room in buffer, resize so it's big enough
             if (kernel32.GetLastError() == W32Errors.ERROR_INSUFFICIENT_BUFFER) {
                 int newMaxSize = used.getInt(0);
                 // Check for overflow or too big
@@ -75,6 +77,7 @@ public class EventSubscribeXmlRenderingCallback implements WEvtApi.EVT_SUBSCRIBE
                 buffer = new Memory(size);
                 wEvtApi.EvtRender(null, eventHandle, WEvtApi.EvtRenderFlags.EVENT_XML, size, buffer, used, propertyCount);
             }
+
             int lastError = kernel32.GetLastError();
             if (lastError == W32Errors.ERROR_SUCCESS) {
                 int usedBytes = used.getInt(0);

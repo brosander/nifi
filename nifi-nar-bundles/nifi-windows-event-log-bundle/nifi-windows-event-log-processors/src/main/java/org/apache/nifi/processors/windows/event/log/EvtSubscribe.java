@@ -22,6 +22,11 @@ import com.google.common.net.MediaType;
 import com.sun.jna.platform.win32.Kernel32;
 import com.sun.jna.platform.win32.WinNT;
 import org.apache.commons.io.Charsets;
+import org.apache.nifi.annotation.behavior.InputRequirement;
+import org.apache.nifi.annotation.behavior.WritesAttribute;
+import org.apache.nifi.annotation.behavior.WritesAttributes;
+import org.apache.nifi.annotation.documentation.CapabilityDescription;
+import org.apache.nifi.annotation.documentation.Tags;
 import org.apache.nifi.annotation.lifecycle.OnScheduled;
 import org.apache.nifi.annotation.lifecycle.OnStopped;
 import org.apache.nifi.components.PropertyDescriptor;
@@ -50,6 +55,13 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
+
+@InputRequirement(InputRequirement.Requirement.INPUT_FORBIDDEN)
+@Tags({"ingest", "event", "windows"})
+@CapabilityDescription("Registers a Windows Event Log Subscribe Callback to receive FlowFiles from Events on Windows.  These can be filtered via channel and xpath.")
+@WritesAttributes({
+        @WritesAttribute(attribute = "mime.type", description = "Will set a MIME type value of application/xml")
+})
 public class EvtSubscribe extends AbstractSessionFactoryProcessor {
     public static final String DEFAULT_CHANNEL = "System";
     public static final String DEFAULT_XPATH = "*";
@@ -128,10 +140,19 @@ public class EvtSubscribe extends AbstractSessionFactoryProcessor {
         }
     }
 
+    /**
+     * Framework constructor
+     */
     public EvtSubscribe() {
         this(null, null);
     }
 
+    /**
+     * Constructor that allows injection of JNA interfaces
+     *
+     * @param wEvtApi event api interface
+     * @param kernel32 kernel interface
+     */
     public EvtSubscribe(WEvtApi wEvtApi, Kernel32 kernel32) {
         this.wEvtApi = wEvtApi == null ? loadWEvtApi() : wEvtApi;
         this.kernel32 = kernel32 == null ? loadKernel32() : kernel32;
@@ -139,8 +160,13 @@ public class EvtSubscribe extends AbstractSessionFactoryProcessor {
         this.renderedXMLs = new LinkedList<>();
     }
 
+    /**
+     * Register subscriber via native call
+     *
+     * @param context the process context
+     */
     @OnScheduled
-    public void subscribeToEvents(ProcessContext context) throws Exception {
+    public void subscribeToEvents(ProcessContext context) {
         int maxEventQueueSize = context.getProperty(MAX_EVENT_QUEUE_SIZE).asInteger();
         evtSubscribeCallback = new EventSubscribeXmlRenderingCallback(getLogger(), s -> {
             ProcessSessionFactory processSessionFactory = sessionFactoryReference.get();
@@ -178,6 +204,12 @@ public class EvtSubscribe extends AbstractSessionFactoryProcessor {
         subscriptionHandle = null;
     }
 
+    /**
+     * Creates a flow file from the given XML and transfers it to the success relationship
+     *
+     * @param session the process session
+     * @param xml the XML
+     */
     protected void createAndTransferEventFlowFile(ProcessSession session, String xml) {
         FlowFile flowFile = session.create();
         flowFile = session.write(flowFile, out -> out.write(xml.getBytes(Charsets.UTF_8)));
@@ -188,6 +220,8 @@ public class EvtSubscribe extends AbstractSessionFactoryProcessor {
     @Override
     public void onTrigger(ProcessContext context, ProcessSessionFactory sessionFactory) throws ProcessException {
         ProcessSession session = sessionFactory.createSession();
+
+        // Give callback the information it needs to do its job and empty queue of events from before trigger
         synchronized (evtSubscribeCallback) {
             sessionFactoryReference.compareAndSet(null, sessionFactory);
             String renderedXml;
@@ -200,6 +234,7 @@ public class EvtSubscribe extends AbstractSessionFactoryProcessor {
 
     @Override
     protected Collection<ValidationResult> customValidate(ValidationContext validationContext) {
+        // We need to check to see if the native libraries loaded properly
         List<ValidationResult> validationResults = new ArrayList<>(super.customValidate(validationContext));
         if (wEvtApiError != null) {
             validationResults.add(new ValidationResult.Builder().valid(false)
