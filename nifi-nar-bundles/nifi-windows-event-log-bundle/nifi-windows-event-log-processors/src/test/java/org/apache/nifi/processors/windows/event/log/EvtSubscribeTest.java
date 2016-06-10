@@ -238,8 +238,18 @@ public class EvtSubscribeTest {
             bufferSize.incrementAndGet();
         }
 
-        // Test event that requires more than max buffer size, shouldn't make it into flow files
+        // Test error event, shouldn't make it into flow files
         WinNT.HANDLE eventHandle = mock(WinNT.HANDLE.class);
+        Pointer pointer = mock(Pointer.class);
+        when(eventHandle.getPointer()).thenReturn(pointer);
+        when(pointer.getInt(0)).thenReturn(111);
+
+        renderingCallback.onEvent(WEvtApi.EvtSubscribeNotifyAction.ERROR, null, eventHandle);
+        verify(wEvtApi, never()).EvtRender(isNull(WinNT.HANDLE.class), eq(eventHandle), eq(WEvtApi.EvtRenderFlags.EVENT_XML), anyInt(), any(Pointer.class),
+                any(Pointer.class), any(Pointer.class));
+
+        // Test event that requires more than max buffer size, shouldn't make it into flow files
+        eventHandle = mock(WinNT.HANDLE.class);
         when(wEvtApi.EvtRender(isNull(WinNT.HANDLE.class), eq(eventHandle), eq(WEvtApi.EvtRenderFlags.EVENT_XML), anyInt(), any(Pointer.class),
                 any(Pointer.class), any(Pointer.class))).thenAnswer(invocation -> {
             Object[] arguments = invocation.getArguments();
@@ -252,7 +262,7 @@ public class EvtSubscribeTest {
         verify(wEvtApi, times(1)).EvtRender(isNull(WinNT.HANDLE.class), eq(eventHandle), eq(WEvtApi.EvtRenderFlags.EVENT_XML),
                 anyInt(), any(Pointer.class), any(Pointer.class), any(Pointer.class));
 
-        // Test error handling, this shouldn't make it into the flow files
+        // Test render error handling, this shouldn't make it into the flow files
         eventHandle = mock(WinNT.HANDLE.class);
         when(wEvtApi.EvtRender(isNull(WinNT.HANDLE.class), eq(eventHandle), eq(WEvtApi.EvtRenderFlags.EVENT_XML), anyInt(),
                 any(Pointer.class), any(Pointer.class), any(Pointer.class))).thenAnswer(invocation -> {

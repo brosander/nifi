@@ -28,6 +28,9 @@ import org.apache.nifi.logging.ComponentLog;
 
 import java.util.function.Consumer;
 
+/**
+ * Callback that will render the XML representation of the event using native Windows API
+ */
 public class EventSubscribeXmlRenderingCallback implements WEvtApi.EVT_SUBSCRIBE_CALLBACK {
     public static final String RECEIVED_THE_FOLLOWING_WIN32_ERROR = "Received the following Win32 error: ";
     public static final int INITIAL_BUFFER_SIZE = 1024;
