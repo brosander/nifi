@@ -58,9 +58,9 @@ import java.util.concurrent.atomic.AtomicReference;
 
 @InputRequirement(InputRequirement.Requirement.INPUT_FORBIDDEN)
 @Tags({"ingest", "event", "windows"})
-@CapabilityDescription("Registers a Windows Event Log Subscribe Callback to receive FlowFiles from Events on Windows.  These can be filtered via channel and xpath.")
+@CapabilityDescription("Registers a Windows Event Log Subscribe Callback to receive FlowFiles from Events on Windows.  These can be filtered via channel and XPath.")
 @WritesAttributes({
-        @WritesAttribute(attribute = "mime.type", description = "Will set a MIME type value of application/xml")
+        @WritesAttribute(attribute = "mime.type", description = "Will set a MIME type value of application/xml.")
 })
 public class EvtSubscribe extends AbstractSessionFactoryProcessor {
     public static final String DEFAULT_CHANNEL = "System";
@@ -73,7 +73,7 @@ public class EvtSubscribe extends AbstractSessionFactoryProcessor {
             .displayName("Channel")
             .required(true)
             .defaultValue(DEFAULT_CHANNEL)
-            .description("The Windows Event Log Channel to listen to")
+            .description("The Windows Event Log Channel to listen to.")
             .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
             .build();
 
@@ -82,7 +82,7 @@ public class EvtSubscribe extends AbstractSessionFactoryProcessor {
             .displayName("XPath Query")
             .required(true)
             .defaultValue(DEFAULT_XPATH)
-            .description("XPath Query to filter events (See https://msdn.microsoft.com/en-us/library/windows/desktop/dd996910(v=vs.85).aspx for examples)")
+            .description("XPath Query to filter events. (See https://msdn.microsoft.com/en-us/library/windows/desktop/dd996910(v=vs.85).aspx for examples.)")
             .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
             .build();
 
@@ -91,15 +91,17 @@ public class EvtSubscribe extends AbstractSessionFactoryProcessor {
             .displayName("Maximum Buffer Size")
             .required(true)
             .defaultValue(Integer.toString(DEFAULT_MAX_BUFFER))
-            .description("The individual Event Log XMLs are rendered to a buffer.  This specifies the maximum size in bytes that the buffer will be allowed to grow to.")
+            .description("The individual Event Log XMLs are rendered to a buffer." +
+                    "  This specifies the maximum size in bytes that the buffer will be allowed to grow to. (Limiting the maximum size of an individual Event XML.)")
             .addValidator(StandardValidators.POSITIVE_INTEGER_VALIDATOR)
             .build();
 
     public static final PropertyDescriptor MAX_EVENT_QUEUE_SIZE = new PropertyDescriptor.Builder()
             .name("maxQueue")
             .displayName("Maximum queue size")
+            .required(true)
             .defaultValue(Integer.toString(DEFAULT_MAX_QUEUE_SIZE))
-            .description("Maximum number of events to Queue for transformation into FlowFiles before the Processor starts running")
+            .description("Maximum number of events to queue for transformation into FlowFiles before the Processor starts running.")
             .addValidator(StandardValidators.POSITIVE_INTEGER_VALIDATOR)
             .build();
 
@@ -107,7 +109,7 @@ public class EvtSubscribe extends AbstractSessionFactoryProcessor {
 
     public static final Relationship REL_SUCCESS = new Relationship.Builder()
             .name("success")
-            .description("Relationship for successfully formatted events")
+            .description("Relationship for successfully formatted events.")
             .build();
 
     public static final Set<Relationship> RELATIONSHIPS = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(REL_SUCCESS)));
@@ -117,8 +119,8 @@ public class EvtSubscribe extends AbstractSessionFactoryProcessor {
     private final WEvtApi wEvtApi;
     private final Kernel32 kernel32;
 
-    private UnsatisfiedLinkError wEvtApiError = null;
-    private UnsatisfiedLinkError kernel32Error = null;
+    private Throwable wEvtApiError = null;
+    private Throwable kernel32Error = null;
 
     private WEvtApi.EVT_SUBSCRIBE_CALLBACK evtSubscribeCallback;
     private WinNT.HANDLE subscriptionHandle;
@@ -126,7 +128,7 @@ public class EvtSubscribe extends AbstractSessionFactoryProcessor {
     private WEvtApi loadWEvtApi() {
         try {
             return WEvtApi.INSTANCE;
-        } catch (UnsatisfiedLinkError e) {
+        } catch (Throwable e) {
             wEvtApiError = e;
             return null;
         }
@@ -135,7 +137,7 @@ public class EvtSubscribe extends AbstractSessionFactoryProcessor {
     private Kernel32 loadKernel32() {
         try {
             return Kernel32.INSTANCE;
-        } catch (UnsatisfiedLinkError e) {
+        } catch (Throwable e) {
             kernel32Error = e;
             return null;
         }
@@ -238,12 +240,14 @@ public class EvtSubscribe extends AbstractSessionFactoryProcessor {
         // We need to check to see if the native libraries loaded properly
         List<ValidationResult> validationResults = new ArrayList<>(super.customValidate(validationContext));
         if (wEvtApiError != null) {
-            validationResults.add(new ValidationResult.Builder().valid(false)
-                    .explanation("Unable to load wevtapi on this system.  This processor utilizes native Windows APIs and will only work on Windows. (" + wEvtApiError.getMessage() + ")").build());
+            validationResults.add(new ValidationResult.Builder().valid(false).subject("System Configuration")
+                    .explanation("NiFi failed to load wevtapi on this system.  This processor utilizes native Windows APIs and will only work on Windows. ("
+                            + wEvtApiError.getMessage() + ")").build());
         }
         if (kernel32Error != null) {
-            validationResults.add(new ValidationResult.Builder().valid(false)
-                    .explanation("Unable to load kernel32 on this system.  This processor utilizes native Windows APIs and will only work on Windows. (" + kernel32Error.getMessage() + ")").build());
+            validationResults.add(new ValidationResult.Builder().valid(false).subject("System Configuration")
+                    .explanation("NiFi failed to load kernel32 on this system.  This processor utilizes native Windows APIs and will only work on Windows. ("
+                            + kernel32Error.getMessage() + ")").build());
         }
         return validationResults;
     }

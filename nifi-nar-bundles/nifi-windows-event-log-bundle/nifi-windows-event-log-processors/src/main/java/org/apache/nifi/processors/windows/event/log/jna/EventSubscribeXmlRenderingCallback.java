@@ -83,7 +83,7 @@ public class EventSubscribeXmlRenderingCallback implements WEvtApi.EVT_SUBSCRIBE
                 int usedBytes = used.getInt(0);
                 consumer.accept(Charsets.UTF_16LE.decode(buffer.getByteBuffer(0, usedBytes)).toString());
             } else {
-                logger.error("EvtRender returned the following error code " + lastError);
+                logger.error("EvtRender returned the following error code " + lastError + ".");
             }
         }
         return 0;
