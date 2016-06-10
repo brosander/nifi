@@ -27,7 +27,8 @@ import com.sun.jna.win32.W32APIOptions;
 public interface WEvtApi extends StdCallLibrary {
     WEvtApi INSTANCE = (WEvtApi) Native.loadLibrary("wevtapi", WEvtApi.class, W32APIOptions.DEFAULT_OPTIONS);
 
-    WinNT.HANDLE EvtSubscribe(WinNT.HANDLE session, WinNT.HANDLE signalEvent, String channelName, String xpathQuery, WinNT.HANDLE bookmark, WinDef.PVOID context, EVT_SUBSCRIBE_CALLBACK evtSubscribeCallback, int flags);
+    WinNT.HANDLE EvtSubscribe(WinNT.HANDLE session, WinNT.HANDLE signalEvent, String channelName, String xpathQuery,
+                              WinNT.HANDLE bookmark, WinDef.PVOID context, EVT_SUBSCRIBE_CALLBACK evtSubscribeCallback, int flags);
 
     boolean EvtRender(WinNT.HANDLE context, WinNT.HANDLE fragment, int flags, int bufferSize, Pointer buffer, Pointer bufferUsed, Pointer propertyCount);
 

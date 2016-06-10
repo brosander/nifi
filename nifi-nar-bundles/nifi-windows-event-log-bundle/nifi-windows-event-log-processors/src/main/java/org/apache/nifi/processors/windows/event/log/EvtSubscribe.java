@@ -134,8 +134,8 @@ public class EvtSubscribe extends AbstractSessionFactoryProcessor {
      * Adds a rendered xml to the queue to be processed.
      * Should only be called within block synchronized on evtSubscribeCallback before the sessionFactoryReference is set
      *
-     * @param s
-     * @param maxEventQueueSize
+     * @param s the rendered xml string
+     * @param maxEventQueueSize the maximum size of the event queue
      */
     protected void addRenderedXml(String s, int maxEventQueueSize) {
         renderedXMLs.add(s);
