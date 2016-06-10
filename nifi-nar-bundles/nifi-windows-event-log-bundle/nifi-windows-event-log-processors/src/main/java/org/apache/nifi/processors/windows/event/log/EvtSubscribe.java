@@ -25,6 +25,8 @@ import org.apache.commons.io.Charsets;
 import org.apache.nifi.annotation.lifecycle.OnScheduled;
 import org.apache.nifi.annotation.lifecycle.OnStopped;
 import org.apache.nifi.components.PropertyDescriptor;
+import org.apache.nifi.components.ValidationContext;
+import org.apache.nifi.components.ValidationResult;
 import org.apache.nifi.flowfile.FlowFile;
 import org.apache.nifi.flowfile.attributes.CoreAttributes;
 import org.apache.nifi.processor.AbstractSessionFactoryProcessor;
@@ -37,7 +39,9 @@ import org.apache.nifi.processor.util.StandardValidators;
 import org.apache.nifi.processors.windows.event.log.jna.EventSubscribeXmlRenderingCallback;
 import org.apache.nifi.processors.windows.event.log.jna.WEvtApi;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -100,16 +104,37 @@ public class EvtSubscribe extends AbstractSessionFactoryProcessor {
     private final WEvtApi wEvtApi;
     private final Kernel32 kernel32;
 
+    private UnsatisfiedLinkError wEvtApiError = null;
+    private UnsatisfiedLinkError kernel32Error = null;
+
     private WEvtApi.EVT_SUBSCRIBE_CALLBACK evtSubscribeCallback;
     private WinNT.HANDLE subscriptionHandle;
 
+    private WEvtApi loadWEvtApi() {
+        try {
+            return WEvtApi.INSTANCE;
+        } catch (UnsatisfiedLinkError e) {
+            wEvtApiError = e;
+            return null;
+        }
+    }
+
+    private Kernel32 loadKernel32() {
+        try {
+            return Kernel32.INSTANCE;
+        } catch (UnsatisfiedLinkError e) {
+            kernel32Error = e;
+            return null;
+        }
+    }
+
     public EvtSubscribe() {
-        this(WEvtApi.INSTANCE, Kernel32.INSTANCE);
+        this(null, null);
     }
 
     public EvtSubscribe(WEvtApi wEvtApi, Kernel32 kernel32) {
-        this.wEvtApi = wEvtApi;
-        this.kernel32 = kernel32;
+        this.wEvtApi = wEvtApi == null ? loadWEvtApi() : wEvtApi;
+        this.kernel32 = kernel32 == null ? loadKernel32() : kernel32;
         this.sessionFactoryReference = new AtomicReference<>();
         this.renderedXMLs = new LinkedList<>();
     }
@@ -171,6 +196,20 @@ public class EvtSubscribe extends AbstractSessionFactoryProcessor {
             }
         }
         context.yield();
+    }
+
+    @Override
+    protected Collection<ValidationResult> customValidate(ValidationContext validationContext) {
+        List<ValidationResult> validationResults = new ArrayList<>(super.customValidate(validationContext));
+        if (wEvtApiError != null) {
+            validationResults.add(new ValidationResult.Builder().valid(false)
+                    .explanation("Unable to load wevtapi on this system.  This processor utilizes native Windows APIs and will only work on Windows. (" + wEvtApiError.getMessage() + ")").build());
+        }
+        if (kernel32Error != null) {
+            validationResults.add(new ValidationResult.Builder().valid(false)
+                    .explanation("Unable to load kernel32 on this system.  This processor utilizes native Windows APIs and will only work on Windows. (" + kernel32Error.getMessage() + ")").build());
+        }
+        return validationResults;
     }
 
     @VisibleForTesting

@@ -17,13 +17,20 @@
 
 package org.apache.nifi.processors.windows.event.log;
 
-import org.junit.runners.model.InitializationError;
+import org.apache.nifi.util.TestRunner;
+import org.apache.nifi.util.TestRunners;
+import org.junit.Test;
+import org.junit.runner.RunWith;
 
 /**
- * Can't even use the JNA interface classes if the native library won't load.  This is a workaround to allow mocking them for unit tests.
+ * Test scenario where we can't load the native libraries
  */
-public class JNAJUnitRunner extends JNACustomLoadLibraryJUnitRunner {
-    public JNAJUnitRunner(Class<?> klass) throws InitializationError {
-        super(klass, null);
+@RunWith(JNAFailJUnitRunner.class)
+public class EventSubscribeCantLoadTest {
+
+    @Test
+    public void testValidate() {
+        TestRunner testRunner = TestRunners.newTestRunner(EvtSubscribe.class);
+        testRunner.assertNotValid();
     }
 }
