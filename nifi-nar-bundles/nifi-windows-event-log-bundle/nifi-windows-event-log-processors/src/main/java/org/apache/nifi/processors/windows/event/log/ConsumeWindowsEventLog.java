@@ -84,7 +84,7 @@ public class ConsumeWindowsEventLog extends AbstractSessionFactoryProcessor {
             .displayName("XPath Query")
             .required(true)
             .defaultValue(DEFAULT_XPATH)
-            .addValidator(StandardValidators.XPATH_VALIDATOR)
+//            .addValidator(StandardValidators.XPATH_VALIDATOR)
             .description("XPath Query to filter events. (See https://msdn.microsoft.com/en-us/library/windows/desktop/dd996910(v=vs.85).aspx for examples.)")
             .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
             .build();
@@ -104,7 +104,7 @@ public class ConsumeWindowsEventLog extends AbstractSessionFactoryProcessor {
             .displayName("Maximum queue size")
             .required(true)
             .defaultValue(Integer.toString(DEFAULT_MAX_QUEUE_SIZE))
-            .description("Maximum number of events to queue for transformation into FlowFiles before the Processor starts running.")
+            .description("Maximum number of events to queue for transformation into FlowFiles.")
             .addValidator(StandardValidators.POSITIVE_INTEGER_VALIDATOR)
             .build();
 
