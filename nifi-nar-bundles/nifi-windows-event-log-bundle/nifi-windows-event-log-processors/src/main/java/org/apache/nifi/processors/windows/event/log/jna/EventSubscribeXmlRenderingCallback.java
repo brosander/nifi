@@ -60,6 +60,9 @@ public class EventSubscribeXmlRenderingCallback implements WEvtApi.EVT_SUBSCRIBE
 
     @Override
     public synchronized int onEvent(int evtSubscribeNotifyAction, WinDef.PVOID userContext, WinNT.HANDLE eventHandle) {
+        if (logger.isDebugEnabled()) {
+            logger.debug("onEvent(" + evtSubscribeNotifyAction + ", " + userContext + ", " + eventHandle);
+        }
         if (evtSubscribeNotifyAction == WEvtApi.EvtSubscribeNotifyAction.ERROR) {
             logger.error(RECEIVED_THE_FOLLOWING_WIN32_ERROR + eventHandle.getPointer().getInt(0));
         } else if (evtSubscribeNotifyAction == WEvtApi.EvtSubscribeNotifyAction.DELIVER) {
