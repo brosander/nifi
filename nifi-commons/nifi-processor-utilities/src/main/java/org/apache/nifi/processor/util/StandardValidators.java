@@ -34,6 +34,9 @@ import org.apache.nifi.flowfile.FlowFile;
 import org.apache.nifi.processor.DataUnit;
 import org.apache.nifi.util.FormatUtils;
 
+import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathFactory;
+
 public class StandardValidators {
 
     //
@@ -350,6 +353,11 @@ public class StandardValidators {
 
     public static final Validator FILE_EXISTS_VALIDATOR = new FileExistsValidator(true);
 
+    /**
+     * Validate XPath using Java's default XPathFactory
+     */
+    public static final Validator XPATH_VALIDATOR = createXPathValidator(XPathFactory::newInstance);
+
     //
     //
     // FACTORY METHODS FOR VALIDATORS
@@ -539,6 +547,40 @@ public class StandardValidators {
                 return new ValidationResult.Builder().subject(subject).input(input).explanation(reason).valid(reason == null).build();
             }
 
+        };
+    }
+
+    public interface XPathFactorySupplier {
+        XPathFactory get() throws Exception;
+    }
+
+    /**
+     * Creates an XPath validator using the given factory supplier to allow specification of XPathFactory
+     *
+     * @param factorySupplier the supplier for the XPathFactory
+     * @return an XPath validator that uses the XPathFactory returned by the supplier
+     */
+    public static Validator createXPathValidator(XPathFactorySupplier factorySupplier) {
+        return new Validator() {
+            @Override
+            public ValidationResult validate(final String subject, final String input, final ValidationContext validationContext) {
+                try {
+                    XPathFactory factory = factorySupplier.get();
+                    XPath xPath = factory.newXPath();
+
+                    String error = null;
+                    try {
+                        xPath.compile(input);
+                    } catch (final Exception e) {
+                        error = e.toString();
+                    }
+
+                    return new ValidationResult.Builder().input(input).subject(subject).valid(error == null).explanation(error).build();
+                } catch (final Exception e) {
+                    return new ValidationResult.Builder().input(input).subject(subject).valid(false)
+                            .explanation("Unable to initialize XPath engine due to " + e.toString()).build();
+                }
+            }
         };
     }
 

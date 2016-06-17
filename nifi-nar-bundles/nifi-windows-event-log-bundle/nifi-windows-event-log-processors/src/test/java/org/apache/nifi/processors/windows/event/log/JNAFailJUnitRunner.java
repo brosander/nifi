@@ -19,12 +19,24 @@ package org.apache.nifi.processors.windows.event.log;
 
 import org.junit.runners.model.InitializationError;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * Native load failure to simulate case on all OSes (even Windows)
  */
-public class JNAFailJUnitRunner extends JNACustomLoadLibraryJUnitRunner {
+public class JNAFailJUnitRunner extends JNAOverridingJUnitRunner {
 
     public JNAFailJUnitRunner(Class<?> klass) throws InitializationError {
-        super(klass, "throw new " + UnsatisfiedLinkError.class.getCanonicalName() + "(\"JNAFailJUnitRunner\");");
+        super(klass);
+    }
+
+    @Override
+    protected Map<String, Map<String, String>> getClassOverrideMap() {
+        Map<String, Map<String, String>> classOverrideMap = new HashMap<>();
+        Map<String, String> nativeOverrideMap = new HashMap<>();
+        nativeOverrideMap.put(LOAD_LIBRARY, "throw new " + UnsatisfiedLinkError.class.getCanonicalName() + "(\"JNAFailJUnitRunner\");");
+        classOverrideMap.put(NATIVE_CANONICAL_NAME, nativeOverrideMap);
+        return classOverrideMap;
     }
 }

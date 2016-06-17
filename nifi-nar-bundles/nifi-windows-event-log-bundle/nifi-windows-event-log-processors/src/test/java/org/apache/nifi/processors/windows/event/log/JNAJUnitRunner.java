@@ -17,13 +17,35 @@
 
 package org.apache.nifi.processors.windows.event.log;
 
+import com.sun.jna.platform.win32.Kernel32Util;
 import org.junit.runners.model.InitializationError;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Can't even use the JNA interface classes if the native library won't load.  This is a workaround to allow mocking them for unit tests.
  */
-public class JNAJUnitRunner extends JNACustomLoadLibraryJUnitRunner {
+public class JNAJUnitRunner extends JNAOverridingJUnitRunner {
+    public static final String TEST_COMPUTER_NAME = "testComputerName";
+    public static final String KERNEL_32_UTIL_CANONICAL_NAME = Kernel32Util.class.getCanonicalName();
+
     public JNAJUnitRunner(Class<?> klass) throws InitializationError {
-        super(klass, null);
+        super(klass);
+    }
+
+    @Override
+    protected Map<String, Map<String, String>> getClassOverrideMap() {
+        Map<String, Map<String, String>> classOverrideMap = new HashMap<>();
+
+        Map<String, String> nativeOverrideMap = new HashMap<>();
+        nativeOverrideMap.put(LOAD_LIBRARY, "return null;");
+        classOverrideMap.put(NATIVE_CANONICAL_NAME, nativeOverrideMap);
+
+        Map<String, String> kernel32UtilMap = new HashMap<>();
+        kernel32UtilMap.put("getComputerName", "return \"" + TEST_COMPUTER_NAME + "\";");
+        classOverrideMap.put(KERNEL_32_UTIL_CANONICAL_NAME, kernel32UtilMap);
+
+        return classOverrideMap;
     }
 }

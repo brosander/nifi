@@ -28,26 +28,31 @@ import org.junit.runners.model.InitializationError;
 import org.mockito.runners.MockitoJUnitRunner;
 
 import java.net.URLClassLoader;
+import java.util.Map;
 
 /**
  * Can't even use the JNA interface classes if the native library won't load.  This is a workaround to allow mocking them for unit tests.
  */
-public class JNACustomLoadLibraryJUnitRunner extends Runner {
+public abstract class JNAOverridingJUnitRunner extends Runner {
     public static final String NATIVE_CANONICAL_NAME = Native.class.getCanonicalName();
-
+    public static final String LOAD_LIBRARY = "loadLibrary";
     private final Runner delegate;
 
-    public JNACustomLoadLibraryJUnitRunner(Class<?> klass, String body) throws InitializationError {
-        ClassLoader jnaMockClassloader = new URLClassLoader(((URLClassLoader) JNACustomLoadLibraryJUnitRunner.class.getClassLoader()).getURLs(), null) {
+    public JNAOverridingJUnitRunner(Class<?> klass) throws InitializationError {
+        Map<String, Map<String, String>> classOverrideMap = getClassOverrideMap();
+        ClassLoader jnaMockClassloader = new URLClassLoader(((URLClassLoader) JNAOverridingJUnitRunner.class.getClassLoader()).getURLs(), null) {
             @Override
             protected synchronized Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
-                if (name.equals(NATIVE_CANONICAL_NAME)) {
+                Map<String, String> classOverrides = classOverrideMap.get(name);
+                if (classOverrides != null) {
                     ClassPool classPool = ClassPool.getDefault();
                     try {
                         CtClass ctClass = classPool.get(name);
                         try {
-                            for (CtMethod loadLibrary : ctClass.getDeclaredMethods("loadLibrary")) {
-                                loadLibrary.setBody(body);
+                            for (Map.Entry<String, String> methodAndBody : classOverrides.entrySet()) {
+                                for (CtMethod loadLibrary : ctClass.getDeclaredMethods(methodAndBody.getKey())) {
+                                    loadLibrary.setBody(methodAndBody.getValue());
+                                }
                             }
 
                             byte[] bytes = ctClass.toBytecode();
@@ -63,7 +68,7 @@ public class JNACustomLoadLibraryJUnitRunner extends Runner {
                         throw new ClassNotFoundException(name, e);
                     }
                 } else if (name.startsWith("org.junit.")) {
-                    Class<?> result = JNACustomLoadLibraryJUnitRunner.class.getClassLoader().loadClass(name);
+                    Class<?> result = JNAOverridingJUnitRunner.class.getClassLoader().loadClass(name);
                     if (resolve) {
                         resolveClass(result);
                     }
@@ -79,6 +84,8 @@ public class JNACustomLoadLibraryJUnitRunner extends Runner {
             throw new InitializationError(e);
         }
     }
+
+    protected abstract Map<String, Map<String, String>> getClassOverrideMap();
 
     @Override
     public Description getDescription() {

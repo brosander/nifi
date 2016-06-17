@@ -17,7 +17,6 @@
 
 package org.apache.nifi.processors.windows.event.log.jna;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.sun.jna.Memory;
 import com.sun.jna.platform.win32.Kernel32;
 import com.sun.jna.platform.win32.W32Errors;
@@ -34,6 +33,7 @@ import java.util.function.Consumer;
 public class EventSubscribeXmlRenderingCallback implements WEvtApi.EVT_SUBSCRIBE_CALLBACK {
     public static final String RECEIVED_THE_FOLLOWING_WIN32_ERROR = "Received the following Win32 error: ";
     public static final int INITIAL_BUFFER_SIZE = 1024;
+    public static final String EVT_RENDER_RETURNED_THE_FOLLOWING_ERROR_CODE = "EvtRender returned the following error code ";
 
     private final ComponentLog logger;
     private final Consumer<String> consumer;
@@ -71,6 +71,7 @@ public class EventSubscribeXmlRenderingCallback implements WEvtApi.EVT_SUBSCRIBE
                 // Check for overflow or too big
                 if (newMaxSize < size || newMaxSize > maxBufferSize) {
                     logger.error("Dropping event " + eventHandle + " because it couldn't be rendered within " + maxBufferSize + " bytes.");
+                    // Ignored, see https://msdn.microsoft.com/en-us/library/windows/desktop/aa385577(v=vs.85).aspx
                     return 0;
                 }
                 size = newMaxSize;
@@ -87,14 +88,10 @@ public class EventSubscribeXmlRenderingCallback implements WEvtApi.EVT_SUBSCRIBE
                 }
                 consumer.accept(string);
             } else {
-                logger.error("EvtRender returned the following error code " + lastError + ".");
+                logger.error(EVT_RENDER_RETURNED_THE_FOLLOWING_ERROR_CODE + lastError + ".");
             }
         }
+        // Ignored, see https://msdn.microsoft.com/en-us/library/windows/desktop/aa385577(v=vs.85).aspx
         return 0;
-    }
-
-    @VisibleForTesting
-    public Consumer<String> getConsumer() {
-        return consumer;
     }
 }

@@ -26,11 +26,14 @@ import org.junit.runner.RunWith;
  * Test scenario where we can't load the native libraries
  */
 @RunWith(JNAFailJUnitRunner.class)
-public class EventSubscribeCantLoadTest {
+public class ConsumeWindowsEventLogFailTest {
 
+    /**
+     * The processor should never be valid because we're using JNAFailJUnitRunner
+     */
     @Test
     public void testValidate() {
-        TestRunner testRunner = TestRunners.newTestRunner(EvtSubscribe.class);
+        TestRunner testRunner = TestRunners.newTestRunner(ConsumeWindowsEventLog.class);
         testRunner.assertNotValid();
     }
 }

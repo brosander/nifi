@@ -17,12 +17,12 @@
 
 package org.apache.nifi.processors.windows.event.log;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.net.MediaType;
 import com.sun.jna.platform.win32.Kernel32;
+import com.sun.jna.platform.win32.Kernel32Util;
 import com.sun.jna.platform.win32.WinNT;
 import org.apache.commons.io.Charsets;
 import org.apache.nifi.annotation.behavior.InputRequirement;
+import org.apache.nifi.annotation.behavior.TriggerSerially;
 import org.apache.nifi.annotation.behavior.WritesAttribute;
 import org.apache.nifi.annotation.behavior.WritesAttributes;
 import org.apache.nifi.annotation.documentation.CapabilityDescription;
@@ -44,25 +44,27 @@ import org.apache.nifi.processor.util.StandardValidators;
 import org.apache.nifi.processors.windows.event.log.jna.EventSubscribeXmlRenderingCallback;
 import org.apache.nifi.processors.windows.event.log.jna.WEvtApi;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
-import java.util.Queue;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 
 @InputRequirement(InputRequirement.Requirement.INPUT_FORBIDDEN)
 @Tags({"ingest", "event", "windows"})
+@TriggerSerially
 @CapabilityDescription("Registers a Windows Event Log Subscribe Callback to receive FlowFiles from Events on Windows.  These can be filtered via channel and XPath.")
 @WritesAttributes({
         @WritesAttribute(attribute = "mime.type", description = "Will set a MIME type value of application/xml.")
 })
-public class EvtSubscribe extends AbstractSessionFactoryProcessor {
+public class ConsumeWindowsEventLog extends AbstractSessionFactoryProcessor {
     public static final String DEFAULT_CHANNEL = "System";
     public static final String DEFAULT_XPATH = "*";
     public static final int DEFAULT_MAX_BUFFER = 1024 * 1024;
@@ -82,6 +84,7 @@ public class EvtSubscribe extends AbstractSessionFactoryProcessor {
             .displayName("XPath Query")
             .required(true)
             .defaultValue(DEFAULT_XPATH)
+            .addValidator(StandardValidators.XPATH_VALIDATOR)
             .description("XPath Query to filter events. (See https://msdn.microsoft.com/en-us/library/windows/desktop/dd996910(v=vs.85).aspx for examples.)")
             .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
             .build();
@@ -109,21 +112,47 @@ public class EvtSubscribe extends AbstractSessionFactoryProcessor {
 
     public static final Relationship REL_SUCCESS = new Relationship.Builder()
             .name("success")
-            .description("Relationship for successfully formatted events.")
+            .description("Relationship for successfully consumed events.")
             .build();
 
     public static final Set<Relationship> RELATIONSHIPS = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(REL_SUCCESS)));
-
-    private final AtomicReference<ProcessSessionFactory> sessionFactoryReference;
-    private final Queue<String> renderedXMLs;
+    public static final String APPLICATION_XML = "application/xml";
     private final WEvtApi wEvtApi;
     private final Kernel32 kernel32;
+    private final String name;
 
     private Throwable wEvtApiError = null;
     private Throwable kernel32Error = null;
 
+    private BlockingQueue<String> renderedXMLs;
     private WEvtApi.EVT_SUBSCRIBE_CALLBACK evtSubscribeCallback;
     private WinNT.HANDLE subscriptionHandle;
+    private ProcessSessionFactory sessionFactory;
+    private String provenanceUri;
+
+    /**
+     * Framework constructor
+     */
+    public ConsumeWindowsEventLog() {
+        this(null, null);
+    }
+
+    /**
+     * Constructor that allows injection of JNA interfaces
+     *
+     * @param wEvtApi  event api interface
+     * @param kernel32 kernel interface
+     */
+    public ConsumeWindowsEventLog(WEvtApi wEvtApi, Kernel32 kernel32) {
+        this.wEvtApi = wEvtApi == null ? loadWEvtApi() : wEvtApi;
+        this.kernel32 = kernel32 == null ? loadKernel32() : kernel32;
+        if (kernel32 != null) {
+            name = Kernel32Util.getComputerName();
+        } else {
+            // Won't be able to use the processor anyway because native libraries didn't load
+            name = null;
+        }
+    }
 
     private WEvtApi loadWEvtApi() {
         try {
@@ -144,98 +173,76 @@ public class EvtSubscribe extends AbstractSessionFactoryProcessor {
     }
 
     /**
-     * Framework constructor
-     */
-    public EvtSubscribe() {
-        this(null, null);
-    }
-
-    /**
-     * Constructor that allows injection of JNA interfaces
-     *
-     * @param wEvtApi event api interface
-     * @param kernel32 kernel interface
-     */
-    public EvtSubscribe(WEvtApi wEvtApi, Kernel32 kernel32) {
-        this.wEvtApi = wEvtApi == null ? loadWEvtApi() : wEvtApi;
-        this.kernel32 = kernel32 == null ? loadKernel32() : kernel32;
-        this.sessionFactoryReference = new AtomicReference<>();
-        this.renderedXMLs = new LinkedList<>();
-    }
-
-    /**
      * Register subscriber via native call
      *
      * @param context the process context
      */
     @OnScheduled
-    public void subscribeToEvents(ProcessContext context) {
-        int maxEventQueueSize = context.getProperty(MAX_EVENT_QUEUE_SIZE).asInteger();
+    public void onScheduled(ProcessContext context) throws URISyntaxException {
+        String channel = context.getProperty(CHANNEL).getValue();
+        String query = context.getProperty(QUERY).getValue();
+
+        renderedXMLs = new LinkedBlockingQueue<>(context.getProperty(MAX_EVENT_QUEUE_SIZE).asInteger());
+        provenanceUri = new URI("winlog", name, "/" + channel, query, null).toASCIIString();
+
         evtSubscribeCallback = new EventSubscribeXmlRenderingCallback(getLogger(), s -> {
-            ProcessSessionFactory processSessionFactory = sessionFactoryReference.get();
-            if (processSessionFactory == null) {
-                addRenderedXml(s, maxEventQueueSize);
-            } else {
-                ProcessSession session = processSessionFactory.createSession();
-                createAndTransferEventFlowFile(session, s);
-                session.commit();
+            try {
+                renderedXMLs.put(s);
+            } catch (InterruptedException e) {
+                throw new IllegalStateException("Got interrupted while waiting to add to queue.", e);
             }
         }, context.getProperty(MAX_BUFFER_SIZE).asInteger(), wEvtApi, kernel32);
-        subscriptionHandle = wEvtApi.EvtSubscribe(null, null,
-                context.getProperty(CHANNEL).getValue(), context.getProperty(QUERY).getValue(), null, null,
+
+        subscriptionHandle = wEvtApi.EvtSubscribe(null, null, channel, query, null, null,
                 evtSubscribeCallback, WEvtApi.EvtSubscribeFlags.SUBSCRIBE_TO_FUTURE);
     }
 
     /**
-     * Adds a rendered xml to the queue to be processed.
-     * Should only be called within block synchronized on evtSubscribeCallback before the sessionFactoryReference is set
-     *
-     * @param s the rendered xml string
-     * @param maxEventQueueSize the maximum size of the event queue
-     */
-    protected void addRenderedXml(String s, int maxEventQueueSize) {
-        renderedXMLs.add(s);
-        while (renderedXMLs.size() > maxEventQueueSize) {
-            renderedXMLs.poll();
-        }
-    }
-
-    /**
-     * Cleanup native subscription
+     * Cleanup
      */
     @OnStopped
-    public void closeSubscriptionHandle() {
+    public void stop() {
         kernel32.CloseHandle(subscriptionHandle);
         subscriptionHandle = null;
-    }
-
-    /**
-     * Creates a flow file from the given XML and transfers it to the success relationship
-     *
-     * @param session the process session
-     * @param xml the XML
-     */
-    protected void createAndTransferEventFlowFile(ProcessSession session, String xml) {
-        FlowFile flowFile = session.create();
-        flowFile = session.write(flowFile, out -> out.write(xml.getBytes(Charsets.UTF_8)));
-        flowFile = session.putAttribute(flowFile, CoreAttributes.MIME_TYPE.key(), MediaType.APPLICATION_XML_UTF_8.toString());
-        session.transfer(flowFile, REL_SUCCESS);
+        evtSubscribeCallback = null;
+        if (!renderedXMLs.isEmpty()) {
+            if (sessionFactory != null) {
+                getLogger().info("Finishing processing leftover events");
+                ProcessSession session = sessionFactory.createSession();
+                processQueue(session);
+            } else {
+                throw new ProcessException("Stopping the processor but there is no ProcessSessionFactory stored and there are messages in the internal queue. Removing the processor now will " +
+                        "clear the queue but will result in DATA LOSS. This is normally due to starting the processor, receiving events and stopping before the onTrigger happens. The messages " +
+                        "in the internal queue cannot finish processing until until the processor is triggered to run.");
+            }
+        }
+        sessionFactory = null;
+        provenanceUri = null;
+        renderedXMLs = null;
     }
 
     @Override
     public void onTrigger(ProcessContext context, ProcessSessionFactory sessionFactory) throws ProcessException {
-        ProcessSession session = sessionFactory.createSession();
+        this.sessionFactory = sessionFactory;
+        processQueue(sessionFactory.createSession());
+    }
 
-        // Give callback the information it needs to do its job and empty queue of events from before trigger
-        synchronized (evtSubscribeCallback) {
-            sessionFactoryReference.compareAndSet(null, sessionFactory);
-            String renderedXml;
-            while ((renderedXml = renderedXMLs.poll()) != null) {
-                createAndTransferEventFlowFile(session, renderedXml);
-            }
+    private void processQueue(ProcessSession session) {
+        String xml;
+        while ((xml = renderedXMLs.peek()) != null) {
+            FlowFile flowFile = session.create();
+            byte[] xmlBytes = xml.getBytes(Charsets.UTF_8);
+            flowFile = session.write(flowFile, out -> out.write(xmlBytes));
+            flowFile = session.putAttribute(flowFile, CoreAttributes.MIME_TYPE.key(), APPLICATION_XML);
+            session.getProvenanceReporter().receive(flowFile, provenanceUri);
+            session.transfer(flowFile, REL_SUCCESS);
             session.commit();
+            try {
+                renderedXMLs.take();
+            } catch (InterruptedException e) {
+                throw new ProcessException(e);
+            }
         }
-        context.yield();
     }
 
     @Override
@@ -253,11 +260,6 @@ public class EvtSubscribe extends AbstractSessionFactoryProcessor {
                             + kernel32Error.getMessage() + ")").build());
         }
         return validationResults;
-    }
-
-    @VisibleForTesting
-    protected ProcessSessionFactory getProcessSessionFactory() {
-        return sessionFactoryReference.get();
     }
 
     @Override

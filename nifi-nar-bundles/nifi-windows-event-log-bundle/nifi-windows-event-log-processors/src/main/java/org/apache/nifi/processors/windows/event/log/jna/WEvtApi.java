@@ -43,20 +43,21 @@ public interface WEvtApi extends StdCallLibrary {
 
     interface EvtSubscribeFlags {
         int SUBSCRIBE_TO_FUTURE = 1;
-        int START_AT_OLDEST = 2;
-        int START_AFTER_BOOKMARK = 3;
-        int ORIGIN_MASK = 0x3;
-        int TOLERATE_QUERY_ERRORS = 0x1000;
-        int STRICT = 0x10000;
     }
 
     interface EvtRenderFlags {
-        int EVENT_VALUES = 0;
         int EVENT_XML = 1;
-        int EVENT_BOOKMARK = 2;
     }
 
     interface EVT_SUBSCRIBE_CALLBACK extends StdCallCallback {
+        /**
+         * Callback method that will be invoked when new events come in
+         *
+         * @param evtSubscribeNotifyAction the notify action
+         * @param userContext              the user context
+         * @param eventHandle              the event handle
+         * @return an int that will be ignored by the Windows Log API (https://msdn.microsoft.com/en-us/library/windows/desktop/aa385577(v=vs.85).aspx)
+         */
         int onEvent(int evtSubscribeNotifyAction, WinDef.PVOID userContext, WinNT.HANDLE eventHandle);
     }
 }

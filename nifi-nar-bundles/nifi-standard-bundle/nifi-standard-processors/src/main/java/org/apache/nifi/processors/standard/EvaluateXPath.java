@@ -62,7 +62,6 @@ import org.apache.nifi.annotation.lifecycle.OnScheduled;
 import org.apache.nifi.components.PropertyDescriptor;
 import org.apache.nifi.components.ValidationContext;
 import org.apache.nifi.components.ValidationResult;
-import org.apache.nifi.components.Validator;
 import org.apache.nifi.flowfile.FlowFile;
 import org.apache.nifi.logging.ComponentLog;
 import org.apache.nifi.processor.AbstractProcessor;
@@ -73,6 +72,7 @@ import org.apache.nifi.processor.Relationship;
 import org.apache.nifi.processor.exception.ProcessException;
 import org.apache.nifi.processor.io.InputStreamCallback;
 import org.apache.nifi.processor.io.OutputStreamCallback;
+import org.apache.nifi.processor.util.StandardValidators;
 import org.apache.nifi.stream.io.BufferedInputStream;
 import org.apache.nifi.stream.io.BufferedOutputStream;
 import org.apache.nifi.util.ObjectHolder;
@@ -208,7 +208,8 @@ public class EvaluateXPath extends AbstractProcessor {
     protected PropertyDescriptor getSupportedDynamicPropertyDescriptor(final String propertyDescriptorName) {
         return new PropertyDescriptor.Builder()
                 .name(propertyDescriptorName).expressionLanguageSupported(false)
-                .addValidator(new XPathValidator()).required(false).dynamic(true).build();
+                .addValidator(StandardValidators.createXPathValidator(() -> XPathFactory.newInstance(NamespaceConstant.OBJECT_MODEL_SAXON)))
+                .required(false).dynamic(true).build();
     }
 
     @Override
@@ -425,29 +426,6 @@ public class EvaluateXPath extends AbstractProcessor {
         transformer.transform(sourceNode, new StreamResult(out));
         if (error.get() != null) {
             throw error.get();
-        }
-    }
-
-    private static class XPathValidator implements Validator {
-
-        @Override
-        public ValidationResult validate(final String subject, final String input, final ValidationContext validationContext) {
-            try {
-                XPathFactory factory = XPathFactory.newInstance(NamespaceConstant.OBJECT_MODEL_SAXON);
-                final XPathEvaluator evaluator = (XPathEvaluator) factory.newXPath();
-
-                String error = null;
-                try {
-                    evaluator.compile(input);
-                } catch (final Exception e) {
-                    error = e.toString();
-                }
-
-                return new ValidationResult.Builder().input(input).subject(subject).valid(error == null).explanation(error).build();
-            } catch (final Exception e) {
-                return new ValidationResult.Builder().input(input).subject(subject).valid(false)
-                        .explanation("Unable to initialize XPath engine due to " + e.toString()).build();
-            }
         }
     }
 }
