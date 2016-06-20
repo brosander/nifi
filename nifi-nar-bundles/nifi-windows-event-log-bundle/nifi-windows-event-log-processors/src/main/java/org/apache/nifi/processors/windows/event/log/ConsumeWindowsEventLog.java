@@ -148,7 +148,7 @@ public class ConsumeWindowsEventLog extends AbstractSessionFactoryProcessor {
     public ConsumeWindowsEventLog(WEvtApi wEvtApi, Kernel32 kernel32) {
         this.wEvtApi = wEvtApi == null ? loadWEvtApi() : wEvtApi;
         this.kernel32 = kernel32 == null ? loadKernel32() : kernel32;
-        this.errorLookup = new ErrorLookup(kernel32);
+        this.errorLookup = new ErrorLookup(this.kernel32);
         if (kernel32 != null) {
             name = Kernel32Util.getComputerName();
         } else {
