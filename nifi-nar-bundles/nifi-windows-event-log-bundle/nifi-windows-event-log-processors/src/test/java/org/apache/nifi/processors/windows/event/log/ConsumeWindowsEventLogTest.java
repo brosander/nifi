@@ -64,9 +64,14 @@ public class ConsumeWindowsEventLogTest {
     @Mock
     WEvtApi wEvtApi;
 
+    @Mock
+    WinNT.HANDLE subscriptionHandle;
+
+    @Mock
+    Pointer subscriptionPointer;
+
     private ConsumeWindowsEventLog evtSubscribe;
     private TestRunner testRunner;
-    private WinNT.HANDLE subscriptionHandle;
 
     public static List<WinNT.HANDLE> mockEventHandles(WEvtApi wEvtApi, Kernel32 kernel32, List<String> eventXmls) {
         List<WinNT.HANDLE> eventHandles = new ArrayList<>();
@@ -90,107 +95,13 @@ public class ConsumeWindowsEventLogTest {
         return eventHandles;
     }
 
-    /*@Test
-    public void testFlow() throws Exception {
-        int maxEventQueue = 1;
-        int maxBuffer = 1024;
-        String testChannel = "testChannel";
-        String testQuery = "testQuery";
-        String testXml3 = "TestXml3";
-        String testXml4 = "TestXml4";
-
-        FlowFile flowFile1 = mock(FlowFile.class);
-        FlowFile flowFile2 = mock(FlowFile.class);
-        FlowFile flowFile3 = mock(FlowFile.class);
-
-        FlowFile flowFile4 = mock(FlowFile.class);
-        FlowFile flowFile5 = mock(FlowFile.class);
-        FlowFile flowFile6 = mock(FlowFile.class);
-
-        ByteArrayOutputStream byteArrayOutputStream1 = new ByteArrayOutputStream();
-        ByteArrayOutputStream byteArrayOutputStream2 = new ByteArrayOutputStream();
-
-        when(processSession.create()).thenReturn(flowFile1).thenReturn(flowFile4).thenReturn(null);
-        when(processSession.write(eq(flowFile1), isA(OutputStreamCallback.class))).thenAnswer(invocation -> {
-            ((OutputStreamCallback) invocation.getArguments()[1]).process(byteArrayOutputStream1);
-            return flowFile2;
-        });
-        when(processSession.write(eq(flowFile4), isA(OutputStreamCallback.class))).thenAnswer(invocation -> {
-            ((OutputStreamCallback) invocation.getArguments()[1]).process(byteArrayOutputStream2);
-            return flowFile5;
-        });
-
-        AtomicReference<String> mimeType1 = new AtomicReference<>(null);
-        AtomicReference<String> mimeType2 = new AtomicReference<>(null);
-        when(processSession.putAttribute(eq(flowFile2), eq(CoreAttributes.MIME_TYPE.key()), anyString())).thenAnswer(invocation -> {
-            mimeType1.set((String) invocation.getArguments()[2]);
-            return flowFile3;
-        });
-        when(processSession.putAttribute(eq(flowFile5), eq(CoreAttributes.MIME_TYPE.key()), anyString())).thenAnswer(invocation -> {
-            mimeType2.set((String) invocation.getArguments()[2]);
-            return flowFile6;
-        });
-
-        PropertyValue maxEventSize = mock(PropertyValue.class);
-        when(maxEventSize.asInteger()).thenReturn(maxEventQueue);
-
-        PropertyValue maxBufferSize = mock(PropertyValue.class);
-        when(maxBufferSize.asInteger()).thenReturn(maxBuffer);
-
-        PropertyValue channel = mock(PropertyValue.class);
-        when(channel.getValue()).thenReturn(testChannel);
-
-        PropertyValue query = mock(PropertyValue.class);
-        when(query.getValue()).thenReturn(testQuery);
-
-        WinNT.HANDLE subscriptionHandle = mock(WinNT.HANDLE.class);
-        when(wEvtApi.EvtSubscribe(isNull(WinNT.HANDLE.class), isNull(WinNT.HANDLE.class), eq(testChannel), eq(testQuery),
-                isNull(WinNT.HANDLE.class), isNull(WinDef.PVOID.class), isA(EventSubscribeXmlRenderingCallback.class),
-                eq(WEvtApi.EvtSubscribeFlags.SUBSCRIBE_TO_FUTURE)))
-                .thenReturn(subscriptionHandle);
-
-        when(processContext.getProperty(ConsumeWindowsEventLog.MAX_EVENT_QUEUE_SIZE)).thenReturn(maxEventSize);
-        when(processContext.getProperty(ConsumeWindowsEventLog.MAX_BUFFER_SIZE)).thenReturn(maxBufferSize);
-        when(processContext.getProperty(ConsumeWindowsEventLog.CHANNEL)).thenReturn(channel);
-        when(processContext.getProperty(ConsumeWindowsEventLog.QUERY)).thenReturn(query);
-
-        evtSubscribe.subscribeToEvents(processContext);
-        ArgumentCaptor<EventSubscribeXmlRenderingCallback> callbackArgumentCaptor = ArgumentCaptor.forClass(EventSubscribeXmlRenderingCallback.class);
-        verify(wEvtApi).EvtSubscribe(isNull(WinNT.HANDLE.class), isNull(WinNT.HANDLE.class), eq(testChannel), eq(testQuery),
-                isNull(WinNT.HANDLE.class), isNull(WinDef.PVOID.class), callbackArgumentCaptor.capture(),
-                eq(WEvtApi.EvtSubscribeFlags.SUBSCRIBE_TO_FUTURE));
-
-        EventSubscribeXmlRenderingCallback callback = callbackArgumentCaptor.getValue();
-        Consumer<String> consumer = callback.getConsumer();
-        consumer.accept("TestXml1");
-        consumer.accept("TestXml2");
-        consumer.accept(testXml3);
-
-        evtSubscribe.onTrigger(processContext, processSessionFactory);
-        verify(processSession).transfer(flowFile3, ConsumeWindowsEventLog.REL_SUCCESS);
-        verify(processSession, times(1)).transfer(any(FlowFile.class), eq(ConsumeWindowsEventLog.REL_SUCCESS));
-        verify(processContext).yield();
-
-        assertEquals(processSessionFactory, evtSubscribe.getProcessSessionFactory());
-        assertEquals(ConsumeWindowsEventLog.APPLICATION_XML, mimeType1.get());
-        assertEquals(testXml3, Charsets.UTF_8.decode(ByteBuffer.wrap(byteArrayOutputStream1.toByteArray())).toString());
-
-        consumer.accept(testXml4);
-        assertEquals(ConsumeWindowsEventLog.APPLICATION_XML, mimeType2.get());
-        assertEquals(testXml4, Charsets.UTF_8.decode(ByteBuffer.wrap(byteArrayOutputStream2.toByteArray())).toString());
-
-        verify(processSession).transfer(flowFile6, ConsumeWindowsEventLog.REL_SUCCESS);
-        verify(processSession, times(2)).transfer(any(FlowFile.class), eq(ConsumeWindowsEventLog.REL_SUCCESS));
-
-        evtSubscribe.closeSubscriptionHandle();
-        verify(kernel32).CloseHandle(subscriptionHandle);
-    }*/
-
     @Before
     public void setup() {
         evtSubscribe = new ConsumeWindowsEventLog(wEvtApi, kernel32);
 
-        subscriptionHandle = mock(WinNT.HANDLE.class);
+
+        when(subscriptionHandle.getPointer()).thenReturn(subscriptionPointer);
+
         when(wEvtApi.EvtSubscribe(isNull(WinNT.HANDLE.class), isNull(WinNT.HANDLE.class), eq(ConsumeWindowsEventLog.DEFAULT_CHANNEL), eq(ConsumeWindowsEventLog.DEFAULT_XPATH),
                 isNull(WinNT.HANDLE.class), isNull(WinDef.PVOID.class), isA(EventSubscribeXmlRenderingCallback.class),
                 eq(WEvtApi.EvtSubscribeFlags.SUBSCRIBE_TO_FUTURE)))
