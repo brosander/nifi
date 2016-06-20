@@ -36,6 +36,8 @@ public interface WEvtApi extends StdCallLibrary {
 
     boolean EvtRender(WinNT.HANDLE context, WinNT.HANDLE fragment, int flags, int bufferSize, Pointer buffer, Pointer bufferUsed, Pointer propertyCount);
 
+    boolean EvtClose(WinNT.HANDLE subscriptionHandle);
+
     interface EvtSubscribeNotifyAction {
         int ERROR = 0;
         int DELIVER = 1;

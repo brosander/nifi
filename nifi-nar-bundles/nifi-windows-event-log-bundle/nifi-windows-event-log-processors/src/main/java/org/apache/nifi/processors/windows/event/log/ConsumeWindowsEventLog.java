@@ -202,7 +202,7 @@ public class ConsumeWindowsEventLog extends AbstractSessionFactoryProcessor {
      */
     @OnStopped
     public void stop() {
-        kernel32.CloseHandle(subscriptionHandle);
+        wEvtApi.EvtClose(subscriptionHandle);
         subscriptionHandle = null;
         evtSubscribeCallback = null;
         if (!renderedXMLs.isEmpty()) {

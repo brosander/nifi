@@ -258,7 +258,7 @@ public class ConsumeWindowsEventLogTest {
     @Test
     public void testStopClosesHandle() {
         testRunner.run(1);
-        verify(kernel32).CloseHandle(subscriptionHandle);
+        verify(wEvtApi).EvtClose(subscriptionHandle);
     }
 
     @Test(expected = ProcessException.class)
