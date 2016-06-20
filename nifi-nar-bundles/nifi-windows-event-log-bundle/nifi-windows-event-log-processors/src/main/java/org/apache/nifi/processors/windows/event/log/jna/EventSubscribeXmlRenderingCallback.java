@@ -40,19 +40,21 @@ public class EventSubscribeXmlRenderingCallback implements WEvtApi.EVT_SUBSCRIBE
     private final int maxBufferSize;
     private final WEvtApi wEvtApi;
     private final Kernel32 kernel32;
+    private final ErrorLookup errorLookup;
 
     private int size;
     private Memory buffer;
     private Memory used;
     private Memory propertyCount;
 
-    public EventSubscribeXmlRenderingCallback(ComponentLog logger, Consumer<String> consumer, int maxBufferSize, WEvtApi wEvtApi, Kernel32 kernel32) {
+    public EventSubscribeXmlRenderingCallback(ComponentLog logger, Consumer<String> consumer, int maxBufferSize, WEvtApi wEvtApi, Kernel32 kernel32, ErrorLookup errorLookup) {
         this.logger = logger;
         this.consumer = consumer;
         this.maxBufferSize = maxBufferSize;
         this.wEvtApi = wEvtApi;
         this.kernel32 = kernel32;
         this.size = Math.min(maxBufferSize, INITIAL_BUFFER_SIZE);
+        this.errorLookup = errorLookup;
         this.buffer = new Memory(size);
         this.used = new Memory(4);
         this.propertyCount = new Memory(4);
@@ -91,7 +93,7 @@ public class EventSubscribeXmlRenderingCallback implements WEvtApi.EVT_SUBSCRIBE
                 }
                 consumer.accept(string);
             } else {
-                logger.error(EVT_RENDER_RETURNED_THE_FOLLOWING_ERROR_CODE + lastError + ".");
+                logger.error(EVT_RENDER_RETURNED_THE_FOLLOWING_ERROR_CODE + errorLookup.getLastError() + ".");
             }
         }
         // Ignored, see https://msdn.microsoft.com/en-us/library/windows/desktop/aa385577(v=vs.85).aspx

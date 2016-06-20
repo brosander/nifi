@@ -52,6 +52,9 @@ public class EventSubscribeXmlRenderingCallbackTest {
     Kernel32 kernel32;
 
     @Mock
+    ErrorLookup errorLookup;
+
+    @Mock
     WinNT.HANDLE handle;
 
     private EventSubscribeXmlRenderingCallback eventSubscribeXmlRenderingCallback;
@@ -60,7 +63,7 @@ public class EventSubscribeXmlRenderingCallbackTest {
     @Before
     public void setup() {
         maxBufferSize = 8;
-        eventSubscribeXmlRenderingCallback = new EventSubscribeXmlRenderingCallback(logger, consumer, maxBufferSize, wEvtApi, kernel32);
+        eventSubscribeXmlRenderingCallback = new EventSubscribeXmlRenderingCallback(logger, consumer, maxBufferSize, wEvtApi, kernel32, errorLookup);
     }
 
     @Test
@@ -105,7 +108,7 @@ public class EventSubscribeXmlRenderingCallbackTest {
         String veryLarge = testStringBuilder.toString();
 
         handle = ConsumeWindowsEventLogTest.mockEventHandles(wEvtApi, kernel32, Arrays.asList(veryLarge)).get(0);
-        eventSubscribeXmlRenderingCallback = new EventSubscribeXmlRenderingCallback(logger, consumer, 2048, wEvtApi, kernel32);
+        eventSubscribeXmlRenderingCallback = new EventSubscribeXmlRenderingCallback(logger, consumer, 2048, wEvtApi, kernel32, errorLookup);
         eventSubscribeXmlRenderingCallback.onEvent(WEvtApi.EvtSubscribeNotifyAction.DELIVER, null, handle);
         verify(consumer).accept(veryLarge);
     }
@@ -114,6 +117,7 @@ public class EventSubscribeXmlRenderingCallbackTest {
     public void testErrorRendering() {
         int value = 225;
         when(kernel32.GetLastError()).thenReturn(value);
+        when(errorLookup.getLastError()).thenReturn(Integer.toString(value));
         eventSubscribeXmlRenderingCallback.onEvent(WEvtApi.EvtSubscribeNotifyAction.DELIVER, null, handle);
         verify(logger).error(EventSubscribeXmlRenderingCallback.EVT_RENDER_RETURNED_THE_FOLLOWING_ERROR_CODE + value + ".");
     }

@@ -41,6 +41,7 @@ import org.apache.nifi.processor.ProcessSessionFactory;
 import org.apache.nifi.processor.Relationship;
 import org.apache.nifi.processor.exception.ProcessException;
 import org.apache.nifi.processor.util.StandardValidators;
+import org.apache.nifi.processors.windows.event.log.jna.ErrorLookup;
 import org.apache.nifi.processors.windows.event.log.jna.EventSubscribeXmlRenderingCallback;
 import org.apache.nifi.processors.windows.event.log.jna.WEvtApi;
 
@@ -119,6 +120,7 @@ public class ConsumeWindowsEventLog extends AbstractSessionFactoryProcessor {
     public static final String APPLICATION_XML = "application/xml";
     private final WEvtApi wEvtApi;
     private final Kernel32 kernel32;
+    private final ErrorLookup errorLookup;
     private final String name;
 
     private Throwable wEvtApiError = null;
@@ -146,6 +148,7 @@ public class ConsumeWindowsEventLog extends AbstractSessionFactoryProcessor {
     public ConsumeWindowsEventLog(WEvtApi wEvtApi, Kernel32 kernel32) {
         this.wEvtApi = wEvtApi == null ? loadWEvtApi() : wEvtApi;
         this.kernel32 = kernel32 == null ? loadKernel32() : kernel32;
+        this.errorLookup = new ErrorLookup(kernel32);
         if (kernel32 != null) {
             name = Kernel32Util.getComputerName();
         } else {
@@ -191,13 +194,13 @@ public class ConsumeWindowsEventLog extends AbstractSessionFactoryProcessor {
             } catch (InterruptedException e) {
                 throw new IllegalStateException("Got interrupted while waiting to add to queue.", e);
             }
-        }, context.getProperty(MAX_BUFFER_SIZE).asInteger(), wEvtApi, kernel32);
+        }, context.getProperty(MAX_BUFFER_SIZE).asInteger(), wEvtApi, kernel32, errorLookup);
 
         subscriptionHandle = wEvtApi.EvtSubscribe(null, null, channel, query, null, null,
                 evtSubscribeCallback, WEvtApi.EvtSubscribeFlags.SUBSCRIBE_TO_FUTURE);
         if (subscriptionHandle == null || subscriptionHandle.getPointer() == null) {
             throw new ProcessException("Unable to subscribe to with provided paramters, received the following error code: "
-                    + kernel32.GetLastError());
+                    + errorLookup.getLastError());
         }
     }
 
