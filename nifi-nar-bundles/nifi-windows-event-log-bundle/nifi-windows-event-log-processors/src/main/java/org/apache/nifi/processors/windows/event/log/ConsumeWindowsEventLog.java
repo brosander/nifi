@@ -46,7 +46,6 @@ import org.apache.nifi.processors.windows.event.log.jna.EventSubscribeXmlRenderi
 import org.apache.nifi.processors.windows.event.log.jna.WEvtApi;
 
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -181,7 +180,7 @@ public class ConsumeWindowsEventLog extends AbstractSessionFactoryProcessor {
      * @param context the process context
      */
     @OnScheduled
-    public void onScheduled(ProcessContext context) throws URISyntaxException {
+    public void onScheduled(ProcessContext context) throws Exception {
         String channel = context.getProperty(CHANNEL).getValue();
         String query = context.getProperty(QUERY).getValue();
 
@@ -199,7 +198,7 @@ public class ConsumeWindowsEventLog extends AbstractSessionFactoryProcessor {
         subscriptionHandle = wEvtApi.EvtSubscribe(null, null, channel, query, null, null,
                 evtSubscribeCallback, WEvtApi.EvtSubscribeFlags.SUBSCRIBE_TO_FUTURE);
         if (subscriptionHandle == null || subscriptionHandle.getPointer() == null) {
-            throw new ProcessException("Unable to subscribe to with provided paramters, received the following error code: "
+            throw new Exception("Unable to subscribe to with provided paramters, received the following error code: "
                     + errorLookup.getLastError());
         }
     }
