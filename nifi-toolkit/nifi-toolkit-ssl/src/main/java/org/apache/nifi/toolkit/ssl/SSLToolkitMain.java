@@ -17,12 +17,15 @@
 
 package org.apache.nifi.toolkit.ssl;
 
+import org.apache.nifi.util.NiFiProperties;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.operator.OperatorCreationException;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.security.GeneralSecurityException;
@@ -85,8 +88,48 @@ public class SSLToolkitMain {
             KeyPair keyPair = sslHelper.generateKeyPair();
             KeyStore keyStore = sslHelper.createKeyStore();
             sslHelper.addToKeyStore(keyStore, keyPair, "NIFI-KEY", keyPassword.toCharArray(),
-                    sslHelper.generateIssuedCertificate(hostname, keyPair, x509Certificate, certificateKeypair), x509Certificate);
-            File outputFile = new File(baseDir, hostname + extension);
+                    sslHelper.generateIssuedCertificate("CN=nifi,OU=" + hostname, keyPair, x509Certificate, certificateKeypair), x509Certificate);
+
+            String keyStoreName = hostname + extension;
+            File propertiesFile = new File(baseDir, hostname + "-nifi.properties");
+            try (BufferedWriter fileOutputStream = new BufferedWriter(new FileWriter(propertiesFile))) {
+                for (String nifiPropertyString : nifiPropertyStrings) {
+                    if (nifiPropertyString.startsWith(NiFiProperties.SECURITY_KEYSTORE + "=")) {
+                        fileOutputStream.write(NiFiProperties.SECURITY_KEYSTORE);
+                        fileOutputStream.write("=./conf/");
+                        fileOutputStream.write(keyStoreName);
+                    } else if (nifiPropertyString.startsWith(NiFiProperties.SECURITY_KEYSTORE_TYPE + "=")) {
+                        fileOutputStream.write(NiFiProperties.SECURITY_KEYSTORE_TYPE);
+                        fileOutputStream.write("=");
+                        fileOutputStream.write(sslHelper.getKeyStoreType());
+                    } else if (nifiPropertyString.startsWith(NiFiProperties.SECURITY_KEYSTORE_PASSWD + "=")) {
+                        fileOutputStream.write(NiFiProperties.SECURITY_KEYSTORE_PASSWD);
+                        fileOutputStream.write("=");
+                        fileOutputStream.write(keyStorePassword);
+                    } else if (nifiPropertyString.startsWith(NiFiProperties.SECURITY_KEY_PASSWD + "=")) {
+                        fileOutputStream.write(NiFiProperties.SECURITY_KEY_PASSWD);
+                        fileOutputStream.write("=");
+                        fileOutputStream.write(keyPassword);
+                    } else if (nifiPropertyString.startsWith(NiFiProperties.SECURITY_TRUSTSTORE + "=")) {
+                        fileOutputStream.write(NiFiProperties.SECURITY_TRUSTSTORE);
+                        fileOutputStream.write("=./conf/truststore");
+                        fileOutputStream.write(extension);
+                    } else if (nifiPropertyString.startsWith(NiFiProperties.SECURITY_TRUSTSTORE_TYPE + "=")) {
+                        fileOutputStream.write(NiFiProperties.SECURITY_TRUSTSTORE_TYPE);
+                        fileOutputStream.write("=");
+                        fileOutputStream.write(sslHelper.getKeyStoreType());
+                    } else if (nifiPropertyString.startsWith(NiFiProperties.SECURITY_TRUSTSTORE_PASSWD + "=")) {
+                        fileOutputStream.write(NiFiProperties.SECURITY_TRUSTSTORE_PASSWD);
+                        fileOutputStream.write("=");
+                        fileOutputStream.write(trustStorePassword);
+                    } else {
+                        fileOutputStream.write(nifiPropertyString);
+                    }
+                    fileOutputStream.newLine();
+                }
+            }
+
+            File outputFile = new File(baseDir, keyStoreName);
             try (FileOutputStream fileOutputStream = new FileOutputStream(outputFile)) {
                 keyStore.store(fileOutputStream, keyStorePassword.toCharArray());
             }
