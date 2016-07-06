@@ -32,6 +32,7 @@ language governing permissions and limitations under the License. -->
         <module>nifi-docs</module>
         <module>nifi-maven-archetypes</module>
         <module>nifi-external</module>
+        <module>nifi-toolkit</module>
     </modules>
     <url>http://nifi.apache.org</url>
     <organization>
