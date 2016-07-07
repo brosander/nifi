@@ -41,6 +41,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class SSLToolkitMain {
     public static final int HELP_EXIT_CODE = 1;
@@ -65,12 +66,14 @@ public class SSLToolkitMain {
     public static final String DEFAULT_KEY_STORE_TYPE = "jks";
 
     public static final String JAVA_HOME = "JAVA_HOME";
-
     public static final String NIFI_TOOLKIT_HOME = "NIFI_TOOLKIT_HOME";
+
     public static final String HEADER = new StringBuilder(System.lineSeparator()).append("Creates certificates and config files for nifi cluster.")
             .append(System.lineSeparator()).append(System.lineSeparator()).toString();
     public static final String FOOTER = new StringBuilder(System.lineSeparator()).append("Java home: ")
             .append(System.getenv(JAVA_HOME)).append(System.lineSeparator()).append("NiFi Toolkit home: ").append(System.getenv(NIFI_TOOLKIT_HOME)).toString();
+    public static final String DEFAULT_HOSTNAMES = "localhost";
+    public static final String HOSTNAMES_ARG = "hostnames";
 
     private final SSLHelper sslHelper;
     private final File baseDir;
@@ -108,6 +111,7 @@ public class SSLToolkitMain {
         addOptionWithArg(options, "d", DAYS_ARG, "Number of days self signed certificate should be valid for.", DEFAULT_CERT_DAYS);
         addOptionWithArg(options, "t", KEY_STORE_TYPE_ARG, "The type of keyStores to generate.", DEFAULT_KEY_STORE_TYPE);
         addOptionWithArg(options, "o", OUTPUT_DIRECTORY_ARG, "The directory to output keystores, truststore, config files.", DEFAULT_OUTPUT_DIRECTORY);
+        addOptionWithArg(options, "n", HOSTNAMES_ARG, "Comma separated list of hostnames.", DEFAULT_HOSTNAMES);
 
         CommandLineParser parser = new DefaultParser();
         CommandLine commandLine = null;
@@ -147,8 +151,10 @@ public class SSLToolkitMain {
 
         File baseDir = new File(outputDirectory);
 
+        List<String> hostnames = Arrays.stream(commandLine.getOptionValue(HOSTNAMES_ARG, DEFAULT_HOSTNAMES).split(",")).map(String::trim).collect(Collectors.toList());
+
         try {
-            new SSLToolkitMain(sslHelper, baseDir, new NifiPropertiesHelper()).createNifiKeystoresAndTrustStores("CN=nifi,OU=rootca", Arrays.asList("centos61", "centos62", "centos63"));
+            new SSLToolkitMain(sslHelper, baseDir, new NifiPropertiesHelper()).createNifiKeystoresAndTrustStores("CN=nifi.root.ca,OU=apache.nifi", hostnames);
         } catch (Exception e) {
             printUsageAndExit("Error creating generating ssl configuration. (" + e.getMessage() + ")", options, ERROR_GENERATING_CONFIG);
         }
@@ -170,7 +176,7 @@ public class SSLToolkitMain {
             KeyPair keyPair = sslHelper.generateKeyPair();
             KeyStore keyStore = sslHelper.createKeyStore();
             sslHelper.addToKeyStore(keyStore, keyPair, "NIFI-KEY", keyPassword.toCharArray(),
-                    sslHelper.generateIssuedCertificate("CN=nifi,OU=" + hostname, keyPair, x509Certificate, certificateKeypair), x509Certificate);
+                    sslHelper.generateIssuedCertificate("CN=" + hostname + ",OU=apache.nifi", keyPair, x509Certificate, certificateKeypair), x509Certificate);
 
             String keyStoreName = hostname + extension;
             File propertiesFile = new File(baseDir, hostname + "-nifi.properties");
