@@ -144,7 +144,7 @@ public class SSLToolkitMain {
         String signingAlgorithm = commandLine.getOptionValue(SIGNING_ALGORITHM_ARG, DEFAULT_SIGNING_ALGORITHM);
 
         String keyStoreType = commandLine.getOptionValue(KEY_STORE_TYPE_ARG, DEFAULT_KEY_STORE_TYPE);
-        
+
         String outputDirectory = commandLine.getOptionValue(OUTPUT_DIRECTORY_ARG, DEFAULT_OUTPUT_DIRECTORY);
 
         File baseDir = new File(outputDirectory);
