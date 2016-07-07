@@ -25,6 +25,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -48,8 +49,9 @@ public class NifiPropertiesHelper {
     }
 
     public void outputWithUpdatedPropertyValues(OutputStream outputStream, Map<String, String> updatedValues) throws IOException {
-        Set<String> keysSeen = new HashSet<>();
         try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(outputStream))) {
+            Map<String, String> remainingValues = new HashMap<>(updatedValues);
+            Set<String> keysSeen = new HashSet<>();
             for (String line : lines) {
                 String key = line.split("=")[0].trim();
                 boolean outputLine = true;
@@ -57,15 +59,23 @@ public class NifiPropertiesHelper {
                     if (!keysSeen.add(key)) {
                         throw new IOException("Found key more than once in nifi.properties: " + key);
                     }
-                    String value = updatedValues.remove(key);
+                    String value = remainingValues.remove(key);
                     if (value != null) {
-                        writer.write(key + "=" + value);
+                        writer.write(key);
+                        writer.write("=");
+                        writer.write(value);
                         outputLine = false;
                     }
                 }
                 if (outputLine) {
                     writer.write(line);
                 }
+                writer.newLine();
+            }
+            for (Map.Entry<String, String> keyValueEntry : remainingValues.entrySet()) {
+                writer.write(keyValueEntry.getKey());
+                writer.write("=");
+                writer.write(keyValueEntry.getValue());
                 writer.newLine();
             }
         }
