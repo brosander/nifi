@@ -107,13 +107,8 @@ run() {
         CLASSPATH="${LIBS}"
     fi
 
-    echo
-    echo "Java home: ${JAVA_HOME}"
-    echo "NiFi Toolkit home: ${NIFI_TOOLKIT_HOME}"
-    echo
-    echo
-
-
+   export JAVA_HOME="$JAVA_HOME"
+   export NIFI_TOOLKIT_HOME="$NIFI_TOOLKIT_HOME"
    "${JAVA}" -cp "${CLASSPATH}" -Xms12m -Xmx24m org.apache.nifi.toolkit.ssl.SSLToolkitMain $@
    return $?
 }
