@@ -144,9 +144,7 @@ public class SSLToolkitMain {
         String signingAlgorithm = commandLine.getOptionValue(SIGNING_ALGORITHM_ARG, DEFAULT_SIGNING_ALGORITHM);
 
         String keyStoreType = commandLine.getOptionValue(KEY_STORE_TYPE_ARG, DEFAULT_KEY_STORE_TYPE);
-
-        SSLHelper sslHelper = new SSLHelper(new SecureRandom(), days, keySize, keyAlgorithm, signingAlgorithm, keyStoreType);
-
+        
         String outputDirectory = commandLine.getOptionValue(OUTPUT_DIRECTORY_ARG, DEFAULT_OUTPUT_DIRECTORY);
 
         File baseDir = new File(outputDirectory);
@@ -154,6 +152,7 @@ public class SSLToolkitMain {
         List<String> hostnames = Arrays.stream(commandLine.getOptionValue(HOSTNAMES_ARG, DEFAULT_HOSTNAMES).split(",")).map(String::trim).collect(Collectors.toList());
 
         try {
+            SSLHelper sslHelper = new SSLHelper(days, keySize, keyAlgorithm, signingAlgorithm, keyStoreType);
             new SSLToolkitMain(sslHelper, baseDir, new NifiPropertiesHelper()).createNifiKeystoresAndTrustStores("CN=nifi.root.ca,OU=apache.nifi", hostnames);
         } catch (Exception e) {
             printUsageAndExit("Error creating generating ssl configuration. (" + e.getMessage() + ")", options, ERROR_GENERATING_CONFIG);

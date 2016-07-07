@@ -41,8 +41,6 @@ import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
-import java.security.PrivateKey;
-import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.security.SignatureException;
 import java.security.cert.Certificate;
@@ -54,19 +52,27 @@ import java.util.concurrent.TimeUnit;
 public class SSLHelper {
     public static final String PROVIDER = "BC";
     private final SecureRandom secureRandom;
+    private final KeyPairGenerator keyPairGenerator;
     private final int days;
-    private final int keySize;
-    private final String keyPairAlgorithm;
     private final String signingAlgorithm;
     private final String keyStoreType;
 
-    public SSLHelper(SecureRandom secureRandom, int days, int keySize, String keyPairAlgorithm, String signingAlgorithm, String keyStoreType) {
+    public SSLHelper(int days, int keySize, String keyPairAlgorithm, String signingAlgorithm, String keyStoreType) throws NoSuchAlgorithmException {
+        this(new SecureRandom(), createKeyPairGenerator(keyPairAlgorithm, keySize), days, signingAlgorithm, keyStoreType);
+    }
+
+    protected SSLHelper(SecureRandom secureRandom, KeyPairGenerator keyPairGenerator, int days, String signingAlgorithm, String keyStoreType) {
         this.secureRandom = secureRandom;
+        this.keyPairGenerator = keyPairGenerator;
         this.days = days;
-        this.keySize = keySize;
-        this.keyPairAlgorithm = keyPairAlgorithm;
         this.signingAlgorithm = signingAlgorithm;
         this.keyStoreType = keyStoreType;
+    }
+
+    private static KeyPairGenerator createKeyPairGenerator(String algorithm, int keySize) throws NoSuchAlgorithmException {
+        KeyPairGenerator instance = KeyPairGenerator.getInstance(algorithm);
+        instance.initialize(keySize);
+        return instance;
     }
 
     public String generatePassword() {
@@ -75,8 +81,6 @@ public class SSLHelper {
     }
 
     public KeyPair generateKeyPair() throws NoSuchAlgorithmException {
-        KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance(keyPairAlgorithm);
-        keyPairGenerator.initialize(keySize);
         return keyPairGenerator.generateKeyPair();
     }
 

@@ -27,7 +27,9 @@ import java.io.IOException;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.security.GeneralSecurityException;
+import java.security.KeyPairGenerator;
 import java.security.KeyStore;
+import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.Security;
 import java.security.cert.X509Certificate;
@@ -56,20 +58,24 @@ public class SSLHelperTest {
 
     private SecureRandom secureRandom;
 
+    private KeyPairGenerator keyPairGenerator;
+
     @BeforeClass
     public static void beforeClass() {
         Security.addProvider(new BouncyCastleProvider());
     }
 
     @Before
-    public void setup() {
+    public void setup() throws NoSuchAlgorithmException {
         days = 360;
         keySize = 2048;
         keyPairAlgorithm = "RSA";
         signingAlgorithm = "SHA1WITHRSA";
         keyStoreType = KeyStore.getDefaultType();
         secureRandom = mock(SecureRandom.class);
-        sslHelper = new SSLHelper(secureRandom, days, keySize, keyPairAlgorithm, signingAlgorithm, keyStoreType);
+        keyPairGenerator = KeyPairGenerator.getInstance(keyPairAlgorithm);
+        keyPairGenerator.initialize(keySize);
+        sslHelper = new SSLHelper(secureRandom, keyPairGenerator, days, signingAlgorithm, keyStoreType);
     }
 
     private Date inFuture(int days) {
