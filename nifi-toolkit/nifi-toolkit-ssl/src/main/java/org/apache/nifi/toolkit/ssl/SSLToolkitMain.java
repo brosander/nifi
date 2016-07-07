@@ -176,7 +176,7 @@ public class SSLToolkitMain {
             File propertiesFile = new File(baseDir, hostname + "-nifi.properties");
 
             Map<String, String> updatedProperties = new HashMap<>();
-            updatedProperties.put(NiFiProperties.SECURITY_KEYSTORE, "=./conf/" + keyStoreName);
+            updatedProperties.put(NiFiProperties.SECURITY_KEYSTORE, "./conf/" + keyStoreName);
             updatedProperties.put(NiFiProperties.SECURITY_KEYSTORE_TYPE, sslHelper.getKeyStoreType());
             updatedProperties.put(NiFiProperties.SECURITY_KEYSTORE_PASSWD, keyStorePassword);
             updatedProperties.put(NiFiProperties.SECURITY_KEY_PASSWD, keyPassword);

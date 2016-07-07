@@ -36,9 +36,14 @@
     </dependencySets>
     <fileSets>
         <fileSet>
-            <directory>${project.basedir}/src/main/resources</directory>
+            <directory>${project.basedir}/src/main/resources/bin</directory>
             <outputDirectory>bin/</outputDirectory>
             <fileMode>0755</fileMode>
+        </fileSet>
+        <fileSet>
+            <directory>${project.build.directory}/nifi-resources/conf</directory>
+            <outputDirectory>lib/</outputDirectory>
+            <fileMode>0644</fileMode>
         </fileSet>
     </fileSets>
     <files>

@@ -23,10 +23,10 @@ import java.io.IOException;
 import java.io.InputStream;
 
 public class SSLToolkitMainTest {
-    @Test
+    /*@Test
     public void testBlah() throws IOException {
         try (InputStream inputStream = SSLToolkitMain.class.getClassLoader().getResourceAsStream("conf/nifi.properties")) {
 
         }
-    }
+    }*/
 }
