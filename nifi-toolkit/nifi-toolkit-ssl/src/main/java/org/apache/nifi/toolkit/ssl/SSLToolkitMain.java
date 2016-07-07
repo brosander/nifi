@@ -27,22 +27,20 @@ import org.apache.nifi.util.NiFiProperties;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.operator.OperatorCreationException;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.security.GeneralSecurityException;
 import java.security.KeyPair;
 import java.security.KeyStore;
 import java.security.SecureRandom;
 import java.security.Security;
 import java.security.cert.X509Certificate;
-import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class SSLToolkitMain {
     public static final int HELP_EXIT_CODE = 1;
@@ -76,12 +74,12 @@ public class SSLToolkitMain {
 
     private final SSLHelper sslHelper;
     private final File baseDir;
-    private final List<String> nifiPropertyStrings;
+    private final NifiPropertiesHelper nifiPropertiesHelper;
 
-    public SSLToolkitMain(SSLHelper sslHelper, File baseDir, List<String> nifiPropertyStrings) {
+    public SSLToolkitMain(SSLHelper sslHelper, File baseDir, NifiPropertiesHelper nifiPropertiesHelper) {
         this.sslHelper = sslHelper;
         this.baseDir = baseDir;
-        this.nifiPropertyStrings = nifiPropertyStrings;
+        this.nifiPropertiesHelper = nifiPropertiesHelper;
     }
 
     private static void addOptionWithArg(Options options, String arg, String longArg, String description, Object defaultVal) {
@@ -124,7 +122,7 @@ public class SSLToolkitMain {
         }
 
         int days = 0;
-        try  {
+        try {
             days = Integer.parseInt(commandLine.getOptionValue(DAYS_ARG, DEFAULT_CERT_DAYS));
         } catch (NumberFormatException e) {
             printUsageAndExit("Expected integer for days argument. (" + e.getMessage() + ")", options, ERROR_PARSING_INT_DAYS);
@@ -149,17 +147,8 @@ public class SSLToolkitMain {
 
         File baseDir = new File(outputDirectory);
 
-        List<String> nifiPropertyStrings = new ArrayList<>();
-        try (BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(SSLToolkitMain.class.getClassLoader().getResourceAsStream("conf/nifi.properties")))) {
-            String line;
-            while((line = bufferedReader.readLine()) != null) {
-                nifiPropertyStrings.add(line.trim());
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
         try {
-            new SSLToolkitMain(sslHelper, baseDir, nifiPropertyStrings).createNifiKeystoresAndTrustStores("CN=nifi,OU=rootca", Arrays.asList("centos61", "centos62", "centos63"));
+            new SSLToolkitMain(sslHelper, baseDir, new NifiPropertiesHelper()).createNifiKeystoresAndTrustStores("CN=nifi,OU=rootca", Arrays.asList("centos61", "centos62", "centos63"));
         } catch (Exception e) {
             printUsageAndExit("Error creating generating ssl configuration. (" + e.getMessage() + ")", options, ERROR_GENERATING_CONFIG);
         }
@@ -185,41 +174,18 @@ public class SSLToolkitMain {
 
             String keyStoreName = hostname + extension;
             File propertiesFile = new File(baseDir, hostname + "-nifi.properties");
-            try (BufferedWriter fileOutputStream = new BufferedWriter(new FileWriter(propertiesFile))) {
-                for (String nifiPropertyString : nifiPropertyStrings) {
-                    if (nifiPropertyString.startsWith(NiFiProperties.SECURITY_KEYSTORE + "=")) {
-                        fileOutputStream.write(NiFiProperties.SECURITY_KEYSTORE);
-                        fileOutputStream.write("=./conf/");
-                        fileOutputStream.write(keyStoreName);
-                    } else if (nifiPropertyString.startsWith(NiFiProperties.SECURITY_KEYSTORE_TYPE + "=")) {
-                        fileOutputStream.write(NiFiProperties.SECURITY_KEYSTORE_TYPE);
-                        fileOutputStream.write("=");
-                        fileOutputStream.write(sslHelper.getKeyStoreType());
-                    } else if (nifiPropertyString.startsWith(NiFiProperties.SECURITY_KEYSTORE_PASSWD + "=")) {
-                        fileOutputStream.write(NiFiProperties.SECURITY_KEYSTORE_PASSWD);
-                        fileOutputStream.write("=");
-                        fileOutputStream.write(keyStorePassword);
-                    } else if (nifiPropertyString.startsWith(NiFiProperties.SECURITY_KEY_PASSWD + "=")) {
-                        fileOutputStream.write(NiFiProperties.SECURITY_KEY_PASSWD);
-                        fileOutputStream.write("=");
-                        fileOutputStream.write(keyPassword);
-                    } else if (nifiPropertyString.startsWith(NiFiProperties.SECURITY_TRUSTSTORE + "=")) {
-                        fileOutputStream.write(NiFiProperties.SECURITY_TRUSTSTORE);
-                        fileOutputStream.write("=./conf/truststore");
-                        fileOutputStream.write(extension);
-                    } else if (nifiPropertyString.startsWith(NiFiProperties.SECURITY_TRUSTSTORE_TYPE + "=")) {
-                        fileOutputStream.write(NiFiProperties.SECURITY_TRUSTSTORE_TYPE);
-                        fileOutputStream.write("=");
-                        fileOutputStream.write(sslHelper.getKeyStoreType());
-                    } else if (nifiPropertyString.startsWith(NiFiProperties.SECURITY_TRUSTSTORE_PASSWD + "=")) {
-                        fileOutputStream.write(NiFiProperties.SECURITY_TRUSTSTORE_PASSWD);
-                        fileOutputStream.write("=");
-                        fileOutputStream.write(trustStorePassword);
-                    } else {
-                        fileOutputStream.write(nifiPropertyString);
-                    }
-                    fileOutputStream.newLine();
-                }
+
+            Map<String, String> updatedProperties = new HashMap<>();
+            updatedProperties.put(NiFiProperties.SECURITY_KEYSTORE, "=./conf/" + keyStoreName);
+            updatedProperties.put(NiFiProperties.SECURITY_KEYSTORE_TYPE, sslHelper.getKeyStoreType());
+            updatedProperties.put(NiFiProperties.SECURITY_KEYSTORE_PASSWD, keyStorePassword);
+            updatedProperties.put(NiFiProperties.SECURITY_KEY_PASSWD, keyPassword);
+            updatedProperties.put(NiFiProperties.SECURITY_TRUSTSTORE, "./conf/truststore" + extension);
+            updatedProperties.put(NiFiProperties.SECURITY_TRUSTSTORE_TYPE, sslHelper.getKeyStoreType());
+            updatedProperties.put(NiFiProperties.SECURITY_TRUSTSTORE_PASSWD, trustStorePassword);
+
+            try (OutputStream outputStream = new FileOutputStream(propertiesFile)) {
+                nifiPropertiesHelper.outputWithUpdatedPropertyValues(outputStream, updatedProperties);
             }
 
             File outputFile = new File(baseDir, keyStoreName);
