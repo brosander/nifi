@@ -107,6 +107,20 @@ public class SSLToolkitMainTest {
         checkHostDir(SSLToolkitMain.DEFAULT_HOSTNAMES);
     }
 
+    @Test
+    public void testHostnamesArgument() throws NoSuchAlgorithmException, IOException, InvalidKeySpecException, CertificateException, InvalidKeyException, KeyStoreException, SignatureException, NoSuchProviderException, UnrecoverableEntryException {
+        String nifi1 = "nifi1";
+        String nifi2 = "nifi2";
+        String nifi3 = "nifi3";
+        
+        runAndAssertExitCode(0, "-o", tempDir.getAbsolutePath(), "-n", nifi1 + "," + nifi2 + "," + nifi3);
+        checkLoadCertPrivateKey(SSLToolkitMain.DEFAULT_KEY_ALGORITHM);
+
+        checkHostDir(nifi1);
+        checkHostDir(nifi2);
+        checkHostDir(nifi3);
+    }
+
     private void checkLoadCertPrivateKey(String algorithm) throws IOException, NoSuchAlgorithmException, InvalidKeySpecException {
         PKCS8EncodedKeySpec pkcs8EncodedKeySpec = new PKCS8EncodedKeySpec(FileUtils.readFileToByteArray(new File(tempDir, SSLToolkitMain.ROOT_CERT_PRIVATE_KEY)));
         KeyFactory.getInstance(algorithm).generatePrivate(pkcs8EncodedKeySpec);
