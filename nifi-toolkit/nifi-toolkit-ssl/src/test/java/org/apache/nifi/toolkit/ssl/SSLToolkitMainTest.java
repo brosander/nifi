@@ -34,7 +34,6 @@ import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.Permission;
-import java.security.PrivateKey;
 import java.security.SignatureException;
 import java.security.UnrecoverableEntryException;
 import java.security.cert.Certificate;
@@ -50,8 +49,19 @@ import static org.junit.Assert.fail;
 public class SSLToolkitMainTest {
     private SecurityManager originalSecurityManager;
 
+    private File tempDir;
+
     @Before
-    public void setup() {
+    public void setup() throws IOException {
+        tempDir = File.createTempFile("ssl-test", UUID.randomUUID().toString());
+        if (!tempDir.delete()) {
+            throw new IOException("Couldn't delete " + tempDir);
+        }
+
+        if (!tempDir.mkdirs()) {
+            throw new IOException("Couldn't make directory " + tempDir);
+        }
+
         originalSecurityManager = System.getSecurityManager();
         // [see http://stackoverflow.com/questions/309396/java-how-to-test-methods-that-call-system-exit#answer-309427]
         System.setSecurityManager(new SecurityManager() {
@@ -74,8 +84,9 @@ public class SSLToolkitMainTest {
     }
 
     @After
-    public void teardown() {
+    public void teardown() throws IOException {
         System.setSecurityManager(originalSecurityManager);
+        FileUtils.deleteDirectory(tempDir);
     }
 
     @Test
@@ -91,59 +102,53 @@ public class SSLToolkitMainTest {
 
     @Test
     public void testDirOutput() throws IOException, KeyStoreException, CertificateException, NoSuchAlgorithmException, UnrecoverableEntryException, InvalidKeyException, NoSuchProviderException, SignatureException, InvalidKeySpecException {
-        File tempDir = File.createTempFile("ssl-test", UUID.randomUUID().toString());
-        if (!tempDir.delete()) {
-            throw new IOException("Couldn't delete " + tempDir);
+        runAndAssertExitCode(0, "-o", tempDir.getAbsolutePath());
+        checkLoadCertPrivateKey(SSLToolkitMain.DEFAULT_KEY_ALGORITHM);
+        checkHostDir(SSLToolkitMain.DEFAULT_HOSTNAMES);
+    }
+
+    private void checkLoadCertPrivateKey(String algorithm) throws IOException, NoSuchAlgorithmException, InvalidKeySpecException {
+        PKCS8EncodedKeySpec pkcs8EncodedKeySpec = new PKCS8EncodedKeySpec(FileUtils.readFileToByteArray(new File(tempDir, SSLToolkitMain.ROOT_CERT_PRIVATE_KEY)));
+        KeyFactory.getInstance(algorithm).generatePrivate(pkcs8EncodedKeySpec);
+    }
+
+    private void checkHostDir(String hostname) throws IOException, KeyStoreException, NoSuchAlgorithmException, CertificateException, UnrecoverableEntryException, InvalidKeyException, NoSuchProviderException, SignatureException {
+        File hostDir = new File(tempDir, hostname);
+        Properties nifiProperties = new Properties();
+        try (InputStream inputStream = new FileInputStream(new File(hostDir, "nifi.properties"))) {
+            nifiProperties.load(inputStream);
         }
 
-        if (!tempDir.mkdirs()) {
-            throw new IOException("Couldn't make directory " + tempDir);
+        String trustStoreType = nifiProperties.getProperty(NiFiProperties.SECURITY_TRUSTSTORE_TYPE);
+        KeyStore trustStore = KeyStore.getInstance(trustStoreType);
+        try (InputStream inputStream = new FileInputStream(new File(hostDir, "truststore." + trustStoreType))) {
+            trustStore.load(inputStream, nifiProperties.getProperty(NiFiProperties.SECURITY_TRUSTSTORE_PASSWD).toCharArray());
         }
 
-        try {
-            runAndAssertExitCode(0, "-o", tempDir.getAbsolutePath());
+        Certificate certificate = trustStore.getCertificate(SSLToolkitMain.NIFI_CERT);
 
-            File hostDir = new File(tempDir, SSLToolkitMain.DEFAULT_HOSTNAMES);
+        String keyStoreType = nifiProperties.getProperty(NiFiProperties.SECURITY_KEYSTORE_TYPE);
+        String keyStoreFilename = hostDir.getName() + "." + keyStoreType;
+        assertEquals("./conf/" + keyStoreFilename, nifiProperties.getProperty(NiFiProperties.SECURITY_KEYSTORE));
 
-            PKCS8EncodedKeySpec pkcs8EncodedKeySpec = new PKCS8EncodedKeySpec(FileUtils.readFileToByteArray(new File(hostDir, SSLToolkitMain.ROOT_CERT_PRIVATE_KEY)));
-
-            KeyFactory.getInstance(SSLToolkitMain.DEFAULT_KEY_ALGORITHM).generatePrivate(pkcs8EncodedKeySpec);
-
-            Properties nifiProperties = new Properties();
-            try (InputStream inputStream = new FileInputStream(new File(hostDir, "nifi.properties"))) {
-                nifiProperties.load(inputStream);
-            }
-
-            String trustStoreType = nifiProperties.getProperty(NiFiProperties.SECURITY_TRUSTSTORE_TYPE);
-            KeyStore trustStore = KeyStore.getInstance(trustStoreType);
-            try (InputStream inputStream = new FileInputStream(new File(hostDir, "truststore." + trustStoreType))) {
-                trustStore.load(inputStream, nifiProperties.getProperty(NiFiProperties.SECURITY_TRUSTSTORE_PASSWD).toCharArray());
-            }
-
-            Certificate certificate = trustStore.getCertificate(SSLToolkitMain.NIFI_CERT);
-
-            String keyStoreType = nifiProperties.getProperty(NiFiProperties.SECURITY_KEYSTORE_TYPE);
-            KeyStore keyStore = KeyStore.getInstance(keyStoreType);
-            try (InputStream inputStream = new FileInputStream(new File(hostDir, SSLToolkitMain.DEFAULT_HOSTNAMES + "." + keyStoreType))) {
-                keyStore.load(inputStream, nifiProperties.getProperty(NiFiProperties.SECURITY_KEYSTORE_PASSWD).toCharArray());
-            }
-
-            char[] keyPassword = nifiProperties.getProperty(NiFiProperties.SECURITY_KEY_PASSWD).toCharArray();
-
-            KeyStore.Entry entry = keyStore.getEntry(SSLToolkitMain.NIFI_KEY, new KeyStore.PasswordProtection(keyPassword));
-            assertEquals(KeyStore.PrivateKeyEntry.class, entry.getClass());
-
-            KeyStore.PrivateKeyEntry privateKeyEntry = (KeyStore.PrivateKeyEntry) entry;
-
-            Certificate[] certificateChain = privateKeyEntry.getCertificateChain();
-
-            assertEquals(2, certificateChain.length);
-            assertEquals(certificate, certificateChain[1]);
-            certificateChain[1].verify(certificate.getPublicKey());
-            certificateChain[0].verify(certificate.getPublicKey());
-        } finally {
-            FileUtils.deleteDirectory(tempDir);
+        KeyStore keyStore = KeyStore.getInstance(keyStoreType);
+        try (InputStream inputStream = new FileInputStream(new File(hostDir, keyStoreFilename))) {
+            keyStore.load(inputStream, nifiProperties.getProperty(NiFiProperties.SECURITY_KEYSTORE_PASSWD).toCharArray());
         }
+
+        char[] keyPassword = nifiProperties.getProperty(NiFiProperties.SECURITY_KEY_PASSWD).toCharArray();
+
+        KeyStore.Entry entry = keyStore.getEntry(SSLToolkitMain.NIFI_KEY, new KeyStore.PasswordProtection(keyPassword));
+        assertEquals(KeyStore.PrivateKeyEntry.class, entry.getClass());
+
+        KeyStore.PrivateKeyEntry privateKeyEntry = (KeyStore.PrivateKeyEntry) entry;
+
+        Certificate[] certificateChain = privateKeyEntry.getCertificateChain();
+
+        assertEquals(2, certificateChain.length);
+        assertEquals(certificate, certificateChain[1]);
+        certificateChain[1].verify(certificate.getPublicKey());
+        certificateChain[0].verify(certificate.getPublicKey());
     }
 
     private void runAndAssertExitCode(int exitCode, String... args) {

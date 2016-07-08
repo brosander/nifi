@@ -27,7 +27,6 @@ import org.apache.nifi.util.NiFiProperties;
 import org.apache.nifi.util.StringUtils;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.operator.OperatorCreationException;
-import sun.security.pkcs.PKCS8Key;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -36,7 +35,6 @@ import java.io.OutputStream;
 import java.security.GeneralSecurityException;
 import java.security.KeyPair;
 import java.security.KeyStore;
-import java.security.SecureRandom;
 import java.security.Security;
 import java.security.cert.X509Certificate;
 import java.security.spec.PKCS8EncodedKeySpec;
@@ -119,7 +117,7 @@ public class SSLToolkitMain {
         addOptionWithArg(options, "t", KEY_STORE_TYPE_ARG, "The type of keyStores to generate.", DEFAULT_KEY_STORE_TYPE);
         addOptionWithArg(options, "o", OUTPUT_DIRECTORY_ARG, "The directory to output keystores, truststore, config files.", DEFAULT_OUTPUT_DIRECTORY);
         addOptionWithArg(options, "n", HOSTNAMES_ARG, "Comma separated list of hostnames.", DEFAULT_HOSTNAMES);
-        addOptionWithArg(options, "p", HTTPS_PORT_ARG, "Https port to use.",  "");
+        addOptionWithArg(options, "p", HTTPS_PORT_ARG, "Https port to use.", "");
 
         CommandLineParser parser = new DefaultParser();
         CommandLine commandLine = null;
@@ -182,6 +180,11 @@ public class SSLToolkitMain {
         KeyStore trustStore = sslHelper.createKeyStore();
         trustStore.setCertificateEntry(NIFI_CERT, x509Certificate);
 
+        PKCS8EncodedKeySpec pkcs8EncodedKeySpec = new PKCS8EncodedKeySpec(certificateKeypair.getPrivate().getEncoded());
+        try (OutputStream outputStream = new FileOutputStream(new File(baseDir, ROOT_CERT_PRIVATE_KEY))) {
+            outputStream.write(pkcs8EncodedKeySpec.getEncoded());
+        }
+
         for (String hostname : hostnames) {
             processHost(httpsPort, extension, certificateKeypair, x509Certificate, trustStoreName, trustStorePassword, trustStore, hostname);
         }
@@ -201,11 +204,6 @@ public class SSLToolkitMain {
         File hostDir = new File(baseDir, hostname);
         if (!hostDir.mkdirs()) {
             throw new IOException("Unable to make directory: " + hostDir.getAbsolutePath());
-        }
-
-        PKCS8EncodedKeySpec pkcs8EncodedKeySpec = new PKCS8EncodedKeySpec(keyPair.getPrivate().getEncoded());
-        try (OutputStream outputStream = new FileOutputStream(new File(hostDir, ROOT_CERT_PRIVATE_KEY))) {
-            outputStream.write(pkcs8EncodedKeySpec.getEncoded());
         }
 
         File propertiesFile = new File(hostDir, "nifi.properties");
