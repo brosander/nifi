@@ -24,8 +24,10 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.nifi.util.NiFiProperties;
+import org.apache.nifi.util.StringUtils;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.operator.OperatorCreationException;
+import sun.security.pkcs.PKCS8Key;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -37,6 +39,7 @@ import java.security.KeyStore;
 import java.security.SecureRandom;
 import java.security.Security;
 import java.security.cert.X509Certificate;
+import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -74,6 +77,10 @@ public class SSLToolkitMain {
             .append(System.getenv(JAVA_HOME)).append(System.lineSeparator()).append("NiFi Toolkit home: ").append(System.getenv(NIFI_TOOLKIT_HOME)).toString();
     public static final String DEFAULT_HOSTNAMES = "localhost";
     public static final String HOSTNAMES_ARG = "hostnames";
+    public static final String HTTPS_PORT_ARG = "httpsPort";
+    public static final String NIFI_KEY = "nifi-key";
+    public static final String NIFI_CERT = "nifi-cert";
+    public static final String ROOT_CERT_PRIVATE_KEY = "rootCertPrivate.key";
 
     private final SSLHelper sslHelper;
     private final File baseDir;
@@ -112,6 +119,7 @@ public class SSLToolkitMain {
         addOptionWithArg(options, "t", KEY_STORE_TYPE_ARG, "The type of keyStores to generate.", DEFAULT_KEY_STORE_TYPE);
         addOptionWithArg(options, "o", OUTPUT_DIRECTORY_ARG, "The directory to output keystores, truststore, config files.", DEFAULT_OUTPUT_DIRECTORY);
         addOptionWithArg(options, "n", HOSTNAMES_ARG, "Comma separated list of hostnames.", DEFAULT_HOSTNAMES);
+        addOptionWithArg(options, "p", HTTPS_PORT_ARG, "Https port to use.",  "");
 
         CommandLineParser parser = new DefaultParser();
         CommandLine commandLine = null;
@@ -151,16 +159,18 @@ public class SSLToolkitMain {
 
         List<String> hostnames = Arrays.stream(commandLine.getOptionValue(HOSTNAMES_ARG, DEFAULT_HOSTNAMES).split(",")).map(String::trim).collect(Collectors.toList());
 
+        String httpsPort = commandLine.getOptionValue(HTTPS_PORT_ARG, "");
+
         try {
             SSLHelper sslHelper = new SSLHelper(days, keySize, keyAlgorithm, signingAlgorithm, keyStoreType);
-            new SSLToolkitMain(sslHelper, baseDir, new NifiPropertiesHelper()).createNifiKeystoresAndTrustStores("CN=nifi.root.ca,OU=apache.nifi", hostnames);
+            new SSLToolkitMain(sslHelper, baseDir, new NifiPropertiesHelper()).createNifiKeystoresAndTrustStores("CN=nifi.root.ca,OU=apache.nifi", hostnames, httpsPort);
         } catch (Exception e) {
             printUsageAndExit("Error creating generating ssl configuration. (" + e.getMessage() + ")", options, ERROR_GENERATING_CONFIG);
         }
         System.exit(0);
     }
 
-    public void createNifiKeystoresAndTrustStores(String dn, List<String> hostnames) throws GeneralSecurityException, IOException, OperatorCreationException {
+    public void createNifiKeystoresAndTrustStores(String dn, List<String> hostnames, String httpsPort) throws GeneralSecurityException, IOException, OperatorCreationException {
         String extension = "." + sslHelper.getKeyStoreType().toLowerCase();
 
         KeyPair certificateKeypair = sslHelper.generateKeyPair();
@@ -169,41 +179,62 @@ public class SSLToolkitMain {
         String trustStoreName = "truststore" + extension;
         String trustStorePassword = sslHelper.generatePassword();
 
+        KeyStore trustStore = sslHelper.createKeyStore();
+        trustStore.setCertificateEntry(NIFI_CERT, x509Certificate);
+
         for (String hostname : hostnames) {
-            String keyPassword = sslHelper.generatePassword();
-            String keyStorePassword = sslHelper.generatePassword();
-            KeyPair keyPair = sslHelper.generateKeyPair();
-            KeyStore keyStore = sslHelper.createKeyStore();
-            sslHelper.addToKeyStore(keyStore, keyPair, "NIFI-KEY", keyPassword.toCharArray(),
-                    sslHelper.generateIssuedCertificate("CN=" + hostname + ",OU=apache.nifi", keyPair, x509Certificate, certificateKeypair), x509Certificate);
+            processHost(httpsPort, extension, certificateKeypair, x509Certificate, trustStoreName, trustStorePassword, trustStore, hostname);
+        }
+    }
 
-            String keyStoreName = hostname + extension;
-            File propertiesFile = new File(baseDir, hostname + "-nifi.properties");
+    private void processHost(String httpsPort, String extension, KeyPair certificateKeypair, X509Certificate x509Certificate, String trustStoreName, String trustStorePassword, KeyStore trustStore, String hostname) throws IOException, GeneralSecurityException, OperatorCreationException {
+        String keyPassword = sslHelper.generatePassword();
+        String keyStorePassword = sslHelper.generatePassword();
+        KeyPair keyPair = sslHelper.generateKeyPair();
 
-            Map<String, String> updatedProperties = new HashMap<>();
-            updatedProperties.put(NiFiProperties.SECURITY_KEYSTORE, "./conf/" + keyStoreName);
-            updatedProperties.put(NiFiProperties.SECURITY_KEYSTORE_TYPE, sslHelper.getKeyStoreType());
-            updatedProperties.put(NiFiProperties.SECURITY_KEYSTORE_PASSWD, keyStorePassword);
-            updatedProperties.put(NiFiProperties.SECURITY_KEY_PASSWD, keyPassword);
-            updatedProperties.put(NiFiProperties.SECURITY_TRUSTSTORE, "./conf/truststore" + extension);
-            updatedProperties.put(NiFiProperties.SECURITY_TRUSTSTORE_TYPE, sslHelper.getKeyStoreType());
-            updatedProperties.put(NiFiProperties.SECURITY_TRUSTSTORE_PASSWD, trustStorePassword);
+        KeyStore keyStore = sslHelper.createKeyStore();
+        sslHelper.addToKeyStore(keyStore, keyPair, NIFI_KEY, keyPassword.toCharArray(),
+                sslHelper.generateIssuedCertificate("CN=" + hostname + ",OU=apache.nifi", keyPair, x509Certificate, certificateKeypair), x509Certificate);
 
-            try (OutputStream outputStream = new FileOutputStream(propertiesFile)) {
-                nifiPropertiesHelper.outputWithUpdatedPropertyValues(outputStream, updatedProperties);
-            }
+        String keyStoreName = hostname + extension;
 
-            File outputFile = new File(baseDir, keyStoreName);
-            try (FileOutputStream fileOutputStream = new FileOutputStream(outputFile)) {
-                keyStore.store(fileOutputStream, keyStorePassword.toCharArray());
-            }
+        File hostDir = new File(baseDir, hostname);
+        if (!hostDir.mkdirs()) {
+            throw new IOException("Unable to make directory: " + hostDir.getAbsolutePath());
         }
 
-        KeyStore trustStore = sslHelper.createKeyStore();
-        trustStore.setCertificateEntry("NIFI-CERT", x509Certificate);
+        PKCS8EncodedKeySpec pkcs8EncodedKeySpec = new PKCS8EncodedKeySpec(keyPair.getPrivate().getEncoded());
+        try (OutputStream outputStream = new FileOutputStream(new File(hostDir, ROOT_CERT_PRIVATE_KEY))) {
+            outputStream.write(pkcs8EncodedKeySpec.getEncoded());
+        }
 
-        File outputFile = new File(baseDir, trustStoreName);
-        try (FileOutputStream fileOutputStream = new FileOutputStream(outputFile)) {
+        File propertiesFile = new File(hostDir, "nifi.properties");
+
+        Map<String, String> updatedProperties = new HashMap<>();
+        updatedProperties.put(NiFiProperties.SECURITY_KEYSTORE, "./conf/" + keyStoreName);
+        updatedProperties.put(NiFiProperties.SECURITY_KEYSTORE_TYPE, sslHelper.getKeyStoreType());
+        updatedProperties.put(NiFiProperties.SECURITY_KEYSTORE_PASSWD, keyStorePassword);
+        updatedProperties.put(NiFiProperties.SECURITY_KEY_PASSWD, keyPassword);
+        updatedProperties.put(NiFiProperties.SECURITY_TRUSTSTORE, "./conf/truststore" + extension);
+        updatedProperties.put(NiFiProperties.SECURITY_TRUSTSTORE_TYPE, sslHelper.getKeyStoreType());
+        updatedProperties.put(NiFiProperties.SECURITY_TRUSTSTORE_PASSWD, trustStorePassword);
+        if (!StringUtils.isEmpty(httpsPort)) {
+            updatedProperties.put(NiFiProperties.WEB_HTTPS_PORT, httpsPort);
+            updatedProperties.put(NiFiProperties.WEB_HTTP_PORT, "");
+            updatedProperties.put(NiFiProperties.SITE_TO_SITE_SECURE, "true");
+        }
+
+        try (OutputStream outputStream = new FileOutputStream(propertiesFile)) {
+            nifiPropertiesHelper.outputWithUpdatedPropertyValues(outputStream, updatedProperties);
+        }
+
+        File keyStoreFile = new File(hostDir, keyStoreName);
+        try (FileOutputStream fileOutputStream = new FileOutputStream(keyStoreFile)) {
+            keyStore.store(fileOutputStream, keyStorePassword.toCharArray());
+        }
+
+        File trustStoreFile = new File(hostDir, trustStoreName);
+        try (FileOutputStream fileOutputStream = new FileOutputStream(trustStoreFile)) {
             trustStore.store(fileOutputStream, trustStorePassword.toCharArray());
         }
     }
