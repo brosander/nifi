@@ -17,24 +17,18 @@
 
 package org.apache.nifi.toolkit.ssl;
 
-import org.bouncycastle.asn1.ASN1Object;
-import org.bouncycastle.asn1.ASN1Sequence;
 import org.bouncycastle.asn1.x500.X500Name;
-import org.bouncycastle.asn1.x509.AuthorityKeyIdentifier;
 import org.bouncycastle.asn1.x509.BasicConstraints;
 import org.bouncycastle.asn1.x509.ExtendedKeyUsage;
 import org.bouncycastle.asn1.x509.Extension;
 import org.bouncycastle.asn1.x509.KeyPurposeId;
 import org.bouncycastle.asn1.x509.KeyUsage;
-import org.bouncycastle.asn1.x509.SubjectKeyIdentifier;
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
 import org.bouncycastle.cert.CertIOException;
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.X509v3CertificateBuilder;
-import org.bouncycastle.cert.bc.BcX509ExtensionUtils;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.bouncycastle.cert.jcajce.JcaX509ExtensionUtils;
-import org.bouncycastle.crypto.util.SubjectPublicKeyInfoFactory;
 import org.bouncycastle.operator.ContentSigner;
 import org.bouncycastle.operator.OperatorCreationException;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
@@ -117,8 +111,8 @@ public class SSLHelper {
 
         // Set certificate extensions
         // (1) digitalSignature extension
-        certBuilder.addExtension(Extension.keyUsage, true,
-                new KeyUsage(KeyUsage.digitalSignature | KeyUsage.keyEncipherment | KeyUsage.dataEncipherment | KeyUsage.keyAgreement | KeyUsage.nonRepudiation | KeyUsage.cRLSign | KeyUsage.keyCertSign));
+        certBuilder.addExtension(Extension.keyUsage, true, new KeyUsage(KeyUsage.digitalSignature | KeyUsage.keyEncipherment | KeyUsage.dataEncipherment
+                | KeyUsage.keyAgreement | KeyUsage.nonRepudiation | KeyUsage.cRLSign | KeyUsage.keyCertSign));
 
         certBuilder.addExtension(Extension.basicConstraints, false, new BasicConstraints(true));
 
@@ -134,7 +128,8 @@ public class SSLHelper {
         return new JcaX509CertificateConverter().setProvider(PROVIDER).getCertificate(certificateHolder);
     }
 
-    public X509Certificate generateIssuedCertificate(String dn, KeyPair keyPair, X509Certificate issuer, KeyPair issuerKeyPair) throws IOException, NoSuchAlgorithmException, CertificateException, NoSuchProviderException, SignatureException, InvalidKeyException, OperatorCreationException {
+    public X509Certificate generateIssuedCertificate(String dn, KeyPair keyPair, X509Certificate issuer,KeyPair issuerKeyPair)
+            throws IOException, NoSuchAlgorithmException, CertificateException, NoSuchProviderException, SignatureException, InvalidKeyException, OperatorCreationException {
         ContentSigner sigGen = new JcaContentSignerBuilder(signingAlgorithm).setProvider(PROVIDER).build(issuerKeyPair.getPrivate());
         SubjectPublicKeyInfo subPubKeyInfo = SubjectPublicKeyInfo.getInstance(keyPair.getPublic().getEncoded());
         Date startDate = new Date();

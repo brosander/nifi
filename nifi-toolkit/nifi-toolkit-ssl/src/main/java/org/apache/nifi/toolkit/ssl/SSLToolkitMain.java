@@ -31,6 +31,7 @@ import org.bouncycastle.operator.OperatorCreationException;
 import org.bouncycastle.util.io.pem.PemWriter;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -82,6 +83,7 @@ public class SSLToolkitMain {
     public static final String NIFI_CERT = "nifi-cert";
     public static final String ROOT_CERT_PRIVATE_KEY = "rootCert.key";
     public static final String ROOT_CERT_CRT = "rootCert.crt";
+    public static final String NIFI_PROPERTIES_FILE_ARG = "nifiPropertiesFile";
 
     private final SSLHelper sslHelper;
     private final File baseDir;
@@ -121,6 +123,7 @@ public class SSLToolkitMain {
         addOptionWithArg(options, "o", OUTPUT_DIRECTORY_ARG, "The directory to output keystores, truststore, config files.", DEFAULT_OUTPUT_DIRECTORY);
         addOptionWithArg(options, "n", HOSTNAMES_ARG, "Comma separated list of hostnames.", DEFAULT_HOSTNAMES);
         addOptionWithArg(options, "p", HTTPS_PORT_ARG, "Https port to use.", "");
+        addOptionWithArg(options, "f", NIFI_PROPERTIES_FILE_ARG, "Base nifi.properties file to update.", "");
 
         CommandLineParser parser = new DefaultParser();
         CommandLine commandLine = null;
@@ -162,9 +165,17 @@ public class SSLToolkitMain {
 
         String httpsPort = commandLine.getOptionValue(HTTPS_PORT_ARG, "");
 
+        String nifiPropertiesFile = commandLine.getOptionValue(NIFI_PROPERTIES_FILE_ARG, "");
+
         try {
             SSLHelper sslHelper = new SSLHelper(days, keySize, keyAlgorithm, signingAlgorithm, keyStoreType);
-            new SSLToolkitMain(sslHelper, baseDir, new NifiPropertiesHelper()).createNifiKeystoresAndTrustStores("CN=nifi.root.ca,OU=apache.nifi", hostnames, httpsPort);
+            NifiPropertiesHelper nifiPropertiesHelper;
+            if (StringUtils.isEmpty(nifiPropertiesFile)) {
+                nifiPropertiesHelper = new NifiPropertiesHelper();
+            } else {
+                nifiPropertiesHelper = new NifiPropertiesHelper(new FileInputStream(nifiPropertiesFile));
+            }
+            new SSLToolkitMain(sslHelper, baseDir, nifiPropertiesHelper).createNifiKeystoresAndTrustStores("CN=nifi.root.ca,OU=apache.nifi", hostnames, httpsPort);
         } catch (Exception e) {
             printUsageAndExit("Error creating generating ssl configuration. (" + e.getMessage() + ")", options, ERROR_GENERATING_CONFIG);
         }
@@ -196,7 +207,8 @@ public class SSLToolkitMain {
         }
     }
 
-    private void processHost(String httpsPort, String extension, KeyPair certificateKeypair, X509Certificate x509Certificate, String trustStoreName, String trustStorePassword, KeyStore trustStore, String hostname) throws IOException, GeneralSecurityException, OperatorCreationException {
+    private void processHost(String httpsPort, String extension, KeyPair certificateKeypair, X509Certificate x509Certificate, String trustStoreName,
+                             String trustStorePassword, KeyStore trustStore, String hostname) throws IOException, GeneralSecurityException, OperatorCreationException {
         String keyPassword = sslHelper.generatePassword();
         String keyStorePassword = sslHelper.generatePassword();
         KeyPair keyPair = sslHelper.generateKeyPair();

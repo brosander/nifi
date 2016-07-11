@@ -24,37 +24,28 @@ import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.bouncycastle.openssl.PEMKeyPair;
 import org.bouncycastle.openssl.PEMParser;
 import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
-import org.bouncycastle.util.io.pem.PemObject;
-import org.bouncycastle.util.io.pem.PemReader;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import sun.security.util.Pem;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
-import java.security.InvalidKeyException;
-import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.KeyStore;
-import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
 import java.security.Permission;
-import java.security.SignatureException;
-import java.security.UnrecoverableEntryException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
-import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.Properties;
 import java.util.UUID;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 
 public class SSLToolkitMainTest {
@@ -112,14 +103,35 @@ public class SSLToolkitMainTest {
     }
 
     @Test
-    public void testDirOutput() throws IOException, KeyStoreException, CertificateException, NoSuchAlgorithmException, UnrecoverableEntryException, InvalidKeyException, NoSuchProviderException, SignatureException, InvalidKeySpecException {
+    public void testDirOutput() throws Exception {
         runAndAssertExitCode(0, "-o", tempDir.getAbsolutePath());
         X509Certificate x509Certificate = checkLoadCertPrivateKey(SSLToolkitMain.DEFAULT_KEY_ALGORITHM);
         checkHostDir(SSLToolkitMain.DEFAULT_HOSTNAMES, x509Certificate);
+
+        Properties nifiProperties = new Properties();
+        try (InputStream inputStream = new FileInputStream(new File(new File(tempDir, SSLToolkitMain.DEFAULT_HOSTNAMES), "nifi.properties"))) {
+            nifiProperties.load(inputStream);
+        }
+
+        assertNull(nifiProperties.get("nifi.fake.property"));
     }
 
     @Test
-    public void testHostnamesArgument() throws NoSuchAlgorithmException, IOException, InvalidKeySpecException, CertificateException, InvalidKeyException, KeyStoreException, SignatureException, NoSuchProviderException, UnrecoverableEntryException {
+    public void testFileArg() throws Exception {
+        runAndAssertExitCode(0, "-o", tempDir.getAbsolutePath(), "-f", "src/test/resources/nifi.properties");
+        X509Certificate x509Certificate = checkLoadCertPrivateKey(SSLToolkitMain.DEFAULT_KEY_ALGORITHM);
+        checkHostDir(SSLToolkitMain.DEFAULT_HOSTNAMES, x509Certificate);
+
+        Properties nifiProperties = new Properties();
+        try (InputStream inputStream = new FileInputStream(new File(new File(tempDir, SSLToolkitMain.DEFAULT_HOSTNAMES), "nifi.properties"))) {
+            nifiProperties.load(inputStream);
+        }
+
+        assertEquals("fake value", nifiProperties.get("nifi.fake.property"));
+    }
+
+    @Test
+    public void testHostnamesArgument() throws Exception {
         String nifi1 = "nifi1";
         String nifi2 = "nifi2";
         String nifi3 = "nifi3";
@@ -150,7 +162,7 @@ public class SSLToolkitMainTest {
         }
     }
 
-    private void checkHostDir(String hostname, X509Certificate rootCert) throws IOException, KeyStoreException, NoSuchAlgorithmException, CertificateException, UnrecoverableEntryException, InvalidKeyException, NoSuchProviderException, SignatureException {
+    private void checkHostDir(String hostname, X509Certificate rootCert) throws Exception {
         File hostDir = new File(tempDir, hostname);
         Properties nifiProperties = new Properties();
         try (InputStream inputStream = new FileInputStream(new File(hostDir, "nifi.properties"))) {
