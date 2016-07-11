@@ -621,8 +621,8 @@ public class JettyServer implements NiFiServer {
         if (StringUtils.isNotBlank(keystorePassword)) {
             // if no key password was provided, then assume the keystore password is the same as the key password.
             final String defaultKeyPassword = (StringUtils.isBlank(keyPassword)) ? keystorePassword : keyPassword;
-            contextFactory.setKeyManagerPassword(keystorePassword);
-            contextFactory.setKeyStorePassword(defaultKeyPassword);
+            contextFactory.setKeyManagerPassword(defaultKeyPassword);
+            contextFactory.setKeyStorePassword(keystorePassword);
         } else if (StringUtils.isNotBlank(keyPassword)) {
             // since no keystore password was provided, there will be no keystore integrity check
             contextFactory.setKeyStorePassword(keyPassword);

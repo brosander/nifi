@@ -26,10 +26,13 @@ import org.apache.commons.cli.ParseException;
 import org.apache.nifi.util.NiFiProperties;
 import org.apache.nifi.util.StringUtils;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.bouncycastle.openssl.jcajce.JcaMiscPEMGenerator;
 import org.bouncycastle.operator.OperatorCreationException;
+import org.bouncycastle.util.io.pem.PemWriter;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.security.GeneralSecurityException;
@@ -37,7 +40,6 @@ import java.security.KeyPair;
 import java.security.KeyStore;
 import java.security.Security;
 import java.security.cert.X509Certificate;
-import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -78,7 +80,8 @@ public class SSLToolkitMain {
     public static final String HTTPS_PORT_ARG = "httpsPort";
     public static final String NIFI_KEY = "nifi-key";
     public static final String NIFI_CERT = "nifi-cert";
-    public static final String ROOT_CERT_PRIVATE_KEY = "rootCertPrivate.key";
+    public static final String ROOT_CERT_PRIVATE_KEY = "rootCert.key";
+    public static final String ROOT_CERT_CRT = "rootCert.crt";
 
     private final SSLHelper sslHelper;
     private final File baseDir;
@@ -174,16 +177,19 @@ public class SSLToolkitMain {
         KeyPair certificateKeypair = sslHelper.generateKeyPair();
         X509Certificate x509Certificate = sslHelper.generateSelfSignedX509Certificate(certificateKeypair, dn);
 
+        try (PemWriter pemWriter = new PemWriter(new FileWriter(new File(baseDir, ROOT_CERT_CRT)))) {
+            pemWriter.writeObject(new JcaMiscPEMGenerator(x509Certificate));
+        }
+
+        try (PemWriter pemWriter = new PemWriter(new FileWriter(new File(baseDir, ROOT_CERT_PRIVATE_KEY)))) {
+            pemWriter.writeObject(new JcaMiscPEMGenerator(certificateKeypair));
+        }
+
         String trustStoreName = "truststore" + extension;
         String trustStorePassword = sslHelper.generatePassword();
 
         KeyStore trustStore = sslHelper.createKeyStore();
         trustStore.setCertificateEntry(NIFI_CERT, x509Certificate);
-
-        PKCS8EncodedKeySpec pkcs8EncodedKeySpec = new PKCS8EncodedKeySpec(certificateKeypair.getPrivate().getEncoded());
-        try (OutputStream outputStream = new FileOutputStream(new File(baseDir, ROOT_CERT_PRIVATE_KEY))) {
-            outputStream.write(pkcs8EncodedKeySpec.getEncoded());
-        }
 
         for (String hostname : hostnames) {
             processHost(httpsPort, extension, certificateKeypair, x509Certificate, trustStoreName, trustStorePassword, trustStore, hostname);

@@ -17,16 +17,24 @@
 
 package org.apache.nifi.toolkit.ssl;
 
+import org.bouncycastle.asn1.ASN1Object;
+import org.bouncycastle.asn1.ASN1Sequence;
 import org.bouncycastle.asn1.x500.X500Name;
+import org.bouncycastle.asn1.x509.AuthorityKeyIdentifier;
+import org.bouncycastle.asn1.x509.BasicConstraints;
 import org.bouncycastle.asn1.x509.ExtendedKeyUsage;
 import org.bouncycastle.asn1.x509.Extension;
 import org.bouncycastle.asn1.x509.KeyPurposeId;
 import org.bouncycastle.asn1.x509.KeyUsage;
+import org.bouncycastle.asn1.x509.SubjectKeyIdentifier;
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
 import org.bouncycastle.cert.CertIOException;
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.X509v3CertificateBuilder;
+import org.bouncycastle.cert.bc.BcX509ExtensionUtils;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
+import org.bouncycastle.cert.jcajce.JcaX509ExtensionUtils;
+import org.bouncycastle.crypto.util.SubjectPublicKeyInfoFactory;
 import org.bouncycastle.operator.ContentSigner;
 import org.bouncycastle.operator.OperatorCreationException;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
@@ -94,7 +102,7 @@ public class SSLHelper {
         return keyStore;
     }
 
-    public X509Certificate generateSelfSignedX509Certificate(KeyPair keyPair, String dn) throws OperatorCreationException, CertIOException, CertificateException {
+    public X509Certificate generateSelfSignedX509Certificate(KeyPair keyPair, String dn) throws OperatorCreationException, CertIOException, CertificateException, NoSuchAlgorithmException {
         ContentSigner sigGen = new JcaContentSignerBuilder(signingAlgorithm).setProvider(PROVIDER).build(keyPair.getPrivate());
         SubjectPublicKeyInfo subPubKeyInfo = SubjectPublicKeyInfo.getInstance(keyPair.getPublic().getEncoded());
         Date startDate = new Date();
@@ -110,7 +118,13 @@ public class SSLHelper {
         // Set certificate extensions
         // (1) digitalSignature extension
         certBuilder.addExtension(Extension.keyUsage, true,
-                new KeyUsage(KeyUsage.digitalSignature | KeyUsage.keyEncipherment | KeyUsage.dataEncipherment | KeyUsage.keyAgreement));
+                new KeyUsage(KeyUsage.digitalSignature | KeyUsage.keyEncipherment | KeyUsage.dataEncipherment | KeyUsage.keyAgreement | KeyUsage.nonRepudiation | KeyUsage.cRLSign | KeyUsage.keyCertSign));
+
+        certBuilder.addExtension(Extension.basicConstraints, false, new BasicConstraints(true));
+
+        certBuilder.addExtension(Extension.subjectKeyIdentifier, false, new JcaX509ExtensionUtils().createSubjectKeyIdentifier(keyPair.getPublic()));
+
+        certBuilder.addExtension(Extension.authorityKeyIdentifier, false, new JcaX509ExtensionUtils().createAuthorityKeyIdentifier(keyPair.getPublic()));
 
         // (2) extendedKeyUsage extension
         certBuilder.addExtension(Extension.extendedKeyUsage, false, new ExtendedKeyUsage(new KeyPurposeId[]{KeyPurposeId.id_kp_clientAuth, KeyPurposeId.id_kp_serverAuth}));
@@ -126,14 +140,27 @@ public class SSLHelper {
         Date startDate = new Date();
         Date endDate = new Date(startDate.getTime() + TimeUnit.DAYS.toMillis(days));
 
-        X509v3CertificateBuilder v3CertGen = new X509v3CertificateBuilder(
+        X509v3CertificateBuilder certBuilder = new X509v3CertificateBuilder(
                 new X500Name(issuer.getSubjectDN().getName()),
                 BigInteger.valueOf(System.currentTimeMillis()),
                 startDate, endDate,
                 new X500Name(dn),
                 subPubKeyInfo);
 
-        X509CertificateHolder certificateHolder = v3CertGen.build(sigGen);
+        certBuilder.addExtension(Extension.subjectKeyIdentifier, false, new JcaX509ExtensionUtils().createSubjectKeyIdentifier(keyPair.getPublic()));
+
+        certBuilder.addExtension(Extension.authorityKeyIdentifier, false, new JcaX509ExtensionUtils().createAuthorityKeyIdentifier(issuerKeyPair.getPublic()));
+        // Set certificate extensions
+        // (1) digitalSignature extension
+        certBuilder.addExtension(Extension.keyUsage, true,
+                new KeyUsage(KeyUsage.digitalSignature | KeyUsage.keyEncipherment | KeyUsage.dataEncipherment | KeyUsage.keyAgreement | KeyUsage.nonRepudiation));
+
+        certBuilder.addExtension(Extension.basicConstraints, false, new BasicConstraints(false));
+
+        // (2) extendedKeyUsage extension
+        certBuilder.addExtension(Extension.extendedKeyUsage, false, new ExtendedKeyUsage(new KeyPurposeId[]{KeyPurposeId.id_kp_clientAuth, KeyPurposeId.id_kp_serverAuth}));
+
+        X509CertificateHolder certificateHolder = certBuilder.build(sigGen);
         return new JcaX509CertificateConverter().setProvider(PROVIDER).getCertificate(certificateHolder);
     }
 

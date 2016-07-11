@@ -19,16 +19,26 @@ package org.apache.nifi.toolkit.ssl;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.nifi.util.NiFiProperties;
+import org.bouncycastle.cert.X509CertificateHolder;
+import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
+import org.bouncycastle.openssl.PEMKeyPair;
+import org.bouncycastle.openssl.PEMParser;
+import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
+import org.bouncycastle.util.io.pem.PemObject;
+import org.bouncycastle.util.io.pem.PemReader;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import sun.security.util.Pem;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.InvalidKeyException;
 import java.security.KeyFactory;
+import java.security.KeyPair;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
@@ -38,6 +48,7 @@ import java.security.SignatureException;
 import java.security.UnrecoverableEntryException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.Properties;
@@ -103,8 +114,8 @@ public class SSLToolkitMainTest {
     @Test
     public void testDirOutput() throws IOException, KeyStoreException, CertificateException, NoSuchAlgorithmException, UnrecoverableEntryException, InvalidKeyException, NoSuchProviderException, SignatureException, InvalidKeySpecException {
         runAndAssertExitCode(0, "-o", tempDir.getAbsolutePath());
-        checkLoadCertPrivateKey(SSLToolkitMain.DEFAULT_KEY_ALGORITHM);
-        checkHostDir(SSLToolkitMain.DEFAULT_HOSTNAMES);
+        X509Certificate x509Certificate = checkLoadCertPrivateKey(SSLToolkitMain.DEFAULT_KEY_ALGORITHM);
+        checkHostDir(SSLToolkitMain.DEFAULT_HOSTNAMES, x509Certificate);
     }
 
     @Test
@@ -112,21 +123,31 @@ public class SSLToolkitMainTest {
         String nifi1 = "nifi1";
         String nifi2 = "nifi2";
         String nifi3 = "nifi3";
-        
+
         runAndAssertExitCode(0, "-o", tempDir.getAbsolutePath(), "-n", nifi1 + "," + nifi2 + "," + nifi3);
-        checkLoadCertPrivateKey(SSLToolkitMain.DEFAULT_KEY_ALGORITHM);
+        X509Certificate x509Certificate = checkLoadCertPrivateKey(SSLToolkitMain.DEFAULT_KEY_ALGORITHM);
 
-        checkHostDir(nifi1);
-        checkHostDir(nifi2);
-        checkHostDir(nifi3);
+        checkHostDir(nifi1, x509Certificate);
+        checkHostDir(nifi2, x509Certificate);
+        checkHostDir(nifi3, x509Certificate);
     }
 
-    private void checkLoadCertPrivateKey(String algorithm) throws IOException, NoSuchAlgorithmException, InvalidKeySpecException {
-        PKCS8EncodedKeySpec pkcs8EncodedKeySpec = new PKCS8EncodedKeySpec(FileUtils.readFileToByteArray(new File(tempDir, SSLToolkitMain.ROOT_CERT_PRIVATE_KEY)));
-        KeyFactory.getInstance(algorithm).generatePrivate(pkcs8EncodedKeySpec);
+    private X509Certificate checkLoadCertPrivateKey(String algorithm) throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, CertificateException {
+        try (PEMParser pemParser = new PEMParser(new FileReader(new File(tempDir, SSLToolkitMain.ROOT_CERT_PRIVATE_KEY)))) {
+            Object object = pemParser.readObject();
+            assertEquals(PEMKeyPair.class, object.getClass());
+            KeyPair keyPair = new JcaPEMKeyConverter().getKeyPair((PEMKeyPair) object);
+            assertEquals(algorithm, keyPair.getPrivate().getAlgorithm());
+            assertEquals(algorithm, keyPair.getPublic().getAlgorithm());
+        }
+        try (PEMParser pemParser = new PEMParser(new FileReader(new File(tempDir, SSLToolkitMain.ROOT_CERT_CRT)))) {
+            Object object = pemParser.readObject();
+            assertEquals(X509CertificateHolder.class, object.getClass());
+            return new JcaX509CertificateConverter().setProvider(SSLHelper.PROVIDER).getCertificate((X509CertificateHolder) object);
+        }
     }
 
-    private void checkHostDir(String hostname) throws IOException, KeyStoreException, NoSuchAlgorithmException, CertificateException, UnrecoverableEntryException, InvalidKeyException, NoSuchProviderException, SignatureException {
+    private void checkHostDir(String hostname, X509Certificate rootCert) throws IOException, KeyStoreException, NoSuchAlgorithmException, CertificateException, UnrecoverableEntryException, InvalidKeyException, NoSuchProviderException, SignatureException {
         File hostDir = new File(tempDir, hostname);
         Properties nifiProperties = new Properties();
         try (InputStream inputStream = new FileInputStream(new File(hostDir, "nifi.properties"))) {
@@ -140,6 +161,7 @@ public class SSLToolkitMainTest {
         }
 
         Certificate certificate = trustStore.getCertificate(SSLToolkitMain.NIFI_CERT);
+        assertEquals(rootCert, certificate);
 
         String keyStoreType = nifiProperties.getProperty(NiFiProperties.SECURITY_KEYSTORE_TYPE);
         String keyStoreFilename = hostDir.getName() + "." + keyStoreType;
@@ -160,9 +182,9 @@ public class SSLToolkitMainTest {
         Certificate[] certificateChain = privateKeyEntry.getCertificateChain();
 
         assertEquals(2, certificateChain.length);
-        assertEquals(certificate, certificateChain[1]);
-        certificateChain[1].verify(certificate.getPublicKey());
-        certificateChain[0].verify(certificate.getPublicKey());
+        assertEquals(rootCert, certificateChain[1]);
+        certificateChain[1].verify(rootCert.getPublicKey());
+        certificateChain[0].verify(rootCert.getPublicKey());
     }
 
     private void runAndAssertExitCode(int exitCode, String... args) {
