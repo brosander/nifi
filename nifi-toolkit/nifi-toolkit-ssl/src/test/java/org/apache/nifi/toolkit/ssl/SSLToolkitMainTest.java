@@ -133,17 +133,20 @@ public class SSLToolkitMainTest {
     }
 
     private X509Certificate checkLoadCertPrivateKey(String algorithm) throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, CertificateException {
+        KeyPair keyPair;
         try (PEMParser pemParser = new PEMParser(new FileReader(new File(tempDir, SSLToolkitMain.ROOT_CERT_PRIVATE_KEY)))) {
             Object object = pemParser.readObject();
             assertEquals(PEMKeyPair.class, object.getClass());
-            KeyPair keyPair = new JcaPEMKeyConverter().getKeyPair((PEMKeyPair) object);
+            keyPair = new JcaPEMKeyConverter().getKeyPair((PEMKeyPair) object);
             assertEquals(algorithm, keyPair.getPrivate().getAlgorithm());
             assertEquals(algorithm, keyPair.getPublic().getAlgorithm());
         }
         try (PEMParser pemParser = new PEMParser(new FileReader(new File(tempDir, SSLToolkitMain.ROOT_CERT_CRT)))) {
             Object object = pemParser.readObject();
             assertEquals(X509CertificateHolder.class, object.getClass());
-            return new JcaX509CertificateConverter().setProvider(SSLHelper.PROVIDER).getCertificate((X509CertificateHolder) object);
+            X509Certificate x509Certificate = new JcaX509CertificateConverter().setProvider(SSLHelper.PROVIDER).getCertificate((X509CertificateHolder) object);
+            assertEquals(keyPair.getPublic(), x509Certificate.getPublicKey());
+            return x509Certificate;
         }
     }
 
