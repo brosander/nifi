@@ -157,7 +157,7 @@ public class TlsCertificateAuthorityService extends AbstractHandler {
 
             JcaPKCS10CertificationRequest jcaPKCS10CertificationRequest = tlsCertificateAuthorityRequest.parseCsr();
 
-            if (tlsHelper.checkHMac(tlsCertificateAuthorityRequest.getHmac(), token, tlsHelper.getKeyIdentifier(jcaPKCS10CertificationRequest.getPublicKey()))) {
+            if (tlsHelper.checkHMac(tlsCertificateAuthorityRequest.getHmac(), token, jcaPKCS10CertificationRequest.getPublicKey())) {
                 StringWriter signedCertificate = new StringWriter();
                 tlsHelper.writeCertificate(tlsHelper.signCsr(jcaPKCS10CertificationRequest, this.caCert, keyPair), signedCertificate);
 

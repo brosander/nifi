@@ -221,19 +221,11 @@ public class TlsHelper {
         return MessageDigest.isEqual(Base64.getDecoder().decode(hmac), calculateHMac(token, publicKey));
     }
 
-    public boolean checkHMac(String hmac, String token, byte[] publicKeyFingerprint) throws CRMFException, NoSuchProviderException, NoSuchAlgorithmException, InvalidKeyException {
-        return MessageDigest.isEqual(Base64.getDecoder().decode(hmac), calculateHMac(token, publicKeyFingerprint));
-    }
-
-    public byte[] calculateHMac(String token, byte[] publicKeyFingerprint) throws NoSuchProviderException, NoSuchAlgorithmException, InvalidKeyException {
+    public byte[] calculateHMac(String token, PublicKey publicKey) throws NoSuchProviderException, NoSuchAlgorithmException, InvalidKeyException {
         SecretKeySpec keySpec = new SecretKeySpec(token.getBytes(StandardCharsets.UTF_8), "RAW");
         Mac mac = Mac.getInstance("Hmac-SHA256", PROVIDER);
         mac.init(keySpec);
-        return mac.doFinal(publicKeyFingerprint);
-    }
-
-    public byte[] calculateHMac(String token, PublicKey publicKey) throws NoSuchProviderException, NoSuchAlgorithmException, InvalidKeyException {
-        return calculateHMac(token, getKeyIdentifier(publicKey));
+        return mac.doFinal(getKeyIdentifier(publicKey));
     }
 
     public byte[] getKeyIdentifier(PublicKey publicKey) throws NoSuchAlgorithmException {
