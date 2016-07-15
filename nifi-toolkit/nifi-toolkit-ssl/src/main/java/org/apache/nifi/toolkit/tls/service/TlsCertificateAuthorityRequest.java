@@ -17,7 +17,6 @@
 
 package org.apache.nifi.toolkit.tls.service;
 
-import org.apache.nifi.toolkit.tls.util.TlsHelper;
 import org.apache.nifi.util.StringUtils;
 import org.bouncycastle.openssl.PEMParser;
 import org.bouncycastle.openssl.jcajce.JcaMiscPEMGenerator;
@@ -31,7 +30,6 @@ import java.io.StringWriter;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
-import java.util.Base64;
 
 public class TlsCertificateAuthorityRequest {
     private String hmac;
@@ -40,9 +38,9 @@ public class TlsCertificateAuthorityRequest {
     public TlsCertificateAuthorityRequest() {
     }
 
-    public TlsCertificateAuthorityRequest(TlsHelper tlsHelper, String token, JcaPKCS10CertificationRequest csr) throws IOException, NoSuchAlgorithmException,
+    public TlsCertificateAuthorityRequest(String hmac, JcaPKCS10CertificationRequest csr) throws IOException, NoSuchAlgorithmException,
             InvalidKeyException, NoSuchProviderException {
-        this.hmac = Base64.getEncoder().encodeToString(tlsHelper.calculateHMac(token, csr.getPublicKey()));
+        this.hmac = hmac;
         StringWriter writer = new StringWriter();
         try (PemWriter pemWriter = new PemWriter(writer)) {
             pemWriter.writeObject(new JcaMiscPEMGenerator(csr));

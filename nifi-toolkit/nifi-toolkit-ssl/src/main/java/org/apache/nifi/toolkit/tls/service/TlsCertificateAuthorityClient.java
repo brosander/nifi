@@ -57,6 +57,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 
 public class TlsCertificateAuthorityClient {
@@ -124,7 +125,8 @@ public class TlsCertificateAuthorityClient {
         int responseCode;
         try (CloseableHttpClient client = httpClientBuilder.build()) {
             JcaPKCS10CertificationRequest request = tlsHelper.generateCertificationRequest("CN=" + tlsClientConfig.getHostname() + ",OU=NIFI", keyPair);
-            TlsCertificateAuthorityRequest tlsCertificateAuthorityRequest = new TlsCertificateAuthorityRequest(tlsHelper, tlsClientConfig.getToken(), request);
+            String hmac = Base64.getEncoder().encodeToString(tlsHelper.calculateHMac(tlsClientConfig.getToken(), request.getPublicKey()));
+            TlsCertificateAuthorityRequest tlsCertificateAuthorityRequest = new TlsCertificateAuthorityRequest(hmac, request);
 
             HttpPost httpPost = new HttpPost();
             httpPost.setEntity(new ByteArrayEntity(objectMapper.writeValueAsBytes(tlsCertificateAuthorityRequest)));
