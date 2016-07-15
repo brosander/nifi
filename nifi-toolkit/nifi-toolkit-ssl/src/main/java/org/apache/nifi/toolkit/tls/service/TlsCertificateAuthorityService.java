@@ -49,7 +49,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.io.StringWriter;
 import java.security.KeyPair;
 import java.security.KeyStore;
 import java.security.SecureRandom;
@@ -154,7 +153,6 @@ public class TlsCertificateAuthorityService extends AbstractHandler {
             JcaPKCS10CertificationRequest jcaPKCS10CertificationRequest = tlsCertificateAuthorityRequest.parseCsr();
 
             if (tlsHelper.checkHMac(tlsCertificateAuthorityRequest.getHmac(), token, jcaPKCS10CertificationRequest.getPublicKey())) {
-                StringWriter signedCertificate = new StringWriter();
                 X509Certificate x509Certificate = tlsHelper.signCsr(jcaPKCS10CertificationRequest, this.caCert, keyPair);
                 writeResponse(objectMapper, response, new TlsCertificateAuthorityResponse(tlsHelper.calculateHMac(token, caCert.getPublicKey()), x509Certificate), Response.SC_OK);
                 return;
