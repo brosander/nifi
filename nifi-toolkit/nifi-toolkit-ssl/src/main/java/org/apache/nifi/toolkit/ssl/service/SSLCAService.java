@@ -19,7 +19,7 @@ package org.apache.nifi.toolkit.ssl.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.io.input.BoundedReader;
-import org.apache.nifi.toolkit.ssl.SSLToolkitMain;
+import org.apache.nifi.toolkit.ssl.TlsToolkitMain;
 import org.apache.nifi.toolkit.ssl.configuration.SSLConfig;
 import org.apache.nifi.toolkit.ssl.util.InputStreamFactory;
 import org.apache.nifi.toolkit.ssl.util.OutputStreamFactory;
@@ -88,9 +88,9 @@ public class SSLCAService extends AbstractHandler {
                 keyStore.load(inputStream, configuration.getKeyStorePassword().toCharArray());
             }
             keyPassword = configuration.getKeyPassword();
-            KeyStore.Entry keyStoreEntry = keyStore.getEntry(SSLToolkitMain.NIFI_KEY, new KeyStore.PasswordProtection(keyPassword.toCharArray()));
+            KeyStore.Entry keyStoreEntry = keyStore.getEntry(TlsToolkitMain.NIFI_KEY, new KeyStore.PasswordProtection(keyPassword.toCharArray()));
             if (!KeyStore.PrivateKeyEntry.class.isInstance(keyStoreEntry)) {
-                throw new IOException("Expected " + SSLToolkitMain.NIFI_KEY + " alias to contain a private key entry");
+                throw new IOException("Expected " + TlsToolkitMain.NIFI_KEY + " alias to contain a private key entry");
             }
             KeyStore.PrivateKeyEntry privateKeyEntry = (KeyStore.PrivateKeyEntry) keyStoreEntry;
             keyPair = new KeyPair(privateKeyEntry.getCertificate().getPublicKey(), privateKeyEntry.getPrivateKey());
@@ -101,7 +101,7 @@ public class SSLCAService extends AbstractHandler {
             keyStore = this.sslHelper.createKeyStore();
             String keyStorePassword = passwordUtil.generatePassword();
             keyPassword = passwordUtil.generatePassword();
-            this.sslHelper.addToKeyStore(keyStore, keyPair, SSLToolkitMain.NIFI_KEY, keyPassword.toCharArray(), caCert);
+            this.sslHelper.addToKeyStore(keyStore, keyPair, TlsToolkitMain.NIFI_KEY, keyPassword.toCharArray(), caCert);
             try (OutputStream outputStream = outputStreamFactory.create(new File(keyStoreFile))) {
                 keyStore.store(outputStream, keyStorePassword.toCharArray());
             }

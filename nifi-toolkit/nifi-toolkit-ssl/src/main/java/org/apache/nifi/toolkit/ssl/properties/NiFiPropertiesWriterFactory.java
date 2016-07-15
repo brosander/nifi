@@ -17,7 +17,7 @@
 
 package org.apache.nifi.toolkit.ssl.properties;
 
-import org.apache.nifi.toolkit.ssl.SSLToolkitMain;
+import org.apache.nifi.toolkit.ssl.TlsToolkitMain;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -31,7 +31,7 @@ public class NiFiPropertiesWriterFactory {
     private final List<String> lines;
 
     public NiFiPropertiesWriterFactory() throws IOException {
-        this(SSLToolkitMain.class.getClassLoader().getResourceAsStream("conf/nifi.properties"));
+        this(TlsToolkitMain.class.getClassLoader().getResourceAsStream("conf/nifi.properties"));
     }
 
     public NiFiPropertiesWriterFactory(InputStream inputStream) throws IOException {

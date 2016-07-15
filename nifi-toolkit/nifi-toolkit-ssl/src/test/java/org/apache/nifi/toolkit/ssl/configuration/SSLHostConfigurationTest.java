@@ -17,7 +17,7 @@
 
 package org.apache.nifi.toolkit.ssl.configuration;
 
-import org.apache.nifi.toolkit.ssl.SSLToolkitMain;
+import org.apache.nifi.toolkit.ssl.TlsToolkitMain;
 import org.apache.nifi.toolkit.ssl.commandLine.SSLToolkitCommandLine;
 import org.apache.nifi.toolkit.ssl.properties.NiFiPropertiesWriter;
 import org.apache.nifi.toolkit.ssl.properties.NiFiPropertiesWriterFactory;
@@ -167,12 +167,12 @@ public class SSLHostConfigurationTest {
 
         KeyStore trustStore = KeyStore.getInstance("jks");
         trustStore.load(new ByteArrayInputStream(truststoreOutputStream.toByteArray()), trustStorePassword.toCharArray());
-        Certificate certificate = trustStore.getCertificate(SSLToolkitMain.NIFI_CERT);
+        Certificate certificate = trustStore.getCertificate(TlsToolkitMain.NIFI_CERT);
         assertEquals(x509Certificate, certificate);
 
         KeyStore keyStore = KeyStore.getInstance("jks");
         keyStore.load(new ByteArrayInputStream(keystoreOutputStream.toByteArray()), keyStorePassword.toCharArray());
-        KeyStore.Entry entry = keyStore.getEntry(SSLToolkitMain.NIFI_KEY, new KeyStore.PasswordProtection(keyPassword.toCharArray()));
+        KeyStore.Entry entry = keyStore.getEntry(TlsToolkitMain.NIFI_KEY, new KeyStore.PasswordProtection(keyPassword.toCharArray()));
         assertEquals(KeyStore.PrivateKeyEntry.class, entry.getClass());
         KeyStore.PrivateKeyEntry privateKeyEntry = (KeyStore.PrivateKeyEntry) entry;
 

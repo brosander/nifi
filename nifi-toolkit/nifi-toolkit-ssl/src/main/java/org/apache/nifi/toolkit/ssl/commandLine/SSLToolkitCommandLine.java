@@ -23,7 +23,7 @@ import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
-import org.apache.nifi.toolkit.ssl.SSLToolkitMain;
+import org.apache.nifi.toolkit.ssl.TlsToolkitMain;
 import org.apache.nifi.toolkit.ssl.properties.NiFiPropertiesWriterFactory;
 import org.apache.nifi.toolkit.ssl.util.PasswordUtil;
 import org.apache.nifi.util.StringUtils;
@@ -134,7 +134,7 @@ public class SSLToolkitCommandLine {
         }
         HelpFormatter helpFormatter = new HelpFormatter();
         helpFormatter.setWidth(160);
-        helpFormatter.printHelp(SSLToolkitMain.class.getCanonicalName(), HEADER, options, FOOTER, true);
+        helpFormatter.printHelp(TlsToolkitMain.class.getCanonicalName(), HEADER, options, FOOTER, true);
     }
 
     public <T> T printUsageAndThrow(String errorMessage, int exitCode) throws CommandLineParseException {

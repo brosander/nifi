@@ -17,7 +17,7 @@
 
 package org.apache.nifi.toolkit.ssl.commandLine;
 
-import org.apache.nifi.toolkit.ssl.SSLToolkitMainTest;
+import org.apache.nifi.toolkit.ssl.TlsToolkitMainTest;
 import org.apache.nifi.toolkit.ssl.properties.NiFiPropertiesWriter;
 import org.junit.Before;
 import org.junit.Test;
@@ -153,14 +153,14 @@ public class SSLToolkitCommandLineTest {
 
     @Test
     public void testNifiPropertiesFile() throws CommandLineParseException, IOException {
-        sslToolkitCommandLine.parse("-f", SSLToolkitMainTest.TEST_NIFI_PROPERTIES);
-        assertEquals(SSLToolkitMainTest.FAKE_VALUE, getProperties().get(SSLToolkitMainTest.NIFI_FAKE_PROPERTY));
+        sslToolkitCommandLine.parse("-f", TlsToolkitMainTest.TEST_NIFI_PROPERTIES);
+        assertEquals(TlsToolkitMainTest.FAKE_VALUE, getProperties().get(TlsToolkitMainTest.NIFI_FAKE_PROPERTY));
     }
 
     @Test
     public void testNifiPropertiesFileDefault() throws CommandLineParseException, IOException {
         sslToolkitCommandLine.parse();
-        assertNull(getProperties().get(SSLToolkitMainTest.NIFI_FAKE_PROPERTY));
+        assertNull(getProperties().get(TlsToolkitMainTest.NIFI_FAKE_PROPERTY));
     }
 
     @Test

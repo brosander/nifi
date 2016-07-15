@@ -45,7 +45,7 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 
-public class SSLToolkitMainTest {
+public class TlsToolkitMainTest {
     public static final String NIFI_FAKE_PROPERTY = "nifi.fake.property";
     public static final String FAKE_VALUE = "fake value";
     public static final String TEST_NIFI_PROPERTIES = "src/test/resources/localhost/nifi.properties";
@@ -175,12 +175,12 @@ public class SSLToolkitMainTest {
     }
 
     private X509Certificate checkLoadCertPrivateKey(String algorithm) throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, CertificateException {
-        KeyPair keyPair = SSLHelperTest.loadKeyPair(new File(tempDir, SSLToolkitMain.ROOT_CERT_PRIVATE_KEY));
+        KeyPair keyPair = SSLHelperTest.loadKeyPair(new File(tempDir, TlsToolkitMain.ROOT_CERT_PRIVATE_KEY));
 
         assertEquals(algorithm, keyPair.getPrivate().getAlgorithm());
         assertEquals(algorithm, keyPair.getPublic().getAlgorithm());
 
-        X509Certificate x509Certificate = SSLHelperTest.loadCertificate(new File(tempDir, SSLToolkitMain.ROOT_CERT_CRT));
+        X509Certificate x509Certificate = SSLHelperTest.loadCertificate(new File(tempDir, TlsToolkitMain.ROOT_CERT_CRT));
         assertEquals(keyPair.getPublic(), x509Certificate.getPublicKey());
         return x509Certificate;
     }
@@ -188,7 +188,7 @@ public class SSLToolkitMainTest {
     private Properties checkHostDirAndReturnNifiProperties(String hostname, X509Certificate rootCert) throws Exception {
         File hostDir = new File(tempDir, hostname);
         Properties nifiProperties = new Properties();
-        try (InputStream inputStream = new FileInputStream(new File(hostDir, SSLToolkitMain.NIFI_PROPERTIES))) {
+        try (InputStream inputStream = new FileInputStream(new File(hostDir, TlsToolkitMain.NIFI_PROPERTIES))) {
             nifiProperties.load(inputStream);
         }
 
@@ -198,7 +198,7 @@ public class SSLToolkitMainTest {
             trustStore.load(inputStream, nifiProperties.getProperty(NiFiProperties.SECURITY_TRUSTSTORE_PASSWD).toCharArray());
         }
 
-        Certificate certificate = trustStore.getCertificate(SSLToolkitMain.NIFI_CERT);
+        Certificate certificate = trustStore.getCertificate(TlsToolkitMain.NIFI_CERT);
         assertEquals(rootCert, certificate);
 
         String keyStoreType = nifiProperties.getProperty(NiFiProperties.SECURITY_KEYSTORE_TYPE);
@@ -212,7 +212,7 @@ public class SSLToolkitMainTest {
 
         char[] keyPassword = nifiProperties.getProperty(NiFiProperties.SECURITY_KEY_PASSWD).toCharArray();
 
-        KeyStore.Entry entry = keyStore.getEntry(SSLToolkitMain.NIFI_KEY, new KeyStore.PasswordProtection(keyPassword));
+        KeyStore.Entry entry = keyStore.getEntry(TlsToolkitMain.NIFI_KEY, new KeyStore.PasswordProtection(keyPassword));
         assertEquals(KeyStore.PrivateKeyEntry.class, entry.getClass());
 
         KeyStore.PrivateKeyEntry privateKeyEntry = (KeyStore.PrivateKeyEntry) entry;
@@ -228,7 +228,7 @@ public class SSLToolkitMainTest {
 
     private void runAndAssertExitCode(int exitCode, String... args) {
         try {
-            SSLToolkitMain.main(args);
+            TlsToolkitMain.main(args);
             fail("Expecting exit code: " + exitCode);
         } catch (ExitException e) {
             assertEquals(exitCode, e.getExitCode());

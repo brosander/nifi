@@ -37,13 +37,13 @@ public class PasswordUtilTest {
         int value = 8675309;
         doAnswer(invocation -> {
             byte[] bytes = (byte[]) invocation.getArguments()[0];
-            assertEquals(17, bytes.length);
+            assertEquals(128, bytes.length);
             Arrays.fill(bytes, (byte) 0);
             byte[] val = ByteBuffer.allocate(Long.BYTES).putLong(value).array();
             System.arraycopy(val, 0, bytes, bytes.length - val.length, val.length);
             return null;
         }).when(secureRandom).nextBytes(any(byte[].class));
-        String expected = BigInteger.valueOf(Integer.valueOf(value).longValue()).toString(32);
+        String expected = BigInteger.valueOf(Integer.valueOf(value).longValue()).toString(64);
         String actual = passwordUtil.generatePassword();
         assertEquals(expected, actual);
     }

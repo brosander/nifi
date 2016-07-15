@@ -18,7 +18,7 @@
 package org.apache.nifi.toolkit.ssl.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.nifi.toolkit.ssl.SSLToolkitMain;
+import org.apache.nifi.toolkit.ssl.TlsToolkitMain;
 import org.apache.nifi.toolkit.ssl.commandLine.SSLToolkitCommandLine;
 import org.apache.nifi.toolkit.ssl.configuration.SSLClientConfig;
 import org.apache.nifi.toolkit.ssl.configuration.SSLConfig;
@@ -182,7 +182,7 @@ public class SSLCATest {
 
         KeyStore serverKeyStore = KeyStore.getInstance(serverConfig.getKeyStoreType());
         serverKeyStore.load(new ByteArrayInputStream(serverKeyStoreOutputStream.toByteArray()), serverConfig.getKeyStorePassword().toCharArray());
-        KeyStore.Entry serverKeyEntry = serverKeyStore.getEntry(SSLToolkitMain.NIFI_KEY, new KeyStore.PasswordProtection(serverConfig.getKeyPassword().toCharArray()));
+        KeyStore.Entry serverKeyEntry = serverKeyStore.getEntry(TlsToolkitMain.NIFI_KEY, new KeyStore.PasswordProtection(serverConfig.getKeyPassword().toCharArray()));
 
         assertTrue(serverKeyEntry instanceof KeyStore.PrivateKeyEntry);
         KeyStore.PrivateKeyEntry privateKeyEntry = (KeyStore.PrivateKeyEntry) serverKeyEntry;
@@ -200,7 +200,7 @@ public class SSLCATest {
 
         KeyStore clientKeyStore = KeyStore.getInstance(clientConfig.getKeyStoreType());
         clientKeyStore.load(new ByteArrayInputStream(clientKeyStoreOutputStream.toByteArray()), clientConfig.getKeyStorePassword().toCharArray());
-        KeyStore.Entry clientKeyStoreEntry = clientKeyStore.getEntry(SSLToolkitMain.NIFI_KEY, new KeyStore.PasswordProtection(clientConfig.getKeyPassword().toCharArray()));
+        KeyStore.Entry clientKeyStoreEntry = clientKeyStore.getEntry(TlsToolkitMain.NIFI_KEY, new KeyStore.PasswordProtection(clientConfig.getKeyPassword().toCharArray()));
 
         assertTrue(clientKeyStoreEntry instanceof KeyStore.PrivateKeyEntry);
         KeyStore.PrivateKeyEntry clientPrivateKeyEntry = (KeyStore.PrivateKeyEntry) clientKeyStoreEntry;
@@ -212,7 +212,7 @@ public class SSLCATest {
 
         KeyStore clientTrustStore = KeyStore.getInstance(clientConfig.getTrustStoreType());
         clientTrustStore.load(new ByteArrayInputStream(clientTrustStoreOutputStream.toByteArray()), clientConfig.getTrustStorePassword().toCharArray());
-        assertEquals(caCertificate, clientTrustStore.getCertificate(SSLToolkitMain.NIFI_CERT));
+        assertEquals(caCertificate, clientTrustStore.getCertificate(TlsToolkitMain.NIFI_CERT));
     }
 
     private void assertPrivateAndPublicKeyMatch(PrivateKey privateKey, PublicKey publicKey) throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {

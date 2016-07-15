@@ -33,7 +33,7 @@ goto startConfig
 :startConfig
 set LIB_DIR=%~dp0..\lib
 
-SET JAVA_PARAMS=-cp %LIB_DIR%\* -Xms12m -Xmx24m %JAVA_ARGS% org.apache.nifi.toolkit.ssl.SSLToolkitMain
+SET JAVA_PARAMS=-cp %LIB_DIR%\* -Xms12m -Xmx24m %JAVA_ARGS% org.apache.nifi.toolkit.ssl.TlsToolkitMain
 
 cmd.exe /C "%JAVA_EXE%" %JAVA_PARAMS% %*
 

@@ -40,7 +40,7 @@ import java.util.List;
 
 import static org.apache.nifi.toolkit.ssl.commandLine.SSLToolkitCommandLine.ERROR_GENERATING_CONFIG;
 
-public class SSLToolkitMain {
+public class TlsToolkitMain {
     public static final String NIFI_KEY = "nifi-key";
     public static final String NIFI_CERT = "nifi-cert";
     public static final String ROOT_CERT_PRIVATE_KEY = "rootCert.key";
@@ -51,7 +51,7 @@ public class SSLToolkitMain {
     private final File baseDir;
     private final NiFiPropertiesWriterFactory niFiPropertiesWriterFactory;
 
-    public SSLToolkitMain(SSLHelper sslHelper, File baseDir, NiFiPropertiesWriterFactory niFiPropertiesWriterFactory) {
+    public TlsToolkitMain(SSLHelper sslHelper, File baseDir, NiFiPropertiesWriterFactory niFiPropertiesWriterFactory) {
         this.sslHelper = sslHelper;
         this.baseDir = baseDir;
         this.niFiPropertiesWriterFactory = niFiPropertiesWriterFactory;
@@ -66,7 +66,7 @@ public class SSLToolkitMain {
             System.exit(e.getExitCode());
         }
         try {
-            new SSLToolkitMain(new SSLHelper(sslToolkitCommandLine), sslToolkitCommandLine.getBaseDir(), sslToolkitCommandLine.getNiFiPropertiesWriterFactory())
+            new TlsToolkitMain(new SSLHelper(sslToolkitCommandLine), sslToolkitCommandLine.getBaseDir(), sslToolkitCommandLine.getNiFiPropertiesWriterFactory())
                     .createNifiKeystoresAndTrustStores("CN=nifi.root.ca,OU=apache.nifi", sslToolkitCommandLine.getHostnames(), sslToolkitCommandLine.getKeyStorePasswords(),
                             sslToolkitCommandLine.getKeyPasswords(), sslToolkitCommandLine.getTrustStorePasswords(), sslToolkitCommandLine.getHttpsPort());
         } catch (Exception e) {
