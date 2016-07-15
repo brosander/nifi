@@ -26,6 +26,18 @@ public class SSLConfig {
     private String nonce;
     private String hostname;
     private String sslCipher;
+    private int port;
+
+    public SSLConfig() {
+    }
+
+    public int getPort() {
+        return port;
+    }
+
+    public void setPort(int port) {
+        this.port = port;
+    }
 
     public String getSslCipher() {
         return sslCipher;
@@ -33,9 +45,6 @@ public class SSLConfig {
 
     public void setSslCipher(String sslCipher) {
         this.sslCipher = sslCipher;
-    }
-
-    public SSLConfig() {
     }
 
     public SSLHelperConfig getSslHelper() {

@@ -23,6 +23,9 @@ public class SSLClientConfig extends SSLConfig {
     private String trustStorePassword;
     private String trustStoreType;
 
+    public SSLClientConfig() {
+    }
+
     public String getTrustStoreType() {
         return trustStoreType;
     }
@@ -45,9 +48,6 @@ public class SSLClientConfig extends SSLConfig {
 
     public void setTrustStorePassword(String trustStorePassword) {
         this.trustStorePassword = trustStorePassword;
-    }
-
-    public SSLClientConfig() {
     }
 
     public String getCaHostname() {

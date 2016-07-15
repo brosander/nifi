@@ -36,6 +36,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.net.ServerSocket;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.KeyStore;
@@ -53,6 +54,7 @@ import java.security.cert.CertificateException;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -92,12 +94,14 @@ public class SSLCATest {
         clientConfigFileOutputStream = new ByteArrayOutputStream();
 
         String myTestNonceUseSomethingStronger = "myTestNonceUseSomethingStronger";
+        int port = availablePort();
 
         serverConfig = new SSLConfig();
         serverConfig.setHostname("localhost");
         serverConfig.setNonce(myTestNonceUseSomethingStronger);
         serverConfig.setSslCipher("TLS_RSA_WITH_AES_128_GCM_SHA256");
         serverConfig.setKeyStore(serverKeyStore);
+        serverConfig.setPort(port);
 
         clientConfig = new SSLClientConfig();
         clientConfig.setCaHostname("localhost");
@@ -105,6 +109,7 @@ public class SSLCATest {
         clientConfig.setKeyStore(clientKeyStore);
         clientConfig.setTrustStore(clientTrustStore);
         clientConfig.setNonce(myTestNonceUseSomethingStronger);
+        clientConfig.setPort(port);
 
         sslHelperConfig = new SSLHelperConfig();
         sslHelperConfig.setDays(5);
@@ -149,8 +154,19 @@ public class SSLCATest {
             validate();
         } finally {
             if (sslcaService != null) {
-                sslcaService.stop();
+                sslcaService.shutdown();
             }
+        }
+    }
+
+    @Test
+    public void testNonceMismatch() throws Exception {
+        serverConfig.setNonce("a different nonce...");
+        try {
+            testClientGetCert();
+            fail("Expected error with mismatching nonce");
+        } catch (IOException e) {
+            assertTrue(e.getMessage().contains("forbidden"));
         }
     }
 
@@ -178,7 +194,7 @@ public class SSLCATest {
         return caCertificate;
     }
 
-    private void validateClient(Certificate certificate) throws IOException, KeyStoreException, CertificateException, NoSuchAlgorithmException,
+    private void validateClient(Certificate caCertificate) throws IOException, KeyStoreException, CertificateException, NoSuchAlgorithmException,
             UnrecoverableEntryException, InvalidKeyException, NoSuchProviderException, SignatureException {
         clientConfig = objectMapper.readValue(new ByteArrayInputStream(clientConfigFileOutputStream.toByteArray()), SSLClientConfig.class);
 
@@ -190,9 +206,13 @@ public class SSLCATest {
         KeyStore.PrivateKeyEntry clientPrivateKeyEntry = (KeyStore.PrivateKeyEntry) clientKeyStoreEntry;
         Certificate[] certificateChain = clientPrivateKeyEntry.getCertificateChain();
         assertEquals(2, certificateChain.length);
-        assertEquals(certificate, certificateChain[1]);
-        certificateChain[0].verify(certificate.getPublicKey());
+        assertEquals(caCertificate, certificateChain[1]);
+        certificateChain[0].verify(caCertificate.getPublicKey());
         assertPrivateAndPublicKeyMatch(clientPrivateKeyEntry.getPrivateKey(), certificateChain[0].getPublicKey());
+
+        KeyStore clientTrustStore = KeyStore.getInstance(clientConfig.getTrustStoreType());
+        clientTrustStore.load(new ByteArrayInputStream(clientTrustStoreOutputStream.toByteArray()), clientConfig.getTrustStorePassword().toCharArray());
+        assertEquals(caCertificate, clientTrustStore.getCertificate(SSLToolkitMain.NIFI_CERT));
     }
 
     private void assertPrivateAndPublicKeyMatch(PrivateKey privateKey, PublicKey publicKey) throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
@@ -205,5 +225,25 @@ public class SSLCATest {
         verify.initVerify(publicKey);
         verify.update(bytes);
         verify.verify(signature.sign());
+    }
+
+    /**
+     * Will determine the available port used by ca server
+     */
+    private int availablePort() {
+        ServerSocket s = null;
+        try {
+            s = new ServerSocket(0);
+            s.setReuseAddress(true);
+            return s.getLocalPort();
+        } catch (Exception e) {
+            throw new IllegalStateException("Failed to discover available port.", e);
+        } finally {
+            try {
+                s.close();
+            } catch (IOException e) {
+                // ignore
+            }
+        }
     }
 }

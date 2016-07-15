@@ -47,6 +47,7 @@ import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateHolder;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.pkcs.PKCS10CertificationRequest;
+import org.eclipse.jetty.server.Response;
 
 import javax.net.ssl.SSLSocket;
 import java.io.File;
@@ -128,6 +129,7 @@ public class SSLCAClient {
 
         ObjectMapper objectMapper = new ObjectMapper();
         String jsonResponseString;
+        int responseCode;
         try (CloseableHttpClient client = httpClientBuilder.build()) {
             HttpPost httpPost = new HttpPost();
             ObjectNode requestNode = objectMapper.createObjectNode();
@@ -139,7 +141,12 @@ public class SSLCAClient {
             httpPost.setEntity(new ByteArrayEntity(objectMapper.writeValueAsBytes(requestNode)));
             try (CloseableHttpResponse response = client.execute(new HttpHost(sslClientConfig.getCaHostname(), 8443, "https"), httpPost)) {
                 jsonResponseString = IOUtils.toString(new BoundedInputStream(response.getEntity().getContent(), 1024 * 1024), StandardCharsets.UTF_8);
+                responseCode = response.getStatusLine().getStatusCode();
             }
+        }
+
+        if (responseCode != Response.SC_OK) {
+            throw new IOException("Received response code " + responseCode + " with payload " + jsonResponseString);
         }
 
         if (certificates.size() != 1) {

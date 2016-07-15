@@ -188,7 +188,11 @@ public class SSLCAService extends AbstractHandler {
     }
 
     private void writeResponse(ObjectMapper objectMapper, HttpServletResponse response, ObjectNode responseNode, int responseCode) throws IOException {
-        objectMapper.writeTree(objectMapper.getFactory().createGenerator(response.getWriter()), responseNode);
-        response.setStatus(responseCode);
+        if (responseCode == Response.SC_OK) {
+            objectMapper.writeValue(response.getWriter(), responseNode);
+            response.setStatus(responseCode);
+        } else {
+            response.sendError(responseCode, objectMapper.writeValueAsString(responseNode));
+        }
     }
 }
