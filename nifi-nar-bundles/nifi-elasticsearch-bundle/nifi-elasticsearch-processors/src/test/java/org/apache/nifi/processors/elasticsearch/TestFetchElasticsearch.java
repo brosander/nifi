@@ -226,10 +226,10 @@ public class TestFetchElasticsearch {
         FetchElasticsearchTestProcessor processor = new FetchElasticsearchTestProcessor(true);
         runner = TestRunners.newTestRunner(processor);
         SSLContextService sslService = mock(SSLContextService.class);
-        when(sslService.getIdentifier()).thenReturn("ssl-context");
-        runner.addControllerService("ssl-context", sslService);
+        when(sslService.getIdentifier()).thenReturn("tls-context");
+        runner.addControllerService("tls-context", sslService);
         runner.enableControllerService(sslService);
-        runner.setProperty(FetchElasticsearch.PROP_SSL_CONTEXT_SERVICE, "ssl-context");
+        runner.setProperty(FetchElasticsearch.PROP_SSL_CONTEXT_SERVICE, "tls-context");
         runner.setProperty(AbstractElasticsearchProcessor.CLUSTER_NAME, "elasticsearch");
         runner.setProperty(AbstractElasticsearchProcessor.HOSTS, "127.0.0.1:9300");
         runner.setProperty(AbstractElasticsearchProcessor.PING_TIMEOUT, "5s");

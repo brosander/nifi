@@ -27,7 +27,7 @@ import org.apache.nifi.processor.exception.ProcessException;
  * Definition for SSLContextService.
  *
  */
-@Tags({"ssl", "secure", "certificate", "keystore", "truststore", "jks", "p12", "pkcs12", "pkcs"})
+@Tags({"tls", "secure", "certificate", "keystore", "truststore", "jks", "p12", "pkcs12", "pkcs"})
 @CapabilityDescription("Provides the ability to configure keystore and/or truststore properties once and reuse "
         + "that configuration throughout the application")
 public interface SSLContextService extends ControllerService {

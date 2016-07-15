@@ -74,14 +74,14 @@ public class TestPostHTTP {
         setup(sslProps);
 
         final SSLContextService sslContextService = new StandardSSLContextService();
-        runner.addControllerService("ssl-context", sslContextService);
+        runner.addControllerService("tls-context", sslContextService);
         runner.setProperty(sslContextService, StandardSSLContextService.TRUSTSTORE, "src/test/resources/localhost-ts.jks");
         runner.setProperty(sslContextService, StandardSSLContextService.TRUSTSTORE_PASSWORD, "localtest");
         runner.setProperty(sslContextService, StandardSSLContextService.TRUSTSTORE_TYPE, "JKS");
         runner.enableControllerService(sslContextService);
 
         runner.setProperty(PostHTTP.URL, server.getSecureUrl());
-        runner.setProperty(PostHTTP.SSL_CONTEXT_SERVICE, "ssl-context");
+        runner.setProperty(PostHTTP.SSL_CONTEXT_SERVICE, "tls-context");
         runner.setProperty(PostHTTP.CHUNKED_ENCODING, "false");
 
         runner.enqueue("Hello world".getBytes());
@@ -103,7 +103,7 @@ public class TestPostHTTP {
         setup(sslProps);
 
         final SSLContextService sslContextService = new StandardSSLContextService();
-        runner.addControllerService("ssl-context", sslContextService);
+        runner.addControllerService("tls-context", sslContextService);
         runner.setProperty(sslContextService, StandardSSLContextService.TRUSTSTORE, "src/test/resources/localhost-ts.jks");
         runner.setProperty(sslContextService, StandardSSLContextService.TRUSTSTORE_PASSWORD, "localtest");
         runner.setProperty(sslContextService, StandardSSLContextService.TRUSTSTORE_TYPE, "JKS");
@@ -113,7 +113,7 @@ public class TestPostHTTP {
         runner.enableControllerService(sslContextService);
 
         runner.setProperty(PostHTTP.URL, server.getSecureUrl());
-        runner.setProperty(PostHTTP.SSL_CONTEXT_SERVICE, "ssl-context");
+        runner.setProperty(PostHTTP.SSL_CONTEXT_SERVICE, "tls-context");
         runner.setProperty(PostHTTP.CHUNKED_ENCODING, "false");
 
         runner.enqueue("Hello world".getBytes());
@@ -135,14 +135,14 @@ public class TestPostHTTP {
         setup(sslProps);
 
         final SSLContextService sslContextService = new StandardSSLContextService();
-        runner.addControllerService("ssl-context", sslContextService);
+        runner.addControllerService("tls-context", sslContextService);
         runner.setProperty(sslContextService, StandardSSLContextService.TRUSTSTORE, "src/test/resources/localhost-ts.jks");
         runner.setProperty(sslContextService, StandardSSLContextService.TRUSTSTORE_PASSWORD, "localtest");
         runner.setProperty(sslContextService, StandardSSLContextService.TRUSTSTORE_TYPE, "JKS");
         runner.enableControllerService(sslContextService);
 
         runner.setProperty(PostHTTP.URL, server.getSecureUrl());
-        runner.setProperty(PostHTTP.SSL_CONTEXT_SERVICE, "ssl-context");
+        runner.setProperty(PostHTTP.SSL_CONTEXT_SERVICE, "tls-context");
         runner.setProperty(PostHTTP.CHUNKED_ENCODING, "false");
 
         runner.enqueue("Hello world".getBytes());
@@ -205,7 +205,7 @@ public class TestPostHTTP {
         setup(sslProps);
 
         final SSLContextService sslContextService = new StandardSSLContextService();
-        runner.addControllerService("ssl-context", sslContextService);
+        runner.addControllerService("tls-context", sslContextService);
         runner.setProperty(sslContextService, StandardSSLContextService.TRUSTSTORE, "src/test/resources/localhost-ts.jks");
         runner.setProperty(sslContextService, StandardSSLContextService.TRUSTSTORE_PASSWORD, "localtest");
         runner.setProperty(sslContextService, StandardSSLContextService.TRUSTSTORE_TYPE, "JKS");
@@ -216,7 +216,7 @@ public class TestPostHTTP {
 
         runner.setProperty(PostHTTP.URL, server.getSecureUrl());
         runner.setProperty(PostHTTP.SEND_AS_FLOWFILE, "true");
-        runner.setProperty(PostHTTP.SSL_CONTEXT_SERVICE, "ssl-context");
+        runner.setProperty(PostHTTP.SSL_CONTEXT_SERVICE, "tls-context");
 
         final Map<String, String> attrs = new HashMap<>();
         attrs.put("abc", "cba");

@@ -89,8 +89,8 @@ public abstract class AbstractMQTTProcessor extends AbstractSessionFactoryProces
                 if (!"".equals(brokerURI.getPath())) {
                     return new ValidationResult.Builder().subject(subject).valid(false).explanation("the broker URI cannot have a path. It currently is:" + brokerURI.getPath()).build();
                 }
-                if (!("tcp".equals(brokerURI.getScheme()) || "ssl".equals(brokerURI.getScheme()))) {
-                    return new ValidationResult.Builder().subject(subject).valid(false).explanation("only the 'tcp' and 'ssl' schemes are supported.").build();
+                if (!("tcp".equals(brokerURI.getScheme()) || "tls".equals(brokerURI.getScheme()))) {
+                    return new ValidationResult.Builder().subject(subject).valid(false).explanation("only the 'tcp' and 'tls' schemes are supported.").build();
                 }
             } catch (URISyntaxException e) {
                 return new ValidationResult.Builder().subject(subject).valid(false).explanation("it is not valid URI syntax.").build();
@@ -115,7 +115,7 @@ public abstract class AbstractMQTTProcessor extends AbstractSessionFactoryProces
 
     public static final PropertyDescriptor PROP_BROKER_URI = new PropertyDescriptor.Builder()
             .name("Broker URI")
-            .description("The URI to use to connect to the MQTT broker (e.g. tcp://localhost:1883). The 'tcp' and 'ssl' schemes are supported. In order to use 'ssl', the SSL Context " +
+            .description("The URI to use to connect to the MQTT broker (e.g. tcp://localhost:1883). The 'tcp' and 'tls' schemes are supported. In order to use 'tls', the SSL Context " +
                     "Service property must be set.")
             .required(true)
             .addValidator(BROKER_VALIDATOR)
@@ -273,8 +273,8 @@ public abstract class AbstractMQTTProcessor extends AbstractSessionFactoryProces
 
         try {
             URI brokerURI = new URI(validationContext.getProperty(PROP_BROKER_URI).getValue());
-            if (brokerURI.getScheme().equalsIgnoreCase("ssl") && !validationContext.getProperty(PROP_SSL_CONTEXT_SERVICE).isSet()) {
-                results.add(new ValidationResult.Builder().subject(PROP_SSL_CONTEXT_SERVICE.getName() + " or " + PROP_BROKER_URI.getName()).valid(false).explanation("if the 'ssl' scheme is used in " +
+            if (brokerURI.getScheme().equalsIgnoreCase("tls") && !validationContext.getProperty(PROP_SSL_CONTEXT_SERVICE).isSet()) {
+                results.add(new ValidationResult.Builder().subject(PROP_SSL_CONTEXT_SERVICE.getName() + " or " + PROP_BROKER_URI.getName()).valid(false).explanation("if the 'tls' scheme is used in " +
                         "the broker URI, the SSL Context Service must be set.").build());
             }
         } catch (URISyntaxException e) {
@@ -286,13 +286,13 @@ public abstract class AbstractMQTTProcessor extends AbstractSessionFactoryProces
 
     public static Properties transformSSLContextService(SSLContextService sslContextService){
         Properties properties = new Properties();
-        properties.setProperty("com.ibm.ssl.protocol", sslContextService.getSslAlgorithm());
-        properties.setProperty("com.ibm.ssl.keyStore", sslContextService.getKeyStoreFile());
-        properties.setProperty("com.ibm.ssl.keyStorePassword", sslContextService.getKeyStorePassword());
-        properties.setProperty("com.ibm.ssl.keyStoreType", sslContextService.getKeyStoreType());
-        properties.setProperty("com.ibm.ssl.trustStore", sslContextService.getTrustStoreFile());
-        properties.setProperty("com.ibm.ssl.trustStorePassword", sslContextService.getTrustStorePassword());
-        properties.setProperty("com.ibm.ssl.trustStoreType", sslContextService.getTrustStoreType());
+        properties.setProperty("com.ibm.tls.protocol", sslContextService.getSslAlgorithm());
+        properties.setProperty("com.ibm.tls.keyStore", sslContextService.getKeyStoreFile());
+        properties.setProperty("com.ibm.tls.keyStorePassword", sslContextService.getKeyStorePassword());
+        properties.setProperty("com.ibm.tls.keyStoreType", sslContextService.getKeyStoreType());
+        properties.setProperty("com.ibm.tls.trustStore", sslContextService.getTrustStoreFile());
+        properties.setProperty("com.ibm.tls.trustStorePassword", sslContextService.getTrustStorePassword());
+        properties.setProperty("com.ibm.tls.trustStoreType", sslContextService.getTrustStoreType());
         return  properties;
     }
 

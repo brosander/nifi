@@ -205,11 +205,11 @@ public abstract class AbstractElasticsearchProcessor extends AbstractProcessor {
 
             String shieldUrl = context.getProperty(PROP_SHIELD_LOCATION).getValue();
             if (sslService != null) {
-                settingsBuilder.put("shield.transport.ssl", "true")
-                        .put("shield.ssl.keystore.path", sslService.getKeyStoreFile())
-                        .put("shield.ssl.keystore.password", sslService.getKeyStorePassword())
-                        .put("shield.ssl.truststore.path", sslService.getTrustStoreFile())
-                        .put("shield.ssl.truststore.password", sslService.getTrustStorePassword());
+                settingsBuilder.put("shield.transport.tls", "true")
+                        .put("shield.tls.keystore.path", sslService.getKeyStoreFile())
+                        .put("shield.tls.keystore.password", sslService.getKeyStorePassword())
+                        .put("shield.tls.truststore.path", sslService.getTrustStoreFile())
+                        .put("shield.tls.truststore.password", sslService.getTrustStorePassword());
             }
 
             // Set username and password for Shield

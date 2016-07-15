@@ -91,14 +91,14 @@ abstract class AbstractAMQPProcessor<T extends AMQPWorker> extends AbstractProce
             .defaultValue("0.9.1")
             .build();
     public static final PropertyDescriptor SSL_CONTEXT_SERVICE = new PropertyDescriptor.Builder()
-            .name("ssl-context-service")
+            .name("tls-context-service")
             .displayName("SSL Context Service")
             .description("The SSL Context Service used to provide client certificate information for TLS/SSL connections.")
             .required(false)
             .identifiesControllerService(SSLContextService.class)
             .build();
     public static final PropertyDescriptor CLIENT_AUTH = new PropertyDescriptor.Builder()
-            .name("ssl-client-auth")
+            .name("tls-client-auth")
             .displayName("Client Auth")
             .description("Client authentication policy when connecting to secure (TLS/SSL) AMQP broker. "
                     + "Possible values are REQUIRED, WANT, NONE. This property is only used when an SSL Context "
@@ -239,7 +239,7 @@ abstract class AbstractAMQPProcessor<T extends AMQPWorker> extends AbstractProce
             sslContext = null;
         }
 
-        // check if the ssl context is set and add it to the factory if so
+        // check if the tls context is set and add it to the factory if so
         if (sslContext != null) {
             cf.useSslProtocol(sslContext);
         }

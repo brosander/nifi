@@ -102,7 +102,7 @@ public class SSLContextFactory {
     public SSLContext createSslContext() throws KeyStoreException, IOException, NoSuchAlgorithmException, CertificateException,
             UnrecoverableKeyException, KeyManagementException {
 
-        // initialize the ssl context
+        // initialize the tls context
         final SSLContext sslContext = SSLContext.getInstance("TLS");
         sslContext.init(keyManagers, trustManagers, new SecureRandom());
         sslContext.getDefaultSSLParameters().setNeedClientAuth(true);

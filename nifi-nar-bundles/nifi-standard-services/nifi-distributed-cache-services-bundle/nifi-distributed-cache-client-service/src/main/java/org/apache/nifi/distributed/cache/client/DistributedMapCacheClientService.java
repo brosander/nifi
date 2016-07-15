@@ -45,7 +45,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Tags({"distributed", "cache", "state", "map", "cluster"})
-@SeeAlso(classNames = {"org.apache.nifi.distributed.cache.server.map.DistributedMapCacheServer", "org.apache.nifi.ssl.StandardSSLContextService"})
+@SeeAlso(classNames = {"org.apache.nifi.distributed.cache.server.map.DistributedMapCacheServer", "org.apache.nifi.tls.StandardSSLContextService"})
 @CapabilityDescription("Provides the ability to communicate with a DistributedMapCacheServer. This can be used in order to share a Map "
     + "between nodes in a NiFi cluster")
 public class DistributedMapCacheClientService extends AbstractControllerService implements DistributedMapCacheClient {

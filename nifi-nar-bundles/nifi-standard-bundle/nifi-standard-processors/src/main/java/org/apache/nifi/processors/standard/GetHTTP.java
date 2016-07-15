@@ -353,7 +353,7 @@ public class GetHTTP extends AbstractSessionFactoryProcessor {
             // this won't happen as the url has already been validated
         }
 
-        // get the ssl context service
+        // get the tls context service
         final SSLContextService sslContextService = context.getProperty(SSL_CONTEXT_SERVICE).asControllerService(SSLContextService.class);
 
         // create the connection manager
@@ -415,7 +415,7 @@ public class GetHTTP extends AbstractSessionFactoryProcessor {
                 clientBuilder.setUserAgent(userAgent);
             }
 
-            // set the ssl context if necessary
+            // set the tls context if necessary
             if (sslContextService != null) {
                 clientBuilder.setSslcontext(sslContextService.createSSLContext(ClientAuth.REQUIRED));
             }

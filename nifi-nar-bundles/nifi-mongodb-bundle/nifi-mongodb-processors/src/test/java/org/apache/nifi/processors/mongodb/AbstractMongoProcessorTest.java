@@ -52,12 +52,12 @@ public class AbstractMongoProcessorTest {
     public void testcreateClientWithSSL() throws Exception {
         SSLContextService sslService = mock(SSLContextService.class);
         SSLContext sslContext = mock(SSLContext.class);
-        when(sslService.getIdentifier()).thenReturn("ssl-context");
+        when(sslService.getIdentifier()).thenReturn("tls-context");
         when(sslService.createSSLContext(any(ClientAuth.class))).thenReturn(sslContext);
-        testRunner.addControllerService("ssl-context", sslService);
+        testRunner.addControllerService("tls-context", sslService);
         testRunner.enableControllerService(sslService);
         testRunner.setProperty(AbstractMongoProcessor.URI, "mongodb://localhost:27017");
-        testRunner.setProperty(AbstractMongoProcessor.SSL_CONTEXT_SERVICE, "ssl-context");
+        testRunner.setProperty(AbstractMongoProcessor.SSL_CONTEXT_SERVICE, "tls-context");
         testRunner.assertValid(sslService);
         processor.createClient(testRunner.getProcessContext());
         assertNotNull(processor.mongoClient);
@@ -71,12 +71,12 @@ public class AbstractMongoProcessorTest {
     public void testcreateClientWithSSLBadClientAuth() throws Exception {
         SSLContextService sslService = mock(SSLContextService.class);
         SSLContext sslContext = mock(SSLContext.class);
-        when(sslService.getIdentifier()).thenReturn("ssl-context");
+        when(sslService.getIdentifier()).thenReturn("tls-context");
         when(sslService.createSSLContext(any(ClientAuth.class))).thenReturn(sslContext);
-        testRunner.addControllerService("ssl-context", sslService);
+        testRunner.addControllerService("tls-context", sslService);
         testRunner.enableControllerService(sslService);
         testRunner.setProperty(AbstractMongoProcessor.URI, "mongodb://localhost:27017");
-        testRunner.setProperty(AbstractMongoProcessor.SSL_CONTEXT_SERVICE, "ssl-context");
+        testRunner.setProperty(AbstractMongoProcessor.SSL_CONTEXT_SERVICE, "tls-context");
         testRunner.assertValid(sslService);
         processor.createClient(testRunner.getProcessContext());
         assertNotNull(processor.mongoClient);

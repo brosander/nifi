@@ -151,7 +151,7 @@ public class TestListenRELP {
     @Test
     public void testTLS() throws InitializationException, IOException, InterruptedException {
         final SSLContextService sslContextService = new StandardSSLContextService();
-        runner.addControllerService("ssl-context", sslContextService);
+        runner.addControllerService("tls-context", sslContextService);
         runner.setProperty(sslContextService, StandardSSLContextService.TRUSTSTORE, "src/test/resources/localhost-ts.jks");
         runner.setProperty(sslContextService, StandardSSLContextService.TRUSTSTORE_PASSWORD, "localtest");
         runner.setProperty(sslContextService, StandardSSLContextService.TRUSTSTORE_TYPE, "JKS");
@@ -160,7 +160,7 @@ public class TestListenRELP {
         runner.setProperty(sslContextService, StandardSSLContextService.KEYSTORE_TYPE, "JKS");
         runner.enableControllerService(sslContextService);
 
-        runner.setProperty(PostHTTP.SSL_CONTEXT_SERVICE, "ssl-context");
+        runner.setProperty(PostHTTP.SSL_CONTEXT_SERVICE, "tls-context");
 
         final List<RELPFrame> frames = new ArrayList<>();
         frames.add(OPEN_FRAME);
@@ -220,7 +220,7 @@ public class TestListenRELP {
             // create a client connection to the port the dispatcher is listening on
             final int realPort = proc.getDispatcherPort();
 
-            // create either a regular socket or ssl socket based on context being passed in
+            // create either a regular socket or tls socket based on context being passed in
             if (sslContextService != null) {
                 final SSLContext sslContext = sslContextService.createSSLContext(SSLContextService.ClientAuth.REQUIRED);
                 socket = sslContext.getSocketFactory().createSocket("localhost", realPort);

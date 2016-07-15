@@ -89,9 +89,9 @@ public class TestInvokeHTTP extends TestInvokeHttpCommon {
 
         runner = TestRunners.newTestRunner(InvokeHTTP.class);
         final StandardSSLContextService sslService = new StandardSSLContextService();
-        runner.addControllerService("ssl-context", sslService, sslProperties);
+        runner.addControllerService("tls-context", sslService, sslProperties);
         runner.enableControllerService(sslService);
-        runner.setProperty(InvokeHTTP.PROP_SSL_CONTEXT_SERVICE, "ssl-context");
+        runner.setProperty(InvokeHTTP.PROP_SSL_CONTEXT_SERVICE, "tls-context");
 
         addHandler(new GetOrHeadHandler());
 

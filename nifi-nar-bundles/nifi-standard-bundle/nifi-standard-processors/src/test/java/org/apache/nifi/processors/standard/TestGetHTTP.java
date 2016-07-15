@@ -488,14 +488,14 @@ public class TestGetHTTP {
     private void useSSLContextService(final Map<String, String> sslProperties) {
         final SSLContextService service = new StandardSSLContextService();
         try {
-            controller.addControllerService("ssl-service", service, sslProperties);
+            controller.addControllerService("tls-service", service, sslProperties);
             controller.enableControllerService(service);
         } catch (InitializationException ex) {
             ex.printStackTrace();
             Assert.fail("Could not create SSL Context Service");
         }
 
-        controller.setProperty(GetHTTP.SSL_CONTEXT_SERVICE, "ssl-service");
+        controller.setProperty(GetHTTP.SSL_CONTEXT_SERVICE, "tls-service");
     }
 
 }

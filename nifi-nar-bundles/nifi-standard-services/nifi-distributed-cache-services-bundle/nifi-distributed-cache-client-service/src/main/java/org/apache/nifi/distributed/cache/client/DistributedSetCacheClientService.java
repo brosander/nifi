@@ -45,7 +45,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Tags({"distributed", "cache", "state", "set", "cluster"})
-@SeeAlso(classNames = {"org.apache.nifi.distributed.cache.server.DistributedSetCacheServer", "org.apache.nifi.ssl.StandardSSLContextService"})
+@SeeAlso(classNames = {"org.apache.nifi.distributed.cache.server.DistributedSetCacheServer", "org.apache.nifi.tls.StandardSSLContextService"})
 @CapabilityDescription("Provides the ability to communicate with a DistributedSetCacheServer. This can be used in order to share a Set "
         + "between nodes in a NiFi cluster")
 public class DistributedSetCacheClientService extends AbstractControllerService implements DistributedSetCacheClient {

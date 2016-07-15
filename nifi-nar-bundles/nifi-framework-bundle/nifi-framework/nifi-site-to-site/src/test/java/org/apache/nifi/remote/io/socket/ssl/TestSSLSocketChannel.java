@@ -16,7 +16,7 @@
  */
 package org.apache.nifi.remote.io.socket.ssl;
 
-//package nifi.remote.io.socket.ssl;
+//package nifi.remote.io.socket.tls;
 //
 //import static org.junit.Assert.assertEquals;
 //import static org.junit.Assert.assertTrue;
@@ -34,9 +34,9 @@ package org.apache.nifi.remote.io.socket.ssl;
 //import java.util.Arrays;
 //import java.util.concurrent.TimeUnit;
 //
-//import javax.net.ssl.SSLContext;
-//import javax.net.ssl.SSLServerSocket;
-//import javax.net.ssl.SSLServerSocketFactory;
+//import javax.net.tls.SSLContext;
+//import javax.net.tls.SSLServerSocket;
+//import javax.net.tls.SSLServerSocketFactory;
 //
 //import nifi.events.EventReporter;
 //import nifi.framework.security.util.SslContextFactory;

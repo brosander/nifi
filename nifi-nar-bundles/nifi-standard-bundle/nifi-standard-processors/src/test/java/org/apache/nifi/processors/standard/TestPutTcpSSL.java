@@ -39,9 +39,9 @@ public class TestPutTcpSSL extends TestPutTCPCommon {
         runner.setProperty(PutTCP.PORT, Integer.toString(port));
 
         final StandardSSLContextService sslService = new StandardSSLContextService();
-        runner.addControllerService("ssl-context", sslService, sslProperties);
+        runner.addControllerService("tls-context", sslService, sslProperties);
         runner.enableControllerService(sslService);
-        runner.setProperty(PutTCP.SSL_CONTEXT_SERVICE, "ssl-context");
+        runner.setProperty(PutTCP.SSL_CONTEXT_SERVICE, "tls-context");
 
         if (outgoingMessageDelimiter != null) {
             runner.setProperty(PutTCP.OUTGOING_MESSAGE_DELIMITER, outgoingMessageDelimiter);

@@ -62,9 +62,9 @@ public class TestInvokeHttpSSL extends TestInvokeHttpCommon {
     public void before() throws Exception {
         runner = TestRunners.newTestRunner(InvokeHTTP.class);
         final StandardSSLContextService sslService = new StandardSSLContextService();
-        runner.addControllerService("ssl-context", sslService, sslProperties);
+        runner.addControllerService("tls-context", sslService, sslProperties);
         runner.enableControllerService(sslService);
-        runner.setProperty(InvokeHTTP.PROP_SSL_CONTEXT_SERVICE, "ssl-context");
+        runner.setProperty(InvokeHTTP.PROP_SSL_CONTEXT_SERVICE, "tls-context");
 
         // Allow time for the controller service to fully initialize
         Thread.sleep(500);

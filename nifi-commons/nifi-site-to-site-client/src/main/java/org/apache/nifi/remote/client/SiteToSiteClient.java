@@ -800,7 +800,7 @@ public interface SiteToSiteClient extends Closeable {
 
             if (keyManagerFactory != null && trustManagerFactory != null) {
                 try {
-                    // initialize the ssl context
+                    // initialize the tls context
                     final SSLContext sslContext = SSLContext.getInstance("TLS");
                     sslContext.init(keyManagerFactory.getKeyManagers(), trustManagerFactory.getTrustManagers(), new SecureRandom());
                     sslContext.getDefaultSSLParameters().setNeedClientAuth(true);

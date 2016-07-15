@@ -93,7 +93,7 @@ public final class SslContextFactory {
                 keyManagerFactory.init(keyStore, props.getProperty(NiFiProperties.SECURITY_KEYSTORE_PASSWD).toCharArray());
             }
 
-            // initialize the ssl context
+            // initialize the tls context
             final SSLContext sslContext = SSLContext.getInstance("TLS");
             sslContext.init(keyManagerFactory.getKeyManagers(),
                     trustManagerFactory.getTrustManagers(), null);

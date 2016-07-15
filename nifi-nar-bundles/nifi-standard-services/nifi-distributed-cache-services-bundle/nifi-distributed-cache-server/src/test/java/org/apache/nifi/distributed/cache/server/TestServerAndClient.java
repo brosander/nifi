@@ -62,7 +62,7 @@ public class TestServerAndClient {
         System.setProperty("org.slf4j.simpleLogger.log.nifi.distributed.cache.server.AbstractCacheServer", "debug");
         System.setProperty("org.slf4j.simpleLogger.log.nifi.distributed.cache.client.DistributedMapCacheClientService", "debug");
         System.setProperty("org.slf4j.simpleLogger.log.nifi.distributed.cache.server.TestServerAndClient", "debug");
-        System.setProperty("org.slf4j.simpleLogger.log.nifi.remote.io.socket.ssl.SSLSocketChannel", "trace");
+        System.setProperty("org.slf4j.simpleLogger.log.nifi.remote.io.socket.tls.SSLSocketChannel", "trace");
         LOGGER = LoggerFactory.getLogger(TestServerAndClient.class);
     }
 

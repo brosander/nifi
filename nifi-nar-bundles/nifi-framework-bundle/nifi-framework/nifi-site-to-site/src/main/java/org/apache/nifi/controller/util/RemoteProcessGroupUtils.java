@@ -111,7 +111,7 @@ public class RemoteProcessGroupUtils {
     /**
      * Gets a client for the given sslContext
      *
-     * @param sslContext the ssl context to get a client for
+     * @param sslContext the tls context to get a client for
      * @return the client
      */
     private Client getClient(final SSLContext sslContext) {

@@ -59,16 +59,16 @@ public class TestPublishMqttSSL extends TestPublishMqttCommon {
     public void init() throws IOException, InitializationException {
         startServer();
         testRunner = TestRunners.newTestRunner(PublishMQTT.class);
-        testRunner.setProperty(PublishMQTT.PROP_BROKER_URI, "ssl://localhost:8883");
+        testRunner.setProperty(PublishMQTT.PROP_BROKER_URI, "tls://localhost:8883");
         testRunner.setProperty(PublishMQTT.PROP_CLIENTID, "TestClient");
         testRunner.setProperty(PublishMQTT.PROP_RETAIN, "true");
         testRunner.setProperty(PublishMQTT.PROP_TOPIC, "testTopic");
 
         final StandardSSLContextService sslService = new StandardSSLContextService();
         Map<String, String> sslProperties = createSslProperties();
-        testRunner.addControllerService("ssl-context", sslService, sslProperties);
+        testRunner.addControllerService("tls-context", sslService, sslProperties);
         testRunner.enableControllerService(sslService);
-        testRunner.setProperty(PublishMQTT.PROP_SSL_CONTEXT_SERVICE, "ssl-context");
+        testRunner.setProperty(PublishMQTT.PROP_SSL_CONTEXT_SERVICE, "tls-context");
     }
 
     @After

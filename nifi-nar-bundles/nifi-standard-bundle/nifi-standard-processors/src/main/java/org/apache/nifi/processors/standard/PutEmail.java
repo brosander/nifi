@@ -125,7 +125,7 @@ public class PutEmail extends AbstractProcessor {
             .required(true)
             .expressionLanguageSupported(true)
             .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
-            .defaultValue("javax.net.ssl.SSLSocketFactory")
+            .defaultValue("javax.net.tls.SSLSocketFactory")
             .build();
     public static final PropertyDescriptor HEADER_XMAILER = new PropertyDescriptor.Builder()
             .name("SMTP X-Mailer Header")

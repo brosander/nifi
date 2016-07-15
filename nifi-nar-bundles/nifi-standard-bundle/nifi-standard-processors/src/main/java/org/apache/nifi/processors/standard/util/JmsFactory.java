@@ -379,7 +379,7 @@ public class JmsFactory {
         try {
             CompositeData compositeData = URISupport.parseComposite(uri);
             for(URI component : compositeData.getComponents()){
-                if ("ssl".equals(component.getScheme())) {
+                if ("tls".equals(component.getScheme())) {
                     return true;
                 }
             }

@@ -46,7 +46,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-@Tags({"ssl", "secure", "certificate", "keystore", "truststore", "jks", "p12", "pkcs12", "pkcs"})
+@Tags({"tls", "secure", "certificate", "keystore", "truststore", "jks", "p12", "pkcs12", "pkcs"})
 @CapabilityDescription("Standard implementation of the SSLContextService. Provides the ability to configure "
         + "keystore and/or truststore properties once and reuse that configuration throughout the application")
 public class StandardSSLContextService extends AbstractControllerService implements SSLContextService {

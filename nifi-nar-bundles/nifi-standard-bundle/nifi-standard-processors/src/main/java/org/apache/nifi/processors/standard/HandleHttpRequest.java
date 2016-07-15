@@ -104,7 +104,7 @@ import com.sun.jersey.api.client.ClientResponse.Status;
             + "attribute, prefixed with \"http.headers.\" For example, if the request contains an HTTP Header named \"x-my-header\", then the value "
             + "will be added to an attribute named \"http.headers.x-my-header\"")})
 @SeeAlso(value = {HandleHttpResponse.class},
-        classNames = {"org.apache.nifi.http.StandardHttpContextMap", "org.apache.nifi.ssl.StandardSSLContextService"})
+        classNames = {"org.apache.nifi.http.StandardHttpContextMap", "org.apache.nifi.tls.StandardSSLContextService"})
 public class HandleHttpRequest extends AbstractProcessor {
 
     private static final Pattern URL_QUERY_PARAM_DELIMITER = Pattern.compile("&");

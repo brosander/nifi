@@ -71,7 +71,7 @@ public class TestConsumeMqttSSL extends TestConsumeMqttCommon {
     public void init() throws IOException, InitializationException {
         startServer();
 
-        broker = "ssl://localhost:8883";
+        broker = "tls://localhost:8883";
         testRunner = TestRunners.newTestRunner(ConsumeMQTT.class);
         testRunner.setProperty(ConsumeMQTT.PROP_BROKER_URI, broker);
         testRunner.setProperty(ConsumeMQTT.PROP_CLIENTID, "TestClient");
@@ -80,9 +80,9 @@ public class TestConsumeMqttSSL extends TestConsumeMqttCommon {
 
         final StandardSSLContextService sslService = new StandardSSLContextService();
         Map<String, String> sslProperties = createSslProperties();
-        testRunner.addControllerService("ssl-context", sslService, sslProperties);
+        testRunner.addControllerService("tls-context", sslService, sslProperties);
         testRunner.enableControllerService(sslService);
-        testRunner.setProperty(ConsumeMQTT.PROP_SSL_CONTEXT_SERVICE, "ssl-context");
+        testRunner.setProperty(ConsumeMQTT.PROP_SSL_CONTEXT_SERVICE, "tls-context");
     }
 
     @After

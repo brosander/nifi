@@ -517,7 +517,7 @@ public final class InvokeHTTP extends AbstractProcessor {
         final SSLContextService sslService = context.getProperty(PROP_SSL_CONTEXT_SERVICE).asControllerService(SSLContextService.class);
         final SSLContext sslContext = sslService == null ? null : sslService.createSSLContext(ClientAuth.NONE);
 
-        // check if the ssl context is set and add the factory if so
+        // check if the tls context is set and add the factory if so
         if (sslContext != null) {
             okHttpClient.setSslSocketFactory(sslContext.getSocketFactory());
         }

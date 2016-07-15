@@ -55,7 +55,7 @@ import java.util.concurrent.BlockingQueue;
 
 @SupportsBatching
 @InputRequirement(InputRequirement.Requirement.INPUT_FORBIDDEN)
-@Tags({"listen", "tcp", "tls", "ssl"})
+@Tags({"listen", "tcp", "tls", "tls"})
 @CapabilityDescription("Listens for incoming TCP connections and reads data from each connection using a line separator " +
         "as the message demarcator. The default behavior is for each message to produce a single FlowFile, however this can " +
         "be controlled by increasing the Batch Size to a larger value for higher throughput. The Receive Buffer Size must be " +

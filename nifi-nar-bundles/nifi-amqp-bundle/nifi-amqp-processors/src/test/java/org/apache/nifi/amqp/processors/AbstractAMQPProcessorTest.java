@@ -46,10 +46,10 @@ public class AbstractAMQPProcessorTest {
     @Test(expected = ProviderCreationException.class)
     public void testConnectToCassandraWithSSLBadClientAuth() throws Exception {
         SSLContextService sslService = mock(SSLContextService.class);
-        when(sslService.getIdentifier()).thenReturn("ssl-context");
-        testRunner.addControllerService("ssl-context", sslService);
+        when(sslService.getIdentifier()).thenReturn("tls-context");
+        testRunner.addControllerService("tls-context", sslService);
         testRunner.enableControllerService(sslService);
-        testRunner.setProperty(AbstractAMQPProcessor.SSL_CONTEXT_SERVICE, "ssl-context");
+        testRunner.setProperty(AbstractAMQPProcessor.SSL_CONTEXT_SERVICE, "tls-context");
         testRunner.setProperty(AbstractAMQPProcessor.HOST, "test");
         testRunner.setProperty(AbstractAMQPProcessor.PORT, "9999");
         testRunner.setProperty(AbstractAMQPProcessor.USER, "test");

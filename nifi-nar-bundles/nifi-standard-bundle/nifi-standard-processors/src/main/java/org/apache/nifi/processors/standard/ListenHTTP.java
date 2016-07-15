@@ -236,7 +236,7 @@ public class ListenHTTP extends AbstractSessionFactoryProcessor {
             // create the connector
             connector = new ServerConnector(server, new HttpConnectionFactory(httpConfiguration));
         } else {
-            // configure the ssl connector
+            // configure the tls connector
             httpConfiguration.setSecureScheme("https");
             httpConfiguration.setSecurePort(port);
             httpConfiguration.addCustomizer(new SecureRequestCustomizer());

@@ -84,10 +84,10 @@ public class TestListenAndPutSyslog {
     @Test
     public void testTLS() throws InitializationException, IOException, InterruptedException {
         configureSSLContextService(listenSyslogRunner);
-        listenSyslogRunner.setProperty(ListenSyslog.SSL_CONTEXT_SERVICE, "ssl-context");
+        listenSyslogRunner.setProperty(ListenSyslog.SSL_CONTEXT_SERVICE, "tls-context");
 
         configureSSLContextService(putSyslogRunner);
-        putSyslogRunner.setProperty(PutSyslog.SSL_CONTEXT_SERVICE, "ssl-context");
+        putSyslogRunner.setProperty(PutSyslog.SSL_CONTEXT_SERVICE, "tls-context");
 
         run(ListenSyslog.TCP_VALUE.getValue(), 7, 7);
     }
@@ -95,7 +95,7 @@ public class TestListenAndPutSyslog {
     @Test
     public void testTLSListenerNoTLSPut() throws InitializationException, IOException, InterruptedException {
         configureSSLContextService(listenSyslogRunner);
-        listenSyslogRunner.setProperty(ListenSyslog.SSL_CONTEXT_SERVICE, "ssl-context");
+        listenSyslogRunner.setProperty(ListenSyslog.SSL_CONTEXT_SERVICE, "tls-context");
 
         // send 7 but expect 0 because sender didn't use TLS
         run(ListenSyslog.TCP_VALUE.getValue(), 7, 0);
@@ -103,7 +103,7 @@ public class TestListenAndPutSyslog {
 
     private SSLContextService configureSSLContextService(TestRunner runner) throws InitializationException {
         final SSLContextService sslContextService = new StandardSSLContextService();
-        runner.addControllerService("ssl-context", sslContextService);
+        runner.addControllerService("tls-context", sslContextService);
         runner.setProperty(sslContextService, StandardSSLContextService.TRUSTSTORE, "src/test/resources/localhost-ts.jks");
         runner.setProperty(sslContextService, StandardSSLContextService.TRUSTSTORE_PASSWORD, "localtest");
         runner.setProperty(sslContextService, StandardSSLContextService.TRUSTSTORE_TYPE, "JKS");

@@ -25,13 +25,13 @@ import java.io.Writer;
 public enum SecurityStoreTypes {
 
     TRUSTSTORE(
-            "javax.net.ssl.trustStore",
-            "javax.net.ssl.trustStorePassword",
-            "javax.net.ssl.trustStoreType"),
+            "javax.net.tls.trustStore",
+            "javax.net.tls.trustStorePassword",
+            "javax.net.tls.trustStoreType"),
     KEYSTORE(
-            "javax.net.ssl.keyStore",
-            "javax.net.ssl.keyStorePassword",
-            "javax.net.ssl.keyStoreType");
+            "javax.net.tls.keyStore",
+            "javax.net.tls.keyStorePassword",
+            "javax.net.tls.keyStoreType");
 
     /**
      * Logs the keystore and truststore Java system property values to the given

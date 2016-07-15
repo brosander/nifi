@@ -90,7 +90,7 @@ public final class SslContextFactory {
         final TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
         trustManagerFactory.init(trustStore);
 
-        // initialize the ssl context
+        // initialize the tls context
         final SSLContext sslContext = SSLContext.getInstance(protocol);
         sslContext.init(keyManagerFactory.getKeyManagers(), trustManagerFactory.getTrustManagers(), new SecureRandom());
         if (ClientAuth.REQUIRED == clientAuth) {
@@ -134,7 +134,7 @@ public final class SslContextFactory {
         final KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
         keyManagerFactory.init(keyStore, keystorePasswd);
 
-        // initialize the ssl context
+        // initialize the tls context
         final SSLContext ctx = SSLContext.getInstance(protocol);
         ctx.init(keyManagerFactory.getKeyManagers(), new TrustManager[0], new SecureRandom());
 
@@ -171,7 +171,7 @@ public final class SslContextFactory {
         final TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
         trustManagerFactory.init(trustStore);
 
-        // initialize the ssl context
+        // initialize the tls context
         final SSLContext ctx = SSLContext.getInstance(protocol);
         ctx.init(new KeyManager[0], trustManagerFactory.getTrustManagers(), new SecureRandom());
 

@@ -205,10 +205,10 @@ public class AbstractCassandraProcessorTest {
     @Test
     public void testConnectToCassandraWithSSL() throws Exception {
         SSLContextService sslService = mock(SSLContextService.class);
-        when(sslService.getIdentifier()).thenReturn("ssl-context");
-        testRunner.addControllerService("ssl-context", sslService);
+        when(sslService.getIdentifier()).thenReturn("tls-context");
+        testRunner.addControllerService("tls-context", sslService);
         testRunner.enableControllerService(sslService);
-        testRunner.setProperty(AbstractCassandraProcessor.PROP_SSL_CONTEXT_SERVICE, "ssl-context");
+        testRunner.setProperty(AbstractCassandraProcessor.PROP_SSL_CONTEXT_SERVICE, "tls-context");
         testRunner.setProperty(AbstractCassandraProcessor.CONSISTENCY_LEVEL, "ONE");
         testRunner.assertValid(sslService);
         processor.connectToCassandra(testRunner.getProcessContext());
@@ -223,10 +223,10 @@ public class AbstractCassandraProcessorTest {
     @Test(expected = ProviderCreationException.class)
     public void testConnectToCassandraWithSSLBadClientAuth() throws Exception {
         SSLContextService sslService = mock(SSLContextService.class);
-        when(sslService.getIdentifier()).thenReturn("ssl-context");
-        testRunner.addControllerService("ssl-context", sslService);
+        when(sslService.getIdentifier()).thenReturn("tls-context");
+        testRunner.addControllerService("tls-context", sslService);
         testRunner.enableControllerService(sslService);
-        testRunner.setProperty(AbstractCassandraProcessor.PROP_SSL_CONTEXT_SERVICE, "ssl-context");
+        testRunner.setProperty(AbstractCassandraProcessor.PROP_SSL_CONTEXT_SERVICE, "tls-context");
         testRunner.setProperty(AbstractCassandraProcessor.CONSISTENCY_LEVEL, "ONE");
         testRunner.assertValid(sslService);
         processor.connectToCassandra(testRunner.getProcessContext());
