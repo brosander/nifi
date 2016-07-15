@@ -22,16 +22,35 @@ import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.openssl.PEMParser;
+import org.bouncycastle.openssl.jcajce.JcaMiscPEMGenerator;
+import org.bouncycastle.util.io.pem.PemWriter;
 
 import java.io.IOException;
 import java.io.StringReader;
+import java.io.StringWriter;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 
 public class TlsCertificateAuthorityResponse {
-    private String hmac;
+    private byte[] hmac;
     private String certificate;
     private String error;
+
+    public TlsCertificateAuthorityResponse() {
+    }
+
+    public TlsCertificateAuthorityResponse(byte[] hmac, X509Certificate certificate) throws IOException {
+        this.hmac = hmac;
+        StringWriter writer = new StringWriter();
+        try (PemWriter pemWriter = new PemWriter(writer)) {
+            pemWriter.writeObject(new JcaMiscPEMGenerator(certificate));
+        }
+        this.certificate = writer.toString();
+    }
+
+    public TlsCertificateAuthorityResponse(String error) {
+        this.error = error;
+    }
 
     public String getError() {
         return error;
@@ -41,11 +60,11 @@ public class TlsCertificateAuthorityResponse {
         this.error = error;
     }
 
-    public String getHmac() {
+    public byte[] getHmac() {
         return hmac;
     }
 
-    public void setHmac(String hmac) {
+    public void setHmac(byte[] hmac) {
         this.hmac = hmac;
     }
 
@@ -62,7 +81,7 @@ public class TlsCertificateAuthorityResponse {
     }
 
     public boolean hasHmac() {
-        return !StringUtils.isEmpty(hmac);
+        return hmac != null && hmac.length > 0;
     }
 
     public X509Certificate parseCertificate() throws IOException, CertificateException {

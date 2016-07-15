@@ -75,7 +75,7 @@ public class TlsHostConfiguration {
 
         KeyStore keyStore = tlsHelper.createKeyStore();
         tlsHelper.addToKeyStore(keyStore, keyPair, NIFI_KEY, keyPassword.toCharArray(),
-                tlsHelper.generateIssuedCertificate("CN=" + hostname + ",OU=apache.nifi", keyPair, x509Certificate, certificateKeypair), x509Certificate);
+                tlsHelper.generateIssuedCertificate("CN=" + hostname + ",OU=apache.nifi", keyPair.getPublic(), x509Certificate, certificateKeypair), x509Certificate);
 
         String keyStoreName = hostname + extension;
         String trustStoreName = TRUSTSTORE + extension;

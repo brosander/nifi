@@ -54,7 +54,6 @@ import java.security.KeyPair;
 import java.security.KeyStore;
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
-import java.util.Base64;
 
 public class TlsCertificateAuthorityService extends AbstractHandler {
     public static final String CSR = "csr";
@@ -141,17 +140,14 @@ public class TlsCertificateAuthorityService extends AbstractHandler {
         try {
             ObjectMapper objectMapper = new ObjectMapper();
             TlsCertificateAuthorityRequest tlsCertificateAuthorityRequest = objectMapper.readValue(new BoundedReader(request.getReader(), 1024 * 1024), TlsCertificateAuthorityRequest.class);
-            TlsCertificateAuthorityResponse tlsCertificateAuthorityResponse = new TlsCertificateAuthorityResponse();
 
             if (!tlsCertificateAuthorityRequest.hasCsr()) {
-                tlsCertificateAuthorityResponse.setError("csr field must be set");
-                writeResponse(objectMapper, response, tlsCertificateAuthorityResponse, Response.SC_BAD_REQUEST);
+                writeResponse(objectMapper, response, new TlsCertificateAuthorityResponse("csr field must be set"), Response.SC_BAD_REQUEST);
                 return;
             }
 
             if (!tlsCertificateAuthorityRequest.hasHmac()) {
-                tlsCertificateAuthorityResponse.setError("hmac field must be set");
-                writeResponse(objectMapper, response, tlsCertificateAuthorityResponse, Response.SC_BAD_REQUEST);
+                writeResponse(objectMapper, response, new TlsCertificateAuthorityResponse("hmac field must be set"), Response.SC_BAD_REQUEST);
                 return;
             }
 
@@ -159,15 +155,11 @@ public class TlsCertificateAuthorityService extends AbstractHandler {
 
             if (tlsHelper.checkHMac(tlsCertificateAuthorityRequest.getHmac(), token, jcaPKCS10CertificationRequest.getPublicKey())) {
                 StringWriter signedCertificate = new StringWriter();
-                tlsHelper.writeCertificate(tlsHelper.signCsr(jcaPKCS10CertificationRequest, this.caCert, keyPair), signedCertificate);
-
-                tlsCertificateAuthorityResponse.setHmac(Base64.getEncoder().encodeToString(tlsHelper.calculateHMac(token, caCert.getPublicKey())));
-                tlsCertificateAuthorityResponse.setCertificate(signedCertificate.toString());
-                writeResponse(objectMapper, response, tlsCertificateAuthorityResponse, Response.SC_OK);
+                X509Certificate x509Certificate = tlsHelper.signCsr(jcaPKCS10CertificationRequest, this.caCert, keyPair);
+                writeResponse(objectMapper, response, new TlsCertificateAuthorityResponse(tlsHelper.calculateHMac(token, caCert.getPublicKey()), x509Certificate), Response.SC_OK);
                 return;
             } else {
-                tlsCertificateAuthorityResponse.setError("forbidden");
-                writeResponse(objectMapper, response, tlsCertificateAuthorityResponse, Response.SC_FORBIDDEN);
+                writeResponse(objectMapper, response, new TlsCertificateAuthorityResponse("forbidden"), Response.SC_FORBIDDEN);
                 return;
             }
         } catch (Exception e) {

@@ -23,12 +23,10 @@ import org.apache.commons.io.input.BoundedInputStream;
 import org.apache.http.HttpHost;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
-import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.conn.ssl.TrustSelfSignedStrategy;
 import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
-import org.apache.http.protocol.HttpContext;
 import org.apache.http.ssl.SSLContextBuilder;
 import org.apache.nifi.toolkit.tls.TlsToolkitMain;
 import org.apache.nifi.toolkit.tls.configuration.TlsClientConfig;
@@ -36,20 +34,14 @@ import org.apache.nifi.toolkit.tls.util.InputStreamFactory;
 import org.apache.nifi.toolkit.tls.util.OutputStreamFactory;
 import org.apache.nifi.toolkit.tls.util.PasswordUtil;
 import org.apache.nifi.toolkit.tls.util.TlsHelper;
-import org.bouncycastle.asn1.x500.style.BCStyle;
-import org.bouncycastle.asn1.x500.style.IETFUtils;
-import org.bouncycastle.cert.jcajce.JcaX509CertificateHolder;
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest;
 import org.eclipse.jetty.server.Response;
 
-import javax.net.ssl.SSLSocket;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.net.InetSocketAddress;
-import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
 import java.security.KeyStore;
@@ -57,7 +49,6 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.List;
 
 public class TlsCertificateAuthorityClient {
@@ -88,45 +79,17 @@ public class TlsCertificateAuthorityClient {
 
         HttpClientBuilder httpClientBuilder = HttpClientBuilder.create();
         SSLContextBuilder sslContextBuilder = SSLContextBuilder.create();
+
+        // We will be validating that we are talking to the correct host once we get the response's hmac of the token and public key of the ca
         sslContextBuilder.loadTrustMaterial(null, new TrustSelfSignedStrategy());
-        httpClientBuilder.setSSLSocketFactory(new SSLConnectionSocketFactory(sslContextBuilder.build()) {
-            @Override
-            public synchronized Socket connectSocket(int connectTimeout, Socket socket, HttpHost host, InetSocketAddress remoteAddress,
-                                                     InetSocketAddress localAddress, HttpContext context) throws IOException {
-                Socket result = super.connectSocket(connectTimeout, socket, host, remoteAddress, localAddress, context);
-                if (!SSLSocket.class.isInstance(result)) {
-                    throw new IOException("Expected tls socket");
-                }
-                SSLSocket sslSocket = (SSLSocket) result;
-                java.security.cert.Certificate[] peerCertificateChain = sslSocket.getSession().getPeerCertificates();
-                if (peerCertificateChain.length != 1) {
-                    throw new IOException("Expected root ca cert");
-                }
-                if (!X509Certificate.class.isInstance(peerCertificateChain[0])) {
-                    throw new IOException("Expected root ca cert in X509 format");
-                }
-                String cn;
-                try {
-                    X509Certificate certificate = (X509Certificate) peerCertificateChain[0];
-                    cn = IETFUtils.valueToString(new JcaX509CertificateHolder(certificate).getSubject().getRDNs(BCStyle.CN)[0].getFirst().getValue());
-                    certificates.add(certificate);
-                } catch (Exception e) {
-                    throw new IOException(e);
-                }
-                if (!tlsClientConfig.getCaHostname().equals(cn)) {
-                    throw new IOException("Expected cn of " + tlsClientConfig.getCaHostname() + " but got " + cn);
-                }
-                return result;
-            }
-        });
+        httpClientBuilder.setSSLSocketFactory(new TlsCertificateAuthorityClientSocketFactory(sslContextBuilder.build(), tlsClientConfig.getCaHostname(), certificates));
 
         ObjectMapper objectMapper = new ObjectMapper();
         String jsonResponseString;
         int responseCode;
         try (CloseableHttpClient client = httpClientBuilder.build()) {
             JcaPKCS10CertificationRequest request = tlsHelper.generateCertificationRequest("CN=" + tlsClientConfig.getHostname() + ",OU=NIFI", keyPair);
-            String hmac = Base64.getEncoder().encodeToString(tlsHelper.calculateHMac(tlsClientConfig.getToken(), request.getPublicKey()));
-            TlsCertificateAuthorityRequest tlsCertificateAuthorityRequest = new TlsCertificateAuthorityRequest(hmac, request);
+            TlsCertificateAuthorityRequest tlsCertificateAuthorityRequest = new TlsCertificateAuthorityRequest(tlsHelper.calculateHMac(tlsClientConfig.getToken(), request.getPublicKey()), request);
 
             HttpPost httpPost = new HttpPost();
             httpPost.setEntity(new ByteArrayEntity(objectMapper.writeValueAsBytes(tlsCertificateAuthorityRequest)));
@@ -158,7 +121,10 @@ public class TlsCertificateAuthorityClient {
         if (!tlsCertificateAuthorityResponse.hasCertificate()) {
             throw new IOException("Expected response to contain certificate");
         }
+
         X509Certificate x509Certificate = tlsCertificateAuthorityResponse.parseCertificate();
+        x509Certificate.verify(caCertificate.getPublicKey());
+
         KeyStore keyStore = tlsHelper.createKeyStore();
         String keyPassword = passwordUtil.generatePassword();
         tlsHelper.addToKeyStore(keyStore, keyPair, TlsToolkitMain.NIFI_KEY, keyPassword.toCharArray(), x509Certificate, caCertificate);

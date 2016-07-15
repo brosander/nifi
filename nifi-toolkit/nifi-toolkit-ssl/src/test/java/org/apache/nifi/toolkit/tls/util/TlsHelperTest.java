@@ -145,7 +145,7 @@ public class TlsHelperTest {
         String dn = "CN=testIssued,O=testOrg";
 
         KeyPair keyPair = tlsHelper.generateKeyPair();
-        X509Certificate x509Certificate = tlsHelper.generateIssuedCertificate(dn, keyPair, issuer, issuerKeyPair);
+        X509Certificate x509Certificate = tlsHelper.generateIssuedCertificate(dn, keyPair.getPublic(), issuer, issuerKeyPair);
         assertEquals(dn, x509Certificate.getSubjectDN().toString());
         assertEquals(issuer.getSubjectDN().toString(), x509Certificate.getIssuerDN().toString());
         assertEquals(keyPair.getPublic(), x509Certificate.getPublicKey());

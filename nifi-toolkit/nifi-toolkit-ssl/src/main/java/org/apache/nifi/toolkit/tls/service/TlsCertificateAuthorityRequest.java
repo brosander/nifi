@@ -32,13 +32,13 @@ import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 
 public class TlsCertificateAuthorityRequest {
-    private String hmac;
+    private byte[] hmac;
     private String csr;
 
     public TlsCertificateAuthorityRequest() {
     }
 
-    public TlsCertificateAuthorityRequest(String hmac, JcaPKCS10CertificationRequest csr) throws IOException, NoSuchAlgorithmException,
+    public TlsCertificateAuthorityRequest(byte[] hmac, JcaPKCS10CertificationRequest csr) throws IOException, NoSuchAlgorithmException,
             InvalidKeyException, NoSuchProviderException {
         this.hmac = hmac;
         StringWriter writer = new StringWriter();
@@ -48,16 +48,16 @@ public class TlsCertificateAuthorityRequest {
         this.csr = writer.toString();
     }
 
-    public String getHmac() {
+    public byte[] getHmac() {
         return hmac;
     }
 
-    public void setHmac(String hmac) {
+    public void setHmac(byte[] hmac) {
         this.hmac = hmac;
     }
 
     public boolean hasHmac() {
-        return !StringUtils.isEmpty(hmac);
+        return hmac != null && hmac.length > 0;
     }
 
     public String getCsr() {

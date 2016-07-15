@@ -35,20 +35,17 @@ import org.bouncycastle.cert.jcajce.JcaX509ExtensionUtils;
 import org.bouncycastle.eac.EACException;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.openssl.PEMParser;
-import org.bouncycastle.openssl.jcajce.JcaMiscPEMGenerator;
 import org.bouncycastle.operator.ContentSigner;
 import org.bouncycastle.operator.OperatorCreationException;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest;
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequestBuilder;
-import org.bouncycastle.util.io.pem.PemWriter;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import javax.security.auth.x500.X500Principal;
 import java.io.IOException;
 import java.io.Reader;
-import java.io.Writer;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
@@ -66,7 +63,6 @@ import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
-import java.util.Base64;
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
 
@@ -149,11 +145,6 @@ public class TlsHelper {
         return new JcaX509CertificateConverter().setProvider(PROVIDER).getCertificate(certificateHolder);
     }
 
-    public X509Certificate generateIssuedCertificate(String dn, KeyPair keyPair, X509Certificate issuer, KeyPair issuerKeyPair)
-            throws IOException, NoSuchAlgorithmException, CertificateException, NoSuchProviderException, SignatureException, InvalidKeyException, OperatorCreationException {
-        return generateIssuedCertificate(dn, keyPair.getPublic(), issuer, issuerKeyPair);
-    }
-
     public X509Certificate generateIssuedCertificate(String dn, PublicKey publicKey, X509Certificate issuer, KeyPair issuerKeyPair)
             throws IOException, NoSuchAlgorithmException, CertificateException, NoSuchProviderException, SignatureException, InvalidKeyException, OperatorCreationException {
         return generateIssuedCertificate(new X500Name(dn), publicKey, issuer, issuerKeyPair);
@@ -211,14 +202,8 @@ public class TlsHelper {
         }
     }
 
-    public void writeCertificate(X509Certificate x509Certificate, Writer writer) throws IOException {
-        try (PemWriter pemWriter = new PemWriter(writer)) {
-            pemWriter.writeObject(new JcaMiscPEMGenerator(x509Certificate));
-        }
-    }
-
-    public boolean checkHMac(String hmac, String token, PublicKey publicKey) throws CRMFException, NoSuchProviderException, NoSuchAlgorithmException, InvalidKeyException {
-        return MessageDigest.isEqual(Base64.getDecoder().decode(hmac), calculateHMac(token, publicKey));
+    public boolean checkHMac(byte[] hmac, String token, PublicKey publicKey) throws CRMFException, NoSuchProviderException, NoSuchAlgorithmException, InvalidKeyException {
+        return MessageDigest.isEqual(hmac, calculateHMac(token, publicKey));
     }
 
     public byte[] calculateHMac(String token, PublicKey publicKey) throws NoSuchProviderException, NoSuchAlgorithmException, InvalidKeyException {
