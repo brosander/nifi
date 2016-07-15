@@ -17,6 +17,7 @@
 
 package org.apache.nifi.toolkit.ssl.configuration;
 
+import org.apache.nifi.toolkit.ssl.util.OutputStreamFactory;
 import org.apache.nifi.toolkit.ssl.util.SSLHelper;
 import org.apache.nifi.toolkit.ssl.properties.NiFiPropertiesWriterFactory;
 
@@ -30,7 +31,7 @@ public class SSLHostConfigurationBuilder {
     private final SSLHelper sslHelper;
     private final NiFiPropertiesWriterFactory niFiPropertiesWriterFactory;
 
-    private SSLHostConfiguration.OutputStreamFactory outputStreamFactory = FileOutputStream::new;
+    private OutputStreamFactory outputStreamFactory = FileOutputStream::new;
 
     private File hostDir;
     private String httpsPort;
@@ -92,7 +93,7 @@ public class SSLHostConfigurationBuilder {
         return this;
     }
 
-    protected SSLHostConfigurationBuilder setOutputStreamFactory(SSLHostConfiguration.OutputStreamFactory outputStreamFactory) {
+    protected SSLHostConfigurationBuilder setOutputStreamFactory(OutputStreamFactory outputStreamFactory) {
         this.outputStreamFactory = outputStreamFactory;
         return this;
     }

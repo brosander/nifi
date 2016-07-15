@@ -18,6 +18,7 @@
 package org.apache.nifi.toolkit.ssl.util;
 
 import org.apache.nifi.toolkit.ssl.commandLine.SSLToolkitCommandLine;
+import org.apache.nifi.toolkit.ssl.configuration.SSLHelperConfig;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x509.BasicConstraints;
 import org.bouncycastle.asn1.x509.ExtendedKeyUsage;
@@ -29,7 +30,6 @@ import org.bouncycastle.cert.CertIOException;
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.X509v3CertificateBuilder;
 import org.bouncycastle.cert.crmf.CRMFException;
-import org.bouncycastle.cert.crmf.jcajce.JcaCertificateRequestMessage;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.bouncycastle.cert.jcajce.JcaX509ExtensionUtils;
 import org.bouncycastle.eac.EACException;
@@ -40,9 +40,8 @@ import org.bouncycastle.operator.ContentSigner;
 import org.bouncycastle.operator.OperatorCreationException;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 import org.bouncycastle.pkcs.PKCS10CertificationRequest;
+import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest;
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequestBuilder;
-import org.bouncycastle.util.io.pem.PemObject;
-import org.bouncycastle.util.io.pem.PemReader;
 import org.bouncycastle.util.io.pem.PemWriter;
 
 import javax.crypto.Mac;
@@ -78,6 +77,10 @@ public class SSLHelper {
     private final int days;
     private final String signingAlgorithm;
     private final String keyStoreType;
+
+    public SSLHelper(SSLHelperConfig sslHelperConfig) throws NoSuchAlgorithmException {
+        this(sslHelperConfig.getDays(), sslHelperConfig.getKeySize(), sslHelperConfig.getKeyPairAlgorithm(), sslHelperConfig.getSigningAlgorithm(), sslHelperConfig.getKeyStoreType());
+    }
 
     public SSLHelper(SSLToolkitCommandLine sslToolkitCommandLine) throws NoSuchAlgorithmException {
         this(sslToolkitCommandLine.getDays(), sslToolkitCommandLine.getKeySize(), sslToolkitCommandLine.getKeyAlgorithm(),
@@ -194,15 +197,18 @@ public class SSLHelper {
         return jcaPKCS10CertificationRequestBuilder.build(jcaContentSignerBuilder.build(keyPair.getPrivate()));
     }
 
-    public X509Certificate signCsr(JcaCertificateRequestMessage certificationRequest, X509Certificate issuer, KeyPair issuerKeyPair) throws InvalidKeySpecException, EACException,
+    public X509Certificate signCsr(JcaPKCS10CertificationRequest certificationRequest, X509Certificate issuer, KeyPair issuerKeyPair) throws InvalidKeySpecException, EACException,
             CertificateException, NoSuchAlgorithmException, IOException, SignatureException, NoSuchProviderException, InvalidKeyException, OperatorCreationException, CRMFException {
-        return generateIssuedCertificate(certificationRequest.getSubjectX500Principal().getName(), certificationRequest.getPublicKey(), issuer, issuerKeyPair);
+        return generateIssuedCertificate(certificationRequest.getSubject(), certificationRequest.getPublicKey(), issuer, issuerKeyPair);
     }
 
-    public JcaCertificateRequestMessage readCertificationRequest(Reader reader) throws IOException {
-        try (PemReader pemReader = new PemReader(reader)) {
-            PemObject pemObject = pemReader.readPemObject();
-            return new JcaCertificateRequestMessage(pemObject.getContent());
+    public PKCS10CertificationRequest readCertificationRequest(Reader reader) throws IOException {
+        try (PEMParser pemParser = new PEMParser(reader)) {
+            Object o = pemParser.readObject();
+            if (!PKCS10CertificationRequest.class.isInstance(o)) {
+                throw new IOException("Expecting instance of " + PKCS10CertificationRequest.class + " but got " + o);
+            }
+            return (PKCS10CertificationRequest) o;
         }
     }
 

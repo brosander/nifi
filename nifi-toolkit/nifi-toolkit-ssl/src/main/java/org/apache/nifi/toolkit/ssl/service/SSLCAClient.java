@@ -33,19 +33,26 @@ import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.protocol.HttpContext;
 import org.apache.http.ssl.SSLContextBuilder;
 import org.apache.nifi.toolkit.ssl.SSLToolkitMain;
+import org.apache.nifi.toolkit.ssl.configuration.SSLClientConfig;
+import org.apache.nifi.toolkit.ssl.util.InputStreamFactory;
+import org.apache.nifi.toolkit.ssl.util.OutputStreamFactory;
 import org.apache.nifi.toolkit.ssl.util.PasswordUtil;
 import org.apache.nifi.toolkit.ssl.util.SSLHelper;
 import org.apache.nifi.util.StringUtils;
-import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x500.style.BCStyle;
+import org.bouncycastle.asn1.x500.style.IETFUtils;
+import org.bouncycastle.asn1.x509.Certificate;
+import org.bouncycastle.cert.X509CertificateHolder;
+import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
+import org.bouncycastle.cert.jcajce.JcaX509CertificateHolder;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.pkcs.PKCS10CertificationRequest;
 
 import javax.net.ssl.SSLSocket;
-import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.StringReader;
 import java.io.StringWriter;
@@ -54,26 +61,37 @@ import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
 import java.security.KeyStore;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 
 public class SSLCAClient {
-    private SSLHelper sslHelper;
-    private PasswordUtil passwordUtil;
-    private String nonce;
-    private String hostname;
-    private String caHostname;
-    private List<X509Certificate> certificates;
-    private File keyStoreLocation;
-    private File trustStoreLocation;
-    private File sslConfigJsonLocation;
+    private final File configFile;
+    private final SSLHelper sslHelper;
+    private final PasswordUtil passwordUtil;
+    private final SSLClientConfig sslClientConfig;
+    private final OutputStreamFactory outputStreamFactory;
+    private final ObjectMapper objectMapper;
 
-    public static void main(String[] args) {
+    public SSLCAClient(File configFile) throws IOException, NoSuchAlgorithmException {
+        this(configFile, FileInputStream::new, FileOutputStream::new);
+    }
 
+    public SSLCAClient(File configFile, InputStreamFactory inputStreamFactory, OutputStreamFactory outputStreamFactory)
+            throws IOException, NoSuchAlgorithmException {
+        this.configFile = configFile;
+        this.objectMapper = new ObjectMapper();
+        this.sslClientConfig = objectMapper.readValue(inputStreamFactory.create(configFile), SSLClientConfig.class);
+        this.sslHelper = new SSLHelper(sslClientConfig.getSslHelper());
+        this.passwordUtil = new PasswordUtil(new SecureRandom());
+        this.outputStreamFactory = outputStreamFactory;
     }
 
     public void generateCertificateAndGetItSigned() throws Exception {
+        List<X509Certificate> certificates = new ArrayList<>();
         KeyPair keyPair = sslHelper.generateKeyPair();
 
         HttpClientBuilder httpClientBuilder = HttpClientBuilder.create();
@@ -81,9 +99,10 @@ public class SSLCAClient {
         sslContextBuilder.loadTrustMaterial(null, new TrustSelfSignedStrategy());
         httpClientBuilder.setSSLSocketFactory(new SSLConnectionSocketFactory(sslContextBuilder.build()) {
             @Override
-            public synchronized Socket connectSocket(int connectTimeout, Socket socket, HttpHost host, InetSocketAddress remoteAddress, InetSocketAddress localAddress, HttpContext context) throws IOException {
+            public synchronized Socket connectSocket(int connectTimeout, Socket socket, HttpHost host, InetSocketAddress remoteAddress,
+                                                     InetSocketAddress localAddress, HttpContext context) throws IOException {
                 Socket result = super.connectSocket(connectTimeout, socket, host, remoteAddress, localAddress, context);
-                if (!SSLSocket.class.isInstance(socket)) {
+                if (!SSLSocket.class.isInstance(result)) {
                     throw new IOException("Expected ssl socket");
                 }
                 SSLSocket sslSocket = (SSLSocket) result;
@@ -91,13 +110,17 @@ public class SSLCAClient {
                 if (peerCertificateChain.length != 1) {
                     throw new IOException("Expected root ca cert");
                 }
+                String cn;
                 try {
-                    certificates.add(sslHelper.readCertificate(new InputStreamReader(new ByteArrayInputStream(peerCertificateChain[0].getEncoded()))));
+                    X509Certificate certificate = new JcaX509CertificateConverter().setProvider(BouncyCastleProvider.PROVIDER_NAME)
+                            .getCertificate(new X509CertificateHolder(Certificate.getInstance(peerCertificateChain[0].getEncoded())));
+                    cn = IETFUtils.valueToString(new JcaX509CertificateHolder(certificate).getSubject().getRDNs(BCStyle.CN)[0].getFirst().getValue());
+                    certificates.add(certificate);
                 } catch (Exception e) {
                     throw new IOException(e);
                 }
-                if (!hostname.equals(new X500Name(peerCertificateChain[0].getSubjectDN().getName()).getRDNs(BCStyle.CN)[0])) {
-                    throw new IOException("Expected cn of " + hostname);
+                if (!sslClientConfig.getCaHostname().equals(cn)) {
+                    throw new IOException("Expected cn of " + sslClientConfig.getCaHostname() + " but got " + cn);
                 }
                 return result;
             }
@@ -108,13 +131,13 @@ public class SSLCAClient {
         try (CloseableHttpClient client = httpClientBuilder.build()) {
             HttpPost httpPost = new HttpPost();
             ObjectNode requestNode = objectMapper.createObjectNode();
-            PKCS10CertificationRequest request = sslHelper.generateCertificationRequest("CN=" + hostname + ",OU=NIFI", keyPair);
+            PKCS10CertificationRequest request = sslHelper.generateCertificationRequest("CN=" + sslClientConfig.getHostname() + ",OU=NIFI", keyPair);
             StringWriter requestStringWriter = new StringWriter();
             sslHelper.writeCertificationRequest(request, requestStringWriter);
             requestNode.put(SSLCAService.CSR, requestStringWriter.toString());
-            requestNode.put(SSLCAService.HMAC, Base64.getEncoder().encodeToString(sslHelper.calculateHMac(nonce, keyPair.getPublic())));
+            requestNode.put(SSLCAService.HMAC, Base64.getEncoder().encodeToString(sslHelper.calculateHMac(sslClientConfig.getNonce(), keyPair.getPublic())));
             httpPost.setEntity(new ByteArrayEntity(objectMapper.writeValueAsBytes(requestNode)));
-            try (CloseableHttpResponse response = client.execute(new HttpHost(caHostname, 8080, "https"), httpPost)) {
+            try (CloseableHttpResponse response = client.execute(new HttpHost(sslClientConfig.getCaHostname(), 8443, "https"), httpPost)) {
                 jsonResponseString = IOUtils.toString(new BoundedInputStream(response.getEntity().getContent(), 1024 * 1024), StandardCharsets.UTF_8);
             }
         }
@@ -130,7 +153,7 @@ public class SSLCAClient {
             throw new IOException("Expected response to contain hmac");
         }
         X509Certificate caCertificate = certificates.get(0);
-        if (!sslHelper.checkHMac(hmac, nonce, sslHelper.getKeyIdentifier(caCertificate.getPublicKey()))) {
+        if (!sslHelper.checkHMac(hmac, sslClientConfig.getNonce(), caCertificate.getPublicKey())) {
             throw new IOException("Unexpected hmac received, possible man in the middle");
         }
         JsonNode certificateNode = jsonResponseNode.get(SSLCAService.CERTIFICATE);
@@ -143,29 +166,26 @@ public class SSLCAClient {
         String keyPassword = passwordUtil.generatePassword();
         sslHelper.addToKeyStore(keyStore, keyPair, SSLToolkitMain.NIFI_KEY, keyPassword.toCharArray(), x509Certificate, caCertificate);
         String keyStorePassword = passwordUtil.generatePassword();
-        try (OutputStream outputStream = new FileOutputStream(keyStoreLocation)) {
+        try (OutputStream outputStream = outputStreamFactory.create(new File(sslClientConfig.getKeyStore()))) {
             keyStore.store(outputStream, keyStorePassword.toCharArray());
         }
 
         KeyStore trustStore = sslHelper.createKeyStore();
         trustStore.setCertificateEntry(SSLToolkitMain.NIFI_CERT, caCertificate);
         String trustStorePassword = passwordUtil.generatePassword();
-        try (OutputStream outputStream = new FileOutputStream(trustStoreLocation)) {
+        try (OutputStream outputStream = outputStreamFactory.create(new File(sslClientConfig.getTrustStore()))) {
             trustStore.store(outputStream, trustStorePassword.toCharArray());
         }
 
-        ObjectNode configNode = objectMapper.createObjectNode();
-        configNode.put("keyStore", keyStoreLocation.getAbsolutePath());
-        configNode.put("keyStorePassword", keyStorePassword);
-        configNode.put("keyPassword", keyPassword);
-        configNode.put("keyStoreType", sslHelper.getKeyStoreType());
+        sslClientConfig.setKeyStorePassword(keyStorePassword);
+        sslClientConfig.setKeyPassword(keyPassword);
+        sslClientConfig.setKeyStoreType(sslHelper.getKeyStoreType());
 
-        configNode.put("trustStore", trustStoreLocation.getAbsolutePath());
-        configNode.put("trustStorePassword", trustStorePassword);
-        configNode.put("trustStoreType", sslHelper.getKeyStoreType());
+        sslClientConfig.setTrustStorePassword(trustStorePassword);
+        sslClientConfig.setTrustStoreType(sslHelper.getKeyStoreType());
 
-        try (OutputStream outputStream = new FileOutputStream(sslConfigJsonLocation)) {
-            objectMapper.writer().writeValue(outputStream, configNode);
+        try (OutputStream outputStream = outputStreamFactory.create(configFile)) {
+            objectMapper.writer().writeValue(outputStream, sslClientConfig);
         }
     }
 }

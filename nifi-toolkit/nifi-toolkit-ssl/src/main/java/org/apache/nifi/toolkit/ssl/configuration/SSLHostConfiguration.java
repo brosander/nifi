@@ -19,6 +19,7 @@ package org.apache.nifi.toolkit.ssl.configuration;
 
 import org.apache.nifi.toolkit.ssl.properties.NiFiPropertiesWriter;
 import org.apache.nifi.toolkit.ssl.properties.NiFiPropertiesWriterFactory;
+import org.apache.nifi.toolkit.ssl.util.OutputStreamFactory;
 import org.apache.nifi.toolkit.ssl.util.SSLHelper;
 import org.apache.nifi.util.NiFiProperties;
 import org.apache.nifi.util.StringUtils;
@@ -108,9 +109,5 @@ public class SSLHostConfiguration {
         try (OutputStream fileOutputStream = outputStreamFactory.create(trustStoreFile)) {
             trustStore.store(fileOutputStream, trustStorePassword.toCharArray());
         }
-    }
-
-    public interface OutputStreamFactory {
-        OutputStream create(File file) throws IOException;
     }
 }

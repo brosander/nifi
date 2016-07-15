@@ -21,6 +21,7 @@ import org.apache.nifi.toolkit.ssl.SSLToolkitMain;
 import org.apache.nifi.toolkit.ssl.commandLine.SSLToolkitCommandLine;
 import org.apache.nifi.toolkit.ssl.properties.NiFiPropertiesWriter;
 import org.apache.nifi.toolkit.ssl.properties.NiFiPropertiesWriterFactory;
+import org.apache.nifi.toolkit.ssl.util.OutputStreamFactory;
 import org.apache.nifi.toolkit.ssl.util.SSLHelper;
 import org.apache.nifi.toolkit.ssl.util.SSLHelperTest;
 import org.apache.nifi.util.NiFiProperties;
@@ -65,7 +66,7 @@ public class SSLHostConfigurationTest {
     private String keyPassword;
     private String trustStorePassword;
     private String hostname;
-    private SSLHostConfiguration.OutputStreamFactory outputStreamFactory;
+    private OutputStreamFactory outputStreamFactory;
     private File nifiPropertiesFile;
     private File keystoreFile;
     private File truststoreFile;
@@ -105,7 +106,7 @@ public class SSLHostConfigurationTest {
         keyStore.load(null, null);
 
         niFiPropertiesWriterFactory = mock(NiFiPropertiesWriterFactory.class);
-        outputStreamFactory = mock(SSLHostConfiguration.OutputStreamFactory.class);
+        outputStreamFactory = mock(OutputStreamFactory.class);
         niFiPropertiesWriter = mock(NiFiPropertiesWriter.class);
 
         nifiPropertiesFile = new File(hostDir, SSLHostConfiguration.NIFI_PROPERTIES);
