@@ -57,7 +57,6 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.List;
 
 public class TlsCertificateAuthorityClient {
@@ -124,10 +123,12 @@ public class TlsCertificateAuthorityClient {
         String jsonResponseString;
         int responseCode;
         try (CloseableHttpClient client = httpClientBuilder.build()) {
-            HttpPost httpPost = new HttpPost();
             JcaPKCS10CertificationRequest request = tlsHelper.generateCertificationRequest("CN=" + tlsClientConfig.getHostname() + ",OU=NIFI", keyPair);
-            httpPost.setEntity(new ByteArrayEntity(objectMapper.writeValueAsBytes(
-                    new TlsCertificateAuthorityRequest(Base64.getEncoder().encodeToString(tlsHelper.calculateHMac(tlsClientConfig.getNonce(), keyPair.getPublic())), request))));
+            TlsCertificateAuthorityRequest tlsCertificateAuthorityRequest = new TlsCertificateAuthorityRequest(tlsHelper, tlsClientConfig.getNonce(), request);
+
+            HttpPost httpPost = new HttpPost();
+            httpPost.setEntity(new ByteArrayEntity(objectMapper.writeValueAsBytes(tlsCertificateAuthorityRequest)));
+
             try (CloseableHttpResponse response = client.execute(new HttpHost(tlsClientConfig.getCaHostname(), tlsClientConfig.getPort(), "https"), httpPost)) {
                 jsonResponseString = IOUtils.toString(new BoundedInputStream(response.getEntity().getContent(), 1024 * 1024), StandardCharsets.UTF_8);
                 responseCode = response.getStatusLine().getStatusCode();

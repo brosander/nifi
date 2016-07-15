@@ -25,7 +25,6 @@ import org.apache.nifi.toolkit.tls.util.InputStreamFactory;
 import org.apache.nifi.toolkit.tls.util.OutputStreamFactory;
 import org.apache.nifi.toolkit.tls.util.PasswordUtil;
 import org.apache.nifi.toolkit.tls.util.TlsHelper;
-import org.apache.nifi.util.StringUtils;
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest;
 import org.eclipse.jetty.http.HttpVersion;
 import org.eclipse.jetty.server.HttpConfiguration;
@@ -144,13 +143,13 @@ public class TlsCertificateAuthorityService extends AbstractHandler {
             TlsCertificateAuthorityRequest tlsCertificateAuthorityRequest = objectMapper.readValue(new BoundedReader(request.getReader(), 1024 * 1024), TlsCertificateAuthorityRequest.class);
             TlsCertificateAuthorityResponse tlsCertificateAuthorityResponse = new TlsCertificateAuthorityResponse();
 
-            if (StringUtils.isEmpty(tlsCertificateAuthorityRequest.getCsr())) {
+            if (!tlsCertificateAuthorityRequest.hasCsr()) {
                 tlsCertificateAuthorityResponse.setError("csr field must be set");
                 writeResponse(objectMapper, response, tlsCertificateAuthorityResponse, Response.SC_BAD_REQUEST);
                 return;
             }
 
-            if (StringUtils.isEmpty(tlsCertificateAuthorityRequest.getHmac())) {
+            if (!tlsCertificateAuthorityRequest.hasHmac()) {
                 tlsCertificateAuthorityResponse.setError("hmac field must be set");
                 writeResponse(objectMapper, response, tlsCertificateAuthorityResponse, Response.SC_BAD_REQUEST);
                 return;
