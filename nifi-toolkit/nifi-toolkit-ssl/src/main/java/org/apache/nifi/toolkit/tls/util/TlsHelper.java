@@ -217,23 +217,23 @@ public class TlsHelper {
         }
     }
 
-    public boolean checkHMac(String hmac, String nonce, PublicKey publicKey) throws CRMFException, NoSuchProviderException, NoSuchAlgorithmException, InvalidKeyException {
-        return MessageDigest.isEqual(Base64.getDecoder().decode(hmac), calculateHMac(nonce, publicKey));
+    public boolean checkHMac(String hmac, String token, PublicKey publicKey) throws CRMFException, NoSuchProviderException, NoSuchAlgorithmException, InvalidKeyException {
+        return MessageDigest.isEqual(Base64.getDecoder().decode(hmac), calculateHMac(token, publicKey));
     }
 
-    public boolean checkHMac(String hmac, String nonce, byte[] publicKeyFingerprint) throws CRMFException, NoSuchProviderException, NoSuchAlgorithmException, InvalidKeyException {
-        return MessageDigest.isEqual(Base64.getDecoder().decode(hmac), calculateHMac(nonce, publicKeyFingerprint));
+    public boolean checkHMac(String hmac, String token, byte[] publicKeyFingerprint) throws CRMFException, NoSuchProviderException, NoSuchAlgorithmException, InvalidKeyException {
+        return MessageDigest.isEqual(Base64.getDecoder().decode(hmac), calculateHMac(token, publicKeyFingerprint));
     }
 
-    public byte[] calculateHMac(String nonce, byte[] publicKeyFingerprint) throws NoSuchProviderException, NoSuchAlgorithmException, InvalidKeyException {
-        SecretKeySpec keySpec = new SecretKeySpec(nonce.getBytes(StandardCharsets.UTF_8), "RAW");
+    public byte[] calculateHMac(String token, byte[] publicKeyFingerprint) throws NoSuchProviderException, NoSuchAlgorithmException, InvalidKeyException {
+        SecretKeySpec keySpec = new SecretKeySpec(token.getBytes(StandardCharsets.UTF_8), "RAW");
         Mac mac = Mac.getInstance("Hmac-SHA256", PROVIDER);
         mac.init(keySpec);
         return mac.doFinal(publicKeyFingerprint);
     }
 
-    public byte[] calculateHMac(String nonce, PublicKey publicKey) throws NoSuchProviderException, NoSuchAlgorithmException, InvalidKeyException {
-        return calculateHMac(nonce, getKeyIdentifier(publicKey));
+    public byte[] calculateHMac(String token, PublicKey publicKey) throws NoSuchProviderException, NoSuchAlgorithmException, InvalidKeyException {
+        return calculateHMac(token, getKeyIdentifier(publicKey));
     }
 
     public byte[] getKeyIdentifier(PublicKey publicKey) throws NoSuchAlgorithmException {

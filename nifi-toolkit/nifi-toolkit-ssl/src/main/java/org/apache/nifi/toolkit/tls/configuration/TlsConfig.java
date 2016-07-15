@@ -23,7 +23,7 @@ public class TlsConfig {
     private String keyStoreType;
     private String keyStorePassword;
     private String keyPassword;
-    private String nonce;
+    private String token;
     private String hostname;
     private String sslCipher;
     private int port;
@@ -87,12 +87,12 @@ public class TlsConfig {
         this.keyPassword = keyPassword;
     }
 
-    public String getNonce() {
-        return nonce;
+    public String getToken() {
+        return token;
     }
 
-    public void setNonce(String nonce) {
-        this.nonce = nonce;
+    public void setToken(String token) {
+        this.token = token;
     }
 
     public String getHostname() {

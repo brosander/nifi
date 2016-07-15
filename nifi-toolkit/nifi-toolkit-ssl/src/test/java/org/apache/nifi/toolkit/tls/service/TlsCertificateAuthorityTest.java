@@ -93,12 +93,12 @@ public class TlsCertificateAuthorityTest {
         serverConfigFileOutputStream = new ByteArrayOutputStream();
         clientConfigFileOutputStream = new ByteArrayOutputStream();
 
-        String myTestNonceUseSomethingStronger = "myTestNonceUseSomethingStronger";
+        String myTestTokenUseSomethingStronger = "myTestTokenUseSomethingStronger";
         int port = availablePort();
 
         serverConfig = new TlsConfig();
         serverConfig.setHostname("localhost");
-        serverConfig.setNonce(myTestNonceUseSomethingStronger);
+        serverConfig.setToken(myTestTokenUseSomethingStronger);
         serverConfig.setSslCipher("TLS_RSA_WITH_AES_128_GCM_SHA256");
         serverConfig.setKeyStore(serverKeyStore);
         serverConfig.setPort(port);
@@ -108,7 +108,7 @@ public class TlsCertificateAuthorityTest {
         clientConfig.setHostname("otherHostname");
         clientConfig.setKeyStore(clientKeyStore);
         clientConfig.setTrustStore(clientTrustStore);
-        clientConfig.setNonce(myTestNonceUseSomethingStronger);
+        clientConfig.setToken(myTestTokenUseSomethingStronger);
         clientConfig.setPort(port);
 
         tlsHelperConfig = new TlsHelperConfig();
@@ -160,11 +160,11 @@ public class TlsCertificateAuthorityTest {
     }
 
     @Test
-    public void testNonceMismatch() throws Exception {
-        serverConfig.setNonce("a different nonce...");
+    public void testTokenMismatch() throws Exception {
+        serverConfig.setToken("a different token...");
         try {
             testClientGetCert();
-            fail("Expected error with mismatching nonce");
+            fail("Expected error with mismatching token");
         } catch (IOException e) {
             assertTrue(e.getMessage().contains("forbidden"));
         }

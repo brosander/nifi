@@ -66,7 +66,7 @@ public class TlsCertificateAuthorityService extends AbstractHandler {
     private final TlsHelper tlsHelper;
     private final PasswordUtil passwordUtil;
     private final Server server;
-    private final String nonce;
+    private final String token;
 
     public TlsCertificateAuthorityService(File configInput) throws Exception {
         this(configInput, FileInputStream::new, FileOutputStream::new);
@@ -109,7 +109,7 @@ public class TlsCertificateAuthorityService extends AbstractHandler {
             configuration.setKeyPassword(keyPassword);
             objectMapper.writeValue(outputStreamFactory.create(configInput), configuration);
         }
-        nonce = configuration.getNonce();
+        token = configuration.getToken();
 
         SslContextFactory sslContextFactory = new SslContextFactory();
         sslContextFactory.setKeyStore(keyStore);
@@ -157,11 +157,11 @@ public class TlsCertificateAuthorityService extends AbstractHandler {
 
             JcaPKCS10CertificationRequest jcaPKCS10CertificationRequest = tlsCertificateAuthorityRequest.parseCsr();
 
-            if (tlsHelper.checkHMac(tlsCertificateAuthorityRequest.getHmac(), nonce, tlsHelper.getKeyIdentifier(jcaPKCS10CertificationRequest.getPublicKey()))) {
+            if (tlsHelper.checkHMac(tlsCertificateAuthorityRequest.getHmac(), token, tlsHelper.getKeyIdentifier(jcaPKCS10CertificationRequest.getPublicKey()))) {
                 StringWriter signedCertificate = new StringWriter();
                 tlsHelper.writeCertificate(tlsHelper.signCsr(jcaPKCS10CertificationRequest, this.caCert, keyPair), signedCertificate);
 
-                tlsCertificateAuthorityResponse.setHmac(Base64.getEncoder().encodeToString(tlsHelper.calculateHMac(nonce, caCert.getPublicKey())));
+                tlsCertificateAuthorityResponse.setHmac(Base64.getEncoder().encodeToString(tlsHelper.calculateHMac(token, caCert.getPublicKey())));
                 tlsCertificateAuthorityResponse.setCertificate(signedCertificate.toString());
                 writeResponse(objectMapper, response, tlsCertificateAuthorityResponse, Response.SC_OK);
                 return;

@@ -124,7 +124,7 @@ public class TlsCertificateAuthorityClient {
         int responseCode;
         try (CloseableHttpClient client = httpClientBuilder.build()) {
             JcaPKCS10CertificationRequest request = tlsHelper.generateCertificationRequest("CN=" + tlsClientConfig.getHostname() + ",OU=NIFI", keyPair);
-            TlsCertificateAuthorityRequest tlsCertificateAuthorityRequest = new TlsCertificateAuthorityRequest(tlsHelper, tlsClientConfig.getNonce(), request);
+            TlsCertificateAuthorityRequest tlsCertificateAuthorityRequest = new TlsCertificateAuthorityRequest(tlsHelper, tlsClientConfig.getToken(), request);
 
             HttpPost httpPost = new HttpPost();
             httpPost.setEntity(new ByteArrayEntity(objectMapper.writeValueAsBytes(tlsCertificateAuthorityRequest)));
@@ -149,7 +149,7 @@ public class TlsCertificateAuthorityClient {
         }
 
         X509Certificate caCertificate = certificates.get(0);
-        if (!tlsHelper.checkHMac(tlsCertificateAuthorityResponse.getHmac(), tlsClientConfig.getNonce(), caCertificate.getPublicKey())) {
+        if (!tlsHelper.checkHMac(tlsCertificateAuthorityResponse.getHmac(), tlsClientConfig.getToken(), caCertificate.getPublicKey())) {
             throw new IOException("Unexpected hmac received, possible man in the middle");
         }
 
