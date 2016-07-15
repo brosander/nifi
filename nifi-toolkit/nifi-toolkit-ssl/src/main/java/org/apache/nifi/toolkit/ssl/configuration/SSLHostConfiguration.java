@@ -20,7 +20,7 @@ package org.apache.nifi.toolkit.ssl.configuration;
 import org.apache.nifi.toolkit.ssl.properties.NiFiPropertiesWriter;
 import org.apache.nifi.toolkit.ssl.properties.NiFiPropertiesWriterFactory;
 import org.apache.nifi.toolkit.ssl.util.OutputStreamFactory;
-import org.apache.nifi.toolkit.ssl.util.SSLHelper;
+import org.apache.nifi.toolkit.ssl.util.TlsHelper;
 import org.apache.nifi.util.NiFiProperties;
 import org.apache.nifi.util.StringUtils;
 import org.bouncycastle.operator.OperatorCreationException;
@@ -39,7 +39,7 @@ public class SSLHostConfiguration {
     public static final String TRUSTSTORE = "truststore";
 
     private final OutputStreamFactory outputStreamFactory;
-    private final SSLHelper sslHelper;
+    private final TlsHelper tlsHelper;
     private final NiFiPropertiesWriterFactory niFiPropertiesWriterFactory;
     private final File hostDir;
     private final String httpsPort;
@@ -52,11 +52,11 @@ public class SSLHostConfiguration {
     private final KeyStore trustStore;
     private final String hostname;
 
-    public SSLHostConfiguration(OutputStreamFactory outputStreamFactory, SSLHelper sslHelper, NiFiPropertiesWriterFactory niFiPropertiesWriterFactory, File hostDir,
+    public SSLHostConfiguration(OutputStreamFactory outputStreamFactory, TlsHelper tlsHelper, NiFiPropertiesWriterFactory niFiPropertiesWriterFactory, File hostDir,
                                 String httpsPort, String extension, KeyPair certificateKeypair, X509Certificate x509Certificate,
                                 String keyStorePassword, String keyPassword, String trustStorePassword, KeyStore trustStore, String hostname) {
         this.outputStreamFactory = outputStreamFactory;
-        this.sslHelper = sslHelper;
+        this.tlsHelper = tlsHelper;
         this.niFiPropertiesWriterFactory = niFiPropertiesWriterFactory;
         this.hostDir = hostDir;
         this.httpsPort = httpsPort;
@@ -71,11 +71,11 @@ public class SSLHostConfiguration {
     }
 
     public void processHost() throws IOException, GeneralSecurityException, OperatorCreationException {
-        KeyPair keyPair = sslHelper.generateKeyPair();
+        KeyPair keyPair = tlsHelper.generateKeyPair();
 
-        KeyStore keyStore = sslHelper.createKeyStore();
-        sslHelper.addToKeyStore(keyStore, keyPair, NIFI_KEY, keyPassword.toCharArray(),
-                sslHelper.generateIssuedCertificate("CN=" + hostname + ",OU=apache.nifi", keyPair, x509Certificate, certificateKeypair), x509Certificate);
+        KeyStore keyStore = tlsHelper.createKeyStore();
+        tlsHelper.addToKeyStore(keyStore, keyPair, NIFI_KEY, keyPassword.toCharArray(),
+                tlsHelper.generateIssuedCertificate("CN=" + hostname + ",OU=apache.nifi", keyPair, x509Certificate, certificateKeypair), x509Certificate);
 
         String keyStoreName = hostname + extension;
         String trustStoreName = TRUSTSTORE + extension;
@@ -83,11 +83,11 @@ public class SSLHostConfiguration {
         NiFiPropertiesWriter niFiPropertiesWriter = niFiPropertiesWriterFactory.create();
 
         niFiPropertiesWriter.setPropertyValue(NiFiProperties.SECURITY_KEYSTORE, "./conf/" + keyStoreName);
-        niFiPropertiesWriter.setPropertyValue(NiFiProperties.SECURITY_KEYSTORE_TYPE, sslHelper.getKeyStoreType());
+        niFiPropertiesWriter.setPropertyValue(NiFiProperties.SECURITY_KEYSTORE_TYPE, tlsHelper.getKeyStoreType());
         niFiPropertiesWriter.setPropertyValue(NiFiProperties.SECURITY_KEYSTORE_PASSWD, keyStorePassword);
         niFiPropertiesWriter.setPropertyValue(NiFiProperties.SECURITY_KEY_PASSWD, keyPassword);
         niFiPropertiesWriter.setPropertyValue(NiFiProperties.SECURITY_TRUSTSTORE, "./conf/truststore" + extension);
-        niFiPropertiesWriter.setPropertyValue(NiFiProperties.SECURITY_TRUSTSTORE_TYPE, sslHelper.getKeyStoreType());
+        niFiPropertiesWriter.setPropertyValue(NiFiProperties.SECURITY_TRUSTSTORE_TYPE, tlsHelper.getKeyStoreType());
         niFiPropertiesWriter.setPropertyValue(NiFiProperties.SECURITY_TRUSTSTORE_PASSWD, trustStorePassword);
         if (!StringUtils.isEmpty(httpsPort)) {
             niFiPropertiesWriter.setPropertyValue(NiFiProperties.WEB_HTTPS_PORT, httpsPort);

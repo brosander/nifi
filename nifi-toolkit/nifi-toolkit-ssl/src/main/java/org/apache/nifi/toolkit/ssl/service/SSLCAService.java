@@ -24,7 +24,7 @@ import org.apache.nifi.toolkit.ssl.configuration.SSLConfig;
 import org.apache.nifi.toolkit.ssl.util.InputStreamFactory;
 import org.apache.nifi.toolkit.ssl.util.OutputStreamFactory;
 import org.apache.nifi.toolkit.ssl.util.PasswordUtil;
-import org.apache.nifi.toolkit.ssl.util.SSLHelper;
+import org.apache.nifi.toolkit.ssl.util.TlsHelper;
 import org.apache.nifi.util.StringUtils;
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest;
 import org.eclipse.jetty.http.HttpVersion;
@@ -64,7 +64,7 @@ public class SSLCAService extends AbstractHandler {
     public static final String ERROR = "error";
     private final KeyPair keyPair;
     private final X509Certificate caCert;
-    private final SSLHelper sslHelper;
+    private final TlsHelper tlsHelper;
     private final PasswordUtil passwordUtil;
     private final Server server;
     private final String nonce;
@@ -77,7 +77,7 @@ public class SSLCAService extends AbstractHandler {
         passwordUtil = new PasswordUtil(new SecureRandom());
         ObjectMapper objectMapper = new ObjectMapper();
         SSLConfig configuration = objectMapper.readValue(inputStreamFactory.create(configInput), SSLConfig.class);
-        sslHelper = new SSLHelper(configuration.getSslHelper());
+        tlsHelper = new TlsHelper(configuration.getSslHelper());
         String keyStoreFile = configuration.getKeyStore();
         KeyStore keyStore;
         String keyPassword;
@@ -94,18 +94,18 @@ public class SSLCAService extends AbstractHandler {
             }
             KeyStore.PrivateKeyEntry privateKeyEntry = (KeyStore.PrivateKeyEntry) keyStoreEntry;
             keyPair = new KeyPair(privateKeyEntry.getCertificate().getPublicKey(), privateKeyEntry.getPrivateKey());
-            caCert = this.sslHelper.readCertificate(new InputStreamReader(new ByteArrayInputStream(privateKeyEntry.getCertificate().getEncoded())));
+            caCert = this.tlsHelper.readCertificate(new InputStreamReader(new ByteArrayInputStream(privateKeyEntry.getCertificate().getEncoded())));
         } else {
-            keyPair = this.sslHelper.generateKeyPair();
-            caCert = this.sslHelper.generateSelfSignedX509Certificate(keyPair, "CN=" + hostname + ",OU=NIFI");
-            keyStore = this.sslHelper.createKeyStore();
+            keyPair = this.tlsHelper.generateKeyPair();
+            caCert = this.tlsHelper.generateSelfSignedX509Certificate(keyPair, "CN=" + hostname + ",OU=NIFI");
+            keyStore = this.tlsHelper.createKeyStore();
             String keyStorePassword = passwordUtil.generatePassword();
             keyPassword = passwordUtil.generatePassword();
-            this.sslHelper.addToKeyStore(keyStore, keyPair, TlsToolkitMain.NIFI_KEY, keyPassword.toCharArray(), caCert);
+            this.tlsHelper.addToKeyStore(keyStore, keyPair, TlsToolkitMain.NIFI_KEY, keyPassword.toCharArray(), caCert);
             try (OutputStream outputStream = outputStreamFactory.create(new File(keyStoreFile))) {
                 keyStore.store(outputStream, keyStorePassword.toCharArray());
             }
-            configuration.setKeyStoreType(this.sslHelper.getKeyStoreType());
+            configuration.setKeyStoreType(this.tlsHelper.getKeyStoreType());
             configuration.setKeyStorePassword(keyStorePassword);
             configuration.setKeyPassword(keyPassword);
             objectMapper.writeValue(outputStreamFactory.create(configInput), configuration);
@@ -158,11 +158,11 @@ public class SSLCAService extends AbstractHandler {
 
             JcaPKCS10CertificationRequest jcaPKCS10CertificationRequest = sslcaRequest.parseCsr();
 
-            if (sslHelper.checkHMac(sslcaRequest.getHmac(), nonce, sslHelper.getKeyIdentifier(jcaPKCS10CertificationRequest.getPublicKey()))) {
+            if (tlsHelper.checkHMac(sslcaRequest.getHmac(), nonce, tlsHelper.getKeyIdentifier(jcaPKCS10CertificationRequest.getPublicKey()))) {
                 StringWriter signedCertificate = new StringWriter();
-                sslHelper.writeCertificate(sslHelper.signCsr(jcaPKCS10CertificationRequest, this.caCert, keyPair), signedCertificate);
+                tlsHelper.writeCertificate(tlsHelper.signCsr(jcaPKCS10CertificationRequest, this.caCert, keyPair), signedCertificate);
 
-                sslcaResponse.setHmac(Base64.getEncoder().encodeToString(sslHelper.calculateHMac(nonce, caCert.getPublicKey())));
+                sslcaResponse.setHmac(Base64.getEncoder().encodeToString(tlsHelper.calculateHMac(nonce, caCert.getPublicKey())));
                 sslcaResponse.setCertificate(signedCertificate.toString());
                 writeResponse(objectMapper, response, sslcaResponse, Response.SC_OK);
                 return;

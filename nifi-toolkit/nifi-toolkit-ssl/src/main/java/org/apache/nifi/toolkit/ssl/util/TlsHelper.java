@@ -70,27 +70,27 @@ import java.util.Base64;
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
 
-public class SSLHelper {
+public class TlsHelper {
     public static final String PROVIDER = BouncyCastleProvider.PROVIDER_NAME;
     private final KeyPairGenerator keyPairGenerator;
     private final int days;
     private final String signingAlgorithm;
     private final String keyStoreType;
 
-    public SSLHelper(SSLHelperConfig sslHelperConfig) throws NoSuchAlgorithmException {
+    public TlsHelper(SSLHelperConfig sslHelperConfig) throws NoSuchAlgorithmException {
         this(sslHelperConfig.getDays(), sslHelperConfig.getKeySize(), sslHelperConfig.getKeyPairAlgorithm(), sslHelperConfig.getSigningAlgorithm(), sslHelperConfig.getKeyStoreType());
     }
 
-    public SSLHelper(SSLToolkitCommandLine sslToolkitCommandLine) throws NoSuchAlgorithmException {
+    public TlsHelper(SSLToolkitCommandLine sslToolkitCommandLine) throws NoSuchAlgorithmException {
         this(sslToolkitCommandLine.getDays(), sslToolkitCommandLine.getKeySize(), sslToolkitCommandLine.getKeyAlgorithm(),
                 sslToolkitCommandLine.getSigningAlgorithm(), sslToolkitCommandLine.getKeyStoreType());
     }
 
-    public SSLHelper(int days, int keySize, String keyPairAlgorithm, String signingAlgorithm, String keyStoreType) throws NoSuchAlgorithmException {
+    public TlsHelper(int days, int keySize, String keyPairAlgorithm, String signingAlgorithm, String keyStoreType) throws NoSuchAlgorithmException {
         this(createKeyPairGenerator(keyPairAlgorithm, keySize), days, signingAlgorithm, keyStoreType);
     }
 
-    protected SSLHelper(KeyPairGenerator keyPairGenerator, int days, String signingAlgorithm, String keyStoreType) {
+    protected TlsHelper(KeyPairGenerator keyPairGenerator, int days, String signingAlgorithm, String keyStoreType) {
         this.keyPairGenerator = keyPairGenerator;
         this.days = days;
         this.signingAlgorithm = signingAlgorithm;
@@ -207,7 +207,7 @@ public class SSLHelper {
             if (!X509CertificateHolder.class.isInstance(object)) {
                 throw new IOException("Expected " + X509CertificateHolder.class);
             }
-            return new JcaX509CertificateConverter().setProvider(SSLHelper.PROVIDER).getCertificate((X509CertificateHolder) object);
+            return new JcaX509CertificateConverter().setProvider(TlsHelper.PROVIDER).getCertificate((X509CertificateHolder) object);
         }
     }
 

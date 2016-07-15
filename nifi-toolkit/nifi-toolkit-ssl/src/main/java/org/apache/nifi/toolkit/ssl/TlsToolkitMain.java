@@ -21,7 +21,7 @@ import org.apache.nifi.toolkit.ssl.commandLine.SSLToolkitCommandLine;
 import org.apache.nifi.toolkit.ssl.commandLine.CommandLineParseException;
 import org.apache.nifi.toolkit.ssl.configuration.SSLHostConfigurationBuilder;
 import org.apache.nifi.toolkit.ssl.properties.NiFiPropertiesWriterFactory;
-import org.apache.nifi.toolkit.ssl.util.SSLHelper;
+import org.apache.nifi.toolkit.ssl.util.TlsHelper;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.openssl.jcajce.JcaMiscPEMGenerator;
 import org.bouncycastle.operator.OperatorCreationException;
@@ -47,12 +47,12 @@ public class TlsToolkitMain {
     public static final String ROOT_CERT_CRT = "rootCert.crt";
     public static final String NIFI_PROPERTIES = "nifi.properties";
 
-    private final SSLHelper sslHelper;
+    private final TlsHelper tlsHelper;
     private final File baseDir;
     private final NiFiPropertiesWriterFactory niFiPropertiesWriterFactory;
 
-    public TlsToolkitMain(SSLHelper sslHelper, File baseDir, NiFiPropertiesWriterFactory niFiPropertiesWriterFactory) {
-        this.sslHelper = sslHelper;
+    public TlsToolkitMain(TlsHelper tlsHelper, File baseDir, NiFiPropertiesWriterFactory niFiPropertiesWriterFactory) {
+        this.tlsHelper = tlsHelper;
         this.baseDir = baseDir;
         this.niFiPropertiesWriterFactory = niFiPropertiesWriterFactory;
     }
@@ -66,7 +66,7 @@ public class TlsToolkitMain {
             System.exit(e.getExitCode());
         }
         try {
-            new TlsToolkitMain(new SSLHelper(sslToolkitCommandLine), sslToolkitCommandLine.getBaseDir(), sslToolkitCommandLine.getNiFiPropertiesWriterFactory())
+            new TlsToolkitMain(new TlsHelper(sslToolkitCommandLine), sslToolkitCommandLine.getBaseDir(), sslToolkitCommandLine.getNiFiPropertiesWriterFactory())
                     .createNifiKeystoresAndTrustStores("CN=nifi.root.ca,OU=apache.nifi", sslToolkitCommandLine.getHostnames(), sslToolkitCommandLine.getKeyStorePasswords(),
                             sslToolkitCommandLine.getKeyPasswords(), sslToolkitCommandLine.getTrustStorePasswords(), sslToolkitCommandLine.getHttpsPort());
         } catch (Exception e) {
@@ -78,8 +78,8 @@ public class TlsToolkitMain {
 
     public void createNifiKeystoresAndTrustStores(String dn, List<String> hostnames, List<String> keyStorePasswords, List<String> keyPasswords,
                                                   List<String> trustStorePasswords, String httpsPort) throws GeneralSecurityException, IOException, OperatorCreationException {
-        KeyPair certificateKeypair = sslHelper.generateKeyPair();
-        X509Certificate x509Certificate = sslHelper.generateSelfSignedX509Certificate(certificateKeypair, dn);
+        KeyPair certificateKeypair = tlsHelper.generateKeyPair();
+        X509Certificate x509Certificate = tlsHelper.generateSelfSignedX509Certificate(certificateKeypair, dn);
 
         try (PemWriter pemWriter = new PemWriter(new FileWriter(new File(baseDir, ROOT_CERT_CRT)))) {
             pemWriter.writeObject(new JcaMiscPEMGenerator(x509Certificate));
@@ -89,10 +89,10 @@ public class TlsToolkitMain {
             pemWriter.writeObject(new JcaMiscPEMGenerator(certificateKeypair));
         }
 
-        KeyStore trustStore = sslHelper.createKeyStore();
+        KeyStore trustStore = tlsHelper.createKeyStore();
         trustStore.setCertificateEntry(NIFI_CERT, x509Certificate);
 
-        SSLHostConfigurationBuilder sslHostConfigurationBuilder = new SSLHostConfigurationBuilder(sslHelper, niFiPropertiesWriterFactory)
+        SSLHostConfigurationBuilder sslHostConfigurationBuilder = new SSLHostConfigurationBuilder(tlsHelper, niFiPropertiesWriterFactory)
                 .setHttpsPort(httpsPort)
                 .setCertificateKeypair(certificateKeypair)
                 .setX509Certificate(x509Certificate)

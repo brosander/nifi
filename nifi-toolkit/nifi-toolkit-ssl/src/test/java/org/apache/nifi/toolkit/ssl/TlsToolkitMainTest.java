@@ -19,7 +19,7 @@ package org.apache.nifi.toolkit.ssl;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.nifi.toolkit.ssl.commandLine.SSLToolkitCommandLine;
-import org.apache.nifi.toolkit.ssl.util.SSLHelperTest;
+import org.apache.nifi.toolkit.ssl.util.TlsHelperTest;
 import org.apache.nifi.util.NiFiProperties;
 import org.junit.After;
 import org.junit.Before;
@@ -175,12 +175,12 @@ public class TlsToolkitMainTest {
     }
 
     private X509Certificate checkLoadCertPrivateKey(String algorithm) throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, CertificateException {
-        KeyPair keyPair = SSLHelperTest.loadKeyPair(new File(tempDir, TlsToolkitMain.ROOT_CERT_PRIVATE_KEY));
+        KeyPair keyPair = TlsHelperTest.loadKeyPair(new File(tempDir, TlsToolkitMain.ROOT_CERT_PRIVATE_KEY));
 
         assertEquals(algorithm, keyPair.getPrivate().getAlgorithm());
         assertEquals(algorithm, keyPair.getPublic().getAlgorithm());
 
-        X509Certificate x509Certificate = SSLHelperTest.loadCertificate(new File(tempDir, TlsToolkitMain.ROOT_CERT_CRT));
+        X509Certificate x509Certificate = TlsHelperTest.loadCertificate(new File(tempDir, TlsToolkitMain.ROOT_CERT_CRT));
         assertEquals(keyPair.getPublic(), x509Certificate.getPublicKey());
         return x509Certificate;
     }

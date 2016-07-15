@@ -35,7 +35,7 @@ import org.apache.nifi.toolkit.ssl.configuration.SSLClientConfig;
 import org.apache.nifi.toolkit.ssl.util.InputStreamFactory;
 import org.apache.nifi.toolkit.ssl.util.OutputStreamFactory;
 import org.apache.nifi.toolkit.ssl.util.PasswordUtil;
-import org.apache.nifi.toolkit.ssl.util.SSLHelper;
+import org.apache.nifi.toolkit.ssl.util.TlsHelper;
 import org.bouncycastle.asn1.x500.style.BCStyle;
 import org.bouncycastle.asn1.x500.style.IETFUtils;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateHolder;
@@ -62,7 +62,7 @@ import java.util.List;
 
 public class SSLCAClient {
     private final File configFile;
-    private final SSLHelper sslHelper;
+    private final TlsHelper tlsHelper;
     private final PasswordUtil passwordUtil;
     private final SSLClientConfig sslClientConfig;
     private final OutputStreamFactory outputStreamFactory;
@@ -77,14 +77,14 @@ public class SSLCAClient {
         this.configFile = configFile;
         this.objectMapper = new ObjectMapper();
         this.sslClientConfig = objectMapper.readValue(inputStreamFactory.create(configFile), SSLClientConfig.class);
-        this.sslHelper = new SSLHelper(sslClientConfig.getSslHelper());
+        this.tlsHelper = new TlsHelper(sslClientConfig.getSslHelper());
         this.passwordUtil = new PasswordUtil(new SecureRandom());
         this.outputStreamFactory = outputStreamFactory;
     }
 
     public void generateCertificateAndGetItSigned() throws Exception {
         List<X509Certificate> certificates = new ArrayList<>();
-        KeyPair keyPair = sslHelper.generateKeyPair();
+        KeyPair keyPair = tlsHelper.generateKeyPair();
 
         HttpClientBuilder httpClientBuilder = HttpClientBuilder.create();
         SSLContextBuilder sslContextBuilder = SSLContextBuilder.create();
@@ -125,9 +125,9 @@ public class SSLCAClient {
         int responseCode;
         try (CloseableHttpClient client = httpClientBuilder.build()) {
             HttpPost httpPost = new HttpPost();
-            JcaPKCS10CertificationRequest request = sslHelper.generateCertificationRequest("CN=" + sslClientConfig.getHostname() + ",OU=NIFI", keyPair);
+            JcaPKCS10CertificationRequest request = tlsHelper.generateCertificationRequest("CN=" + sslClientConfig.getHostname() + ",OU=NIFI", keyPair);
             httpPost.setEntity(new ByteArrayEntity(objectMapper.writeValueAsBytes(
-                    new SSLCARequest(Base64.getEncoder().encodeToString(sslHelper.calculateHMac(sslClientConfig.getNonce(), keyPair.getPublic())), request))));
+                    new SSLCARequest(Base64.getEncoder().encodeToString(tlsHelper.calculateHMac(sslClientConfig.getNonce(), keyPair.getPublic())), request))));
             try (CloseableHttpResponse response = client.execute(new HttpHost(sslClientConfig.getCaHostname(), sslClientConfig.getPort(), "https"), httpPost)) {
                 jsonResponseString = IOUtils.toString(new BoundedInputStream(response.getEntity().getContent(), 1024 * 1024), StandardCharsets.UTF_8);
                 responseCode = response.getStatusLine().getStatusCode();
@@ -148,7 +148,7 @@ public class SSLCAClient {
         }
 
         X509Certificate caCertificate = certificates.get(0);
-        if (!sslHelper.checkHMac(sslcaResponse.getHmac(), sslClientConfig.getNonce(), caCertificate.getPublicKey())) {
+        if (!tlsHelper.checkHMac(sslcaResponse.getHmac(), sslClientConfig.getNonce(), caCertificate.getPublicKey())) {
             throw new IOException("Unexpected hmac received, possible man in the middle");
         }
 
@@ -156,15 +156,15 @@ public class SSLCAClient {
             throw new IOException("Expected response to contain certificate");
         }
         X509Certificate x509Certificate = sslcaResponse.parseCertificate();
-        KeyStore keyStore = sslHelper.createKeyStore();
+        KeyStore keyStore = tlsHelper.createKeyStore();
         String keyPassword = passwordUtil.generatePassword();
-        sslHelper.addToKeyStore(keyStore, keyPair, TlsToolkitMain.NIFI_KEY, keyPassword.toCharArray(), x509Certificate, caCertificate);
+        tlsHelper.addToKeyStore(keyStore, keyPair, TlsToolkitMain.NIFI_KEY, keyPassword.toCharArray(), x509Certificate, caCertificate);
         String keyStorePassword = passwordUtil.generatePassword();
         try (OutputStream outputStream = outputStreamFactory.create(new File(sslClientConfig.getKeyStore()))) {
             keyStore.store(outputStream, keyStorePassword.toCharArray());
         }
 
-        KeyStore trustStore = sslHelper.createKeyStore();
+        KeyStore trustStore = tlsHelper.createKeyStore();
         trustStore.setCertificateEntry(TlsToolkitMain.NIFI_CERT, caCertificate);
         String trustStorePassword = passwordUtil.generatePassword();
         try (OutputStream outputStream = outputStreamFactory.create(new File(sslClientConfig.getTrustStore()))) {
@@ -173,10 +173,10 @@ public class SSLCAClient {
 
         sslClientConfig.setKeyStorePassword(keyStorePassword);
         sslClientConfig.setKeyPassword(keyPassword);
-        sslClientConfig.setKeyStoreType(sslHelper.getKeyStoreType());
+        sslClientConfig.setKeyStoreType(tlsHelper.getKeyStoreType());
 
         sslClientConfig.setTrustStorePassword(trustStorePassword);
-        sslClientConfig.setTrustStoreType(sslHelper.getKeyStoreType());
+        sslClientConfig.setTrustStoreType(tlsHelper.getKeyStoreType());
 
         try (OutputStream outputStream = outputStreamFactory.create(configFile)) {
             objectMapper.writer().writeValue(outputStream, sslClientConfig);

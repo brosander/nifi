@@ -53,8 +53,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 
-public class SSLHelperTest {
-    SSLHelper sslHelper;
+public class TlsHelperTest {
+    TlsHelper tlsHelper;
 
     private int days;
 
@@ -86,7 +86,7 @@ public class SSLHelperTest {
         try (PEMParser pemParser = new PEMParser(reader)) {
             Object object = pemParser.readObject();
             assertEquals(X509CertificateHolder.class, object.getClass());
-            return new JcaX509CertificateConverter().setProvider(SSLHelper.PROVIDER).getCertificate((X509CertificateHolder) object);
+            return new JcaX509CertificateConverter().setProvider(TlsHelper.PROVIDER).getCertificate((X509CertificateHolder) object);
         }
     }
 
@@ -109,7 +109,7 @@ public class SSLHelperTest {
         secureRandom = mock(SecureRandom.class);
         keyPairGenerator = KeyPairGenerator.getInstance(keyPairAlgorithm);
         keyPairGenerator.initialize(keySize);
-        sslHelper = new SSLHelper(keyPairGenerator, days, signingAlgorithm, keyStoreType);
+        tlsHelper = new TlsHelper(keyPairGenerator, days, signingAlgorithm, keyStoreType);
     }
 
     private Date inFuture(int days) {
@@ -120,7 +120,7 @@ public class SSLHelperTest {
     public void testGenerateSelfSignedCert() throws GeneralSecurityException, IOException, OperatorCreationException {
         String dn = "CN=testDN,O=testOrg";
 
-        X509Certificate x509Certificate = sslHelper.generateSelfSignedX509Certificate(sslHelper.generateKeyPair(), dn);
+        X509Certificate x509Certificate = tlsHelper.generateSelfSignedX509Certificate(tlsHelper.generateKeyPair(), dn);
 
         Date notAfter = x509Certificate.getNotAfter();
         assertTrue(notAfter.after(inFuture(days - 1)));
@@ -144,8 +144,8 @@ public class SSLHelperTest {
 
         String dn = "CN=testIssued,O=testOrg";
 
-        KeyPair keyPair = sslHelper.generateKeyPair();
-        X509Certificate x509Certificate = sslHelper.generateIssuedCertificate(dn, keyPair, issuer, issuerKeyPair);
+        KeyPair keyPair = tlsHelper.generateKeyPair();
+        X509Certificate x509Certificate = tlsHelper.generateIssuedCertificate(dn, keyPair, issuer, issuerKeyPair);
         assertEquals(dn, x509Certificate.getSubjectDN().toString());
         assertEquals(issuer.getSubjectDN().toString(), x509Certificate.getIssuerDN().toString());
         assertEquals(keyPair.getPublic(), x509Certificate.getPublicKey());
@@ -166,15 +166,15 @@ public class SSLHelperTest {
 
     @Test
     public void testGetKeyStoreType() {
-        assertEquals(keyStoreType, sslHelper.getKeyStoreType());
+        assertEquals(keyStoreType, tlsHelper.getKeyStoreType());
         keyStoreType = "p12";
-        sslHelper = new SSLHelper(keyPairGenerator, days, signingAlgorithm, keyStoreType);
-        assertEquals(keyStoreType, sslHelper.getKeyStoreType());
+        tlsHelper = new TlsHelper(keyPairGenerator, days, signingAlgorithm, keyStoreType);
+        assertEquals(keyStoreType, tlsHelper.getKeyStoreType());
     }
 
     @Test
     public void testCreateKeyStore() throws CertificateException, NoSuchAlgorithmException, KeyStoreException, IOException {
-        KeyStore keyStore = sslHelper.createKeyStore();
-        assertEquals(sslHelper.getKeyStoreType(), keyStore.getType());
+        KeyStore keyStore = tlsHelper.createKeyStore();
+        assertEquals(tlsHelper.getKeyStoreType(), keyStore.getType());
     }
 }

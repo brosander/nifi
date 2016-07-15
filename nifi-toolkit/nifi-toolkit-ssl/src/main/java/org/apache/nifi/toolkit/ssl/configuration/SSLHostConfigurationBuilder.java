@@ -18,7 +18,7 @@
 package org.apache.nifi.toolkit.ssl.configuration;
 
 import org.apache.nifi.toolkit.ssl.util.OutputStreamFactory;
-import org.apache.nifi.toolkit.ssl.util.SSLHelper;
+import org.apache.nifi.toolkit.ssl.util.TlsHelper;
 import org.apache.nifi.toolkit.ssl.properties.NiFiPropertiesWriterFactory;
 
 import java.io.File;
@@ -28,7 +28,7 @@ import java.security.KeyStore;
 import java.security.cert.X509Certificate;
 
 public class SSLHostConfigurationBuilder {
-    private final SSLHelper sslHelper;
+    private final TlsHelper tlsHelper;
     private final NiFiPropertiesWriterFactory niFiPropertiesWriterFactory;
 
     private OutputStreamFactory outputStreamFactory = FileOutputStream::new;
@@ -43,8 +43,8 @@ public class SSLHostConfigurationBuilder {
     private KeyStore trustStore;
     private String hostname;
 
-    public SSLHostConfigurationBuilder(SSLHelper sslHelper, NiFiPropertiesWriterFactory niFiPropertiesWriterFactory) {
-        this.sslHelper = sslHelper;
+    public SSLHostConfigurationBuilder(TlsHelper tlsHelper, NiFiPropertiesWriterFactory niFiPropertiesWriterFactory) {
+        this.tlsHelper = tlsHelper;
         this.niFiPropertiesWriterFactory = niFiPropertiesWriterFactory;
     }
 
@@ -99,7 +99,7 @@ public class SSLHostConfigurationBuilder {
     }
 
     public SSLHostConfiguration createSSLHostConfiguration() {
-        return new SSLHostConfiguration(outputStreamFactory, sslHelper, niFiPropertiesWriterFactory, hostDir, httpsPort, "." + sslHelper.getKeyStoreType(), certificateKeypair,
+        return new SSLHostConfiguration(outputStreamFactory, tlsHelper, niFiPropertiesWriterFactory, hostDir, httpsPort, "." + tlsHelper.getKeyStoreType(), certificateKeypair,
                 x509Certificate, keyStorePassword, keyPassword, trustStorePassword, trustStore, hostname);
     }
 }

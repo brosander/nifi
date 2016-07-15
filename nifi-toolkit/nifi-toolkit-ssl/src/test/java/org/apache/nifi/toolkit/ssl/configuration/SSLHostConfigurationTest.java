@@ -22,8 +22,8 @@ import org.apache.nifi.toolkit.ssl.commandLine.SSLToolkitCommandLine;
 import org.apache.nifi.toolkit.ssl.properties.NiFiPropertiesWriter;
 import org.apache.nifi.toolkit.ssl.properties.NiFiPropertiesWriterFactory;
 import org.apache.nifi.toolkit.ssl.util.OutputStreamFactory;
-import org.apache.nifi.toolkit.ssl.util.SSLHelper;
-import org.apache.nifi.toolkit.ssl.util.SSLHelperTest;
+import org.apache.nifi.toolkit.ssl.util.TlsHelper;
+import org.apache.nifi.toolkit.ssl.util.TlsHelperTest;
 import org.apache.nifi.util.NiFiProperties;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.operator.OperatorCreationException;
@@ -55,7 +55,7 @@ import static org.mockito.Mockito.when;
 public class SSLHostConfigurationTest {
     SSLHostConfiguration sslHostConfiguration;
 
-    private SSLHelper sslHelper;
+    private TlsHelper tlsHelper;
     private NiFiPropertiesWriterFactory niFiPropertiesWriterFactory;
     private String httpsPort;
     private KeyPair certificateKeypair;
@@ -85,8 +85,8 @@ public class SSLHostConfigurationTest {
     @Before
     public void setup() throws Exception {
         httpsPort = "8443";
-        certificateKeypair = SSLHelperTest.loadKeyPair(new InputStreamReader(getClass().getClassLoader().getResourceAsStream("rootCert.key")));
-        x509Certificate = SSLHelperTest.loadCertificate(new InputStreamReader(getClass().getClassLoader().getResourceAsStream("rootCert.crt")));
+        certificateKeypair = TlsHelperTest.loadKeyPair(new InputStreamReader(getClass().getClassLoader().getResourceAsStream("rootCert.key")));
+        x509Certificate = TlsHelperTest.loadCertificate(new InputStreamReader(getClass().getClassLoader().getResourceAsStream("rootCert.crt")));
         nifiProperties = new Properties();
         nifiProperties.load(getClass().getClassLoader().getResourceAsStream("localhost/nifi.properties"));
         trustStore = KeyStore.getInstance("jks");
@@ -100,7 +100,7 @@ public class SSLHostConfigurationTest {
     }
 
     private void buildSslHostConfiguration() throws Exception {
-        sslHelper = new SSLHelper(Integer.parseInt(SSLToolkitCommandLine.DEFAULT_CERT_DAYS), Integer.parseInt(SSLToolkitCommandLine.DEFAULT_KEYSIZE),
+        tlsHelper = new TlsHelper(Integer.parseInt(SSLToolkitCommandLine.DEFAULT_CERT_DAYS), Integer.parseInt(SSLToolkitCommandLine.DEFAULT_KEYSIZE),
                 SSLToolkitCommandLine.DEFAULT_KEY_ALGORITHM, SSLToolkitCommandLine.DEFAULT_SIGNING_ALGORITHM, SSLToolkitCommandLine.DEFAULT_KEY_STORE_TYPE);
         keyStore = KeyStore.getInstance("jks");
         keyStore.load(null, null);
@@ -110,8 +110,8 @@ public class SSLHostConfigurationTest {
         niFiPropertiesWriter = mock(NiFiPropertiesWriter.class);
 
         nifiPropertiesFile = new File(hostDir, SSLHostConfiguration.NIFI_PROPERTIES);
-        keystoreFile = new File(hostDir, hostname + "." + sslHelper.getKeyStoreType());
-        truststoreFile = new File(hostDir, SSLHostConfiguration.TRUSTSTORE + "." + sslHelper.getKeyStoreType());
+        keystoreFile = new File(hostDir, hostname + "." + tlsHelper.getKeyStoreType());
+        truststoreFile = new File(hostDir, SSLHostConfiguration.TRUSTSTORE + "." + tlsHelper.getKeyStoreType());
 
         nifiPropertiesOutputStream = new ByteArrayOutputStream();
         keystoreOutputStream = new ByteArrayOutputStream();
@@ -122,7 +122,7 @@ public class SSLHostConfigurationTest {
         when(outputStreamFactory.create(eq(keystoreFile))).thenReturn(keystoreOutputStream);
         when(outputStreamFactory.create(eq(truststoreFile))).thenReturn(truststoreOutputStream);
 
-        sslHostConfiguration = new SSLHostConfigurationBuilder(sslHelper, niFiPropertiesWriterFactory)
+        sslHostConfiguration = new SSLHostConfigurationBuilder(tlsHelper, niFiPropertiesWriterFactory)
                 .setOutputStreamFactory(outputStreamFactory)
                 .setHttpsPort(httpsPort)
                 .setCertificateKeypair(certificateKeypair)
