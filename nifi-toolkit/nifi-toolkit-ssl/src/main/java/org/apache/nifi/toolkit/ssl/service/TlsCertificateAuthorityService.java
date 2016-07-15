@@ -57,7 +57,7 @@ import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
 import java.util.Base64;
 
-public class SSLCAService extends AbstractHandler {
+public class TlsCertificateAuthorityService extends AbstractHandler {
     public static final String CSR = "csr";
     public static final String HMAC = "hmac";
     public static final String CERTIFICATE = "certificate";
@@ -69,11 +69,11 @@ public class SSLCAService extends AbstractHandler {
     private final Server server;
     private final String nonce;
 
-    public SSLCAService(File configInput) throws Exception {
+    public TlsCertificateAuthorityService(File configInput) throws Exception {
         this(configInput, FileInputStream::new, FileOutputStream::new);
     }
 
-    public SSLCAService(File configInput, InputStreamFactory inputStreamFactory, OutputStreamFactory outputStreamFactory) throws Exception {
+    public TlsCertificateAuthorityService(File configInput, InputStreamFactory inputStreamFactory, OutputStreamFactory outputStreamFactory) throws Exception {
         passwordUtil = new PasswordUtil(new SecureRandom());
         ObjectMapper objectMapper = new ObjectMapper();
         SSLConfig configuration = objectMapper.readValue(inputStreamFactory.create(configInput), SSLConfig.class);
@@ -141,34 +141,34 @@ public class SSLCAService extends AbstractHandler {
     public void handle(String target, Request baseRequest, HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
         try {
             ObjectMapper objectMapper = new ObjectMapper();
-            SSLCARequest sslcaRequest = objectMapper.readValue(new BoundedReader(request.getReader(), 1024 * 1024), SSLCARequest.class);
-            SSLCAResponse sslcaResponse = new SSLCAResponse();
+            TlsCertificateAuthorityRequest tlsCertificateAuthorityRequest = objectMapper.readValue(new BoundedReader(request.getReader(), 1024 * 1024), TlsCertificateAuthorityRequest.class);
+            TlsCertificateAuthorityResponse tlsCertificateAuthorityResponse = new TlsCertificateAuthorityResponse();
 
-            if (StringUtils.isEmpty(sslcaRequest.getCsr())) {
-                sslcaResponse.setError("csr field must be set");
-                writeResponse(objectMapper, response, sslcaResponse, Response.SC_BAD_REQUEST);
+            if (StringUtils.isEmpty(tlsCertificateAuthorityRequest.getCsr())) {
+                tlsCertificateAuthorityResponse.setError("csr field must be set");
+                writeResponse(objectMapper, response, tlsCertificateAuthorityResponse, Response.SC_BAD_REQUEST);
                 return;
             }
 
-            if (StringUtils.isEmpty(sslcaRequest.getHmac())) {
-                sslcaResponse.setError("hmac field must be set");
-                writeResponse(objectMapper, response, sslcaResponse, Response.SC_BAD_REQUEST);
+            if (StringUtils.isEmpty(tlsCertificateAuthorityRequest.getHmac())) {
+                tlsCertificateAuthorityResponse.setError("hmac field must be set");
+                writeResponse(objectMapper, response, tlsCertificateAuthorityResponse, Response.SC_BAD_REQUEST);
                 return;
             }
 
-            JcaPKCS10CertificationRequest jcaPKCS10CertificationRequest = sslcaRequest.parseCsr();
+            JcaPKCS10CertificationRequest jcaPKCS10CertificationRequest = tlsCertificateAuthorityRequest.parseCsr();
 
-            if (tlsHelper.checkHMac(sslcaRequest.getHmac(), nonce, tlsHelper.getKeyIdentifier(jcaPKCS10CertificationRequest.getPublicKey()))) {
+            if (tlsHelper.checkHMac(tlsCertificateAuthorityRequest.getHmac(), nonce, tlsHelper.getKeyIdentifier(jcaPKCS10CertificationRequest.getPublicKey()))) {
                 StringWriter signedCertificate = new StringWriter();
                 tlsHelper.writeCertificate(tlsHelper.signCsr(jcaPKCS10CertificationRequest, this.caCert, keyPair), signedCertificate);
 
-                sslcaResponse.setHmac(Base64.getEncoder().encodeToString(tlsHelper.calculateHMac(nonce, caCert.getPublicKey())));
-                sslcaResponse.setCertificate(signedCertificate.toString());
-                writeResponse(objectMapper, response, sslcaResponse, Response.SC_OK);
+                tlsCertificateAuthorityResponse.setHmac(Base64.getEncoder().encodeToString(tlsHelper.calculateHMac(nonce, caCert.getPublicKey())));
+                tlsCertificateAuthorityResponse.setCertificate(signedCertificate.toString());
+                writeResponse(objectMapper, response, tlsCertificateAuthorityResponse, Response.SC_OK);
                 return;
             } else {
-                sslcaResponse.setError("forbidden");
-                writeResponse(objectMapper, response, sslcaResponse, Response.SC_FORBIDDEN);
+                tlsCertificateAuthorityResponse.setError("forbidden");
+                writeResponse(objectMapper, response, tlsCertificateAuthorityResponse, Response.SC_FORBIDDEN);
                 return;
             }
         } catch (Exception e) {
@@ -178,12 +178,12 @@ public class SSLCAService extends AbstractHandler {
         }
     }
 
-    private void writeResponse(ObjectMapper objectMapper, HttpServletResponse response, SSLCAResponse sslcaResponse, int responseCode) throws IOException {
+    private void writeResponse(ObjectMapper objectMapper, HttpServletResponse response, TlsCertificateAuthorityResponse tlsCertificateAuthorityResponse, int responseCode) throws IOException {
         if (responseCode == Response.SC_OK) {
-            objectMapper.writeValue(response.getWriter(), sslcaResponse);
+            objectMapper.writeValue(response.getWriter(), tlsCertificateAuthorityResponse);
             response.setStatus(responseCode);
         } else {
-            response.sendError(responseCode, objectMapper.writeValueAsString(sslcaResponse));
+            response.sendError(responseCode, objectMapper.writeValueAsString(tlsCertificateAuthorityResponse));
         }
     }
 }

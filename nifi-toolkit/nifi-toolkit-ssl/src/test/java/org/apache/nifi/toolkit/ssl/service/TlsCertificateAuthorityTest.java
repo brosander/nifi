@@ -59,7 +59,7 @@ import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-public class SSLCATest {
+public class TlsCertificateAuthorityTest {
     private File serverConfigFile;
     private File clientConfigFile;
     private OutputStreamFactory outputStreamFactory;
@@ -146,15 +146,15 @@ public class SSLCATest {
 
     @Test
     public void testClientGetCert() throws Exception {
-        SSLCAService sslcaService = null;
+        TlsCertificateAuthorityService tlsCertificateAuthorityService = null;
         try {
-            sslcaService = new SSLCAService(serverConfigFile, inputStreamFactory, outputStreamFactory);
-            SSLCAClient sslcaClient = new SSLCAClient(clientConfigFile, inputStreamFactory, outputStreamFactory);
-            sslcaClient.generateCertificateAndGetItSigned();
+            tlsCertificateAuthorityService = new TlsCertificateAuthorityService(serverConfigFile, inputStreamFactory, outputStreamFactory);
+            TlsCertificateAuthorityClient tlsCertificateAuthorityClient = new TlsCertificateAuthorityClient(clientConfigFile, inputStreamFactory, outputStreamFactory);
+            tlsCertificateAuthorityClient.generateCertificateAndGetItSigned();
             validate();
         } finally {
-            if (sslcaService != null) {
-                sslcaService.shutdown();
+            if (tlsCertificateAuthorityService != null) {
+                tlsCertificateAuthorityService.shutdown();
             }
         }
     }

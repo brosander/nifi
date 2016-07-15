@@ -28,7 +28,7 @@ import java.io.StringReader;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 
-public class SSLCAResponse {
+public class TlsCertificateAuthorityResponse {
     private String hmac;
     private String certificate;
     private String error;

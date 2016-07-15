@@ -27,14 +27,14 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
 
-public class SSLCARequest {
+public class TlsCertificateAuthorityRequest {
     private String hmac;
     private String csr;
 
-    public SSLCARequest() {
+    public TlsCertificateAuthorityRequest() {
     }
 
-    public SSLCARequest(String hmac, JcaPKCS10CertificationRequest csr) throws IOException {
+    public TlsCertificateAuthorityRequest(String hmac, JcaPKCS10CertificationRequest csr) throws IOException {
         this.hmac = hmac;
         StringWriter writer = new StringWriter();
         try (PemWriter pemWriter = new PemWriter(writer)) {

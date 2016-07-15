@@ -60,7 +60,7 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 
-public class SSLCAClient {
+public class TlsCertificateAuthorityClient {
     private final File configFile;
     private final TlsHelper tlsHelper;
     private final PasswordUtil passwordUtil;
@@ -68,11 +68,11 @@ public class SSLCAClient {
     private final OutputStreamFactory outputStreamFactory;
     private final ObjectMapper objectMapper;
 
-    public SSLCAClient(File configFile) throws IOException, NoSuchAlgorithmException {
+    public TlsCertificateAuthorityClient(File configFile) throws IOException, NoSuchAlgorithmException {
         this(configFile, FileInputStream::new, FileOutputStream::new);
     }
 
-    public SSLCAClient(File configFile, InputStreamFactory inputStreamFactory, OutputStreamFactory outputStreamFactory)
+    public TlsCertificateAuthorityClient(File configFile, InputStreamFactory inputStreamFactory, OutputStreamFactory outputStreamFactory)
             throws IOException, NoSuchAlgorithmException {
         this.configFile = configFile;
         this.objectMapper = new ObjectMapper();
@@ -127,7 +127,7 @@ public class SSLCAClient {
             HttpPost httpPost = new HttpPost();
             JcaPKCS10CertificationRequest request = tlsHelper.generateCertificationRequest("CN=" + sslClientConfig.getHostname() + ",OU=NIFI", keyPair);
             httpPost.setEntity(new ByteArrayEntity(objectMapper.writeValueAsBytes(
-                    new SSLCARequest(Base64.getEncoder().encodeToString(tlsHelper.calculateHMac(sslClientConfig.getNonce(), keyPair.getPublic())), request))));
+                    new TlsCertificateAuthorityRequest(Base64.getEncoder().encodeToString(tlsHelper.calculateHMac(sslClientConfig.getNonce(), keyPair.getPublic())), request))));
             try (CloseableHttpResponse response = client.execute(new HttpHost(sslClientConfig.getCaHostname(), sslClientConfig.getPort(), "https"), httpPost)) {
                 jsonResponseString = IOUtils.toString(new BoundedInputStream(response.getEntity().getContent(), 1024 * 1024), StandardCharsets.UTF_8);
                 responseCode = response.getStatusLine().getStatusCode();
@@ -142,20 +142,20 @@ public class SSLCAClient {
             throw new IOException("Expected one certificate");
         }
 
-        SSLCAResponse sslcaResponse = objectMapper.readValue(jsonResponseString, SSLCAResponse.class);
-        if (!sslcaResponse.hasHmac()) {
+        TlsCertificateAuthorityResponse tlsCertificateAuthorityResponse = objectMapper.readValue(jsonResponseString, TlsCertificateAuthorityResponse.class);
+        if (!tlsCertificateAuthorityResponse.hasHmac()) {
             throw new IOException("Expected response to contain hmac");
         }
 
         X509Certificate caCertificate = certificates.get(0);
-        if (!tlsHelper.checkHMac(sslcaResponse.getHmac(), sslClientConfig.getNonce(), caCertificate.getPublicKey())) {
+        if (!tlsHelper.checkHMac(tlsCertificateAuthorityResponse.getHmac(), sslClientConfig.getNonce(), caCertificate.getPublicKey())) {
             throw new IOException("Unexpected hmac received, possible man in the middle");
         }
 
-        if (!sslcaResponse.hasCertificate()) {
+        if (!tlsCertificateAuthorityResponse.hasCertificate()) {
             throw new IOException("Expected response to contain certificate");
         }
-        X509Certificate x509Certificate = sslcaResponse.parseCertificate();
+        X509Certificate x509Certificate = tlsCertificateAuthorityResponse.parseCertificate();
         KeyStore keyStore = tlsHelper.createKeyStore();
         String keyPassword = passwordUtil.generatePassword();
         tlsHelper.addToKeyStore(keyStore, keyPair, TlsToolkitMain.NIFI_KEY, keyPassword.toCharArray(), x509Certificate, caCertificate);
