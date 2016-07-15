@@ -17,9 +17,7 @@
 
 package org.apache.nifi.toolkit.ssl.service;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.input.BoundedInputStream;
 import org.apache.http.HttpHost;
@@ -41,12 +39,8 @@ import org.apache.nifi.toolkit.ssl.util.SSLHelper;
 import org.apache.nifi.util.StringUtils;
 import org.bouncycastle.asn1.x500.style.BCStyle;
 import org.bouncycastle.asn1.x500.style.IETFUtils;
-import org.bouncycastle.asn1.x509.Certificate;
-import org.bouncycastle.cert.X509CertificateHolder;
-import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateHolder;
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import org.bouncycastle.pkcs.PKCS10CertificationRequest;
+import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest;
 import org.eclipse.jetty.server.Response;
 
 import javax.net.ssl.SSLSocket;
@@ -56,7 +50,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.StringReader;
-import java.io.StringWriter;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
@@ -107,14 +100,16 @@ public class SSLCAClient {
                     throw new IOException("Expected ssl socket");
                 }
                 SSLSocket sslSocket = (SSLSocket) result;
-                javax.security.cert.X509Certificate[] peerCertificateChain = sslSocket.getSession().getPeerCertificateChain();
+                java.security.cert.Certificate[] peerCertificateChain = sslSocket.getSession().getPeerCertificates();
                 if (peerCertificateChain.length != 1) {
                     throw new IOException("Expected root ca cert");
                 }
+                if (!X509Certificate.class.isInstance(peerCertificateChain[0])) {
+                    throw new IOException("Expected root ca cert in X509 format");
+                }
                 String cn;
                 try {
-                    X509Certificate certificate = new JcaX509CertificateConverter().setProvider(BouncyCastleProvider.PROVIDER_NAME)
-                            .getCertificate(new X509CertificateHolder(Certificate.getInstance(peerCertificateChain[0].getEncoded())));
+                    X509Certificate certificate = (X509Certificate) peerCertificateChain[0];
                     cn = IETFUtils.valueToString(new JcaX509CertificateHolder(certificate).getSubject().getRDNs(BCStyle.CN)[0].getFirst().getValue());
                     certificates.add(certificate);
                 } catch (Exception e) {
@@ -132,14 +127,9 @@ public class SSLCAClient {
         int responseCode;
         try (CloseableHttpClient client = httpClientBuilder.build()) {
             HttpPost httpPost = new HttpPost();
-            ObjectNode requestNode = objectMapper.createObjectNode();
-            PKCS10CertificationRequest request = sslHelper.generateCertificationRequest("CN=" + sslClientConfig.getHostname() + ",OU=NIFI", keyPair);
-            StringWriter requestStringWriter = new StringWriter();
-            sslHelper.writeCertificationRequest(request, requestStringWriter);
-            requestNode.put(SSLCAService.CSR, requestStringWriter.toString());
-            requestNode.put(SSLCAService.HMAC, Base64.getEncoder().encodeToString(sslHelper.calculateHMac(sslClientConfig.getNonce(), keyPair.getPublic())));
-            httpPost.setEntity(new ByteArrayEntity(objectMapper.writeValueAsBytes(requestNode)));
-            try (CloseableHttpResponse response = client.execute(new HttpHost(sslClientConfig.getCaHostname(), 8443, "https"), httpPost)) {
+            JcaPKCS10CertificationRequest request = sslHelper.generateCertificationRequest("CN=" + sslClientConfig.getHostname() + ",OU=NIFI", keyPair);
+            httpPost.setEntity(new ByteArrayEntity(objectMapper.writeValueAsBytes(new SSLCARequest(Base64.getEncoder().encodeToString(sslHelper.calculateHMac(sslClientConfig.getNonce(), keyPair.getPublic())), request))));
+            try (CloseableHttpResponse response = client.execute(new HttpHost(sslClientConfig.getCaHostname(), sslClientConfig.getPort(), "https"), httpPost)) {
                 jsonResponseString = IOUtils.toString(new BoundedInputStream(response.getEntity().getContent(), 1024 * 1024), StandardCharsets.UTF_8);
                 responseCode = response.getStatusLine().getStatusCode();
             }
@@ -153,22 +143,20 @@ public class SSLCAClient {
             throw new IOException("Expected one certificate");
         }
 
-        JsonNode jsonResponseNode = objectMapper.readTree(jsonResponseString);
-        JsonNode hmacNode = jsonResponseNode.get(SSLCAService.HMAC);
-        String hmac;
-        if (hmacNode == null || StringUtils.isEmpty(hmac = hmacNode.asText())) {
+        SSLCAResponse sslcaResponse = objectMapper.readValue(jsonResponseString, SSLCAResponse.class);
+        if (!sslcaResponse.hasHmac()) {
             throw new IOException("Expected response to contain hmac");
         }
+
         X509Certificate caCertificate = certificates.get(0);
-        if (!sslHelper.checkHMac(hmac, sslClientConfig.getNonce(), caCertificate.getPublicKey())) {
+        if (!sslHelper.checkHMac(sslcaResponse.getHmac(), sslClientConfig.getNonce(), caCertificate.getPublicKey())) {
             throw new IOException("Unexpected hmac received, possible man in the middle");
         }
-        JsonNode certificateNode = jsonResponseNode.get(SSLCAService.CERTIFICATE);
-        String certificateString;
-        if (certificateNode == null || StringUtils.isEmpty(certificateString = certificateNode.asText())) {
+
+        if (!sslcaResponse.hasCertificate()) {
             throw new IOException("Expected response to contain certificate");
         }
-        X509Certificate x509Certificate = sslHelper.readCertificate(new StringReader(certificateString));
+        X509Certificate x509Certificate = sslcaResponse.parseCertificate();
         KeyStore keyStore = sslHelper.createKeyStore();
         String keyPassword = passwordUtil.generatePassword();
         sslHelper.addToKeyStore(keyStore, keyPair, SSLToolkitMain.NIFI_KEY, keyPassword.toCharArray(), x509Certificate, caCertificate);

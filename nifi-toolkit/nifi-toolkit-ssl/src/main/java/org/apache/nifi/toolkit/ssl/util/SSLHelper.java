@@ -191,31 +191,15 @@ public class SSLHelper {
         return new JcaX509CertificateConverter().setProvider(PROVIDER).getCertificate(certificateHolder);
     }
 
-    public PKCS10CertificationRequest generateCertificationRequest(String requestedDn, KeyPair keyPair) throws OperatorCreationException {
+    public JcaPKCS10CertificationRequest generateCertificationRequest(String requestedDn, KeyPair keyPair) throws OperatorCreationException {
         JcaPKCS10CertificationRequestBuilder jcaPKCS10CertificationRequestBuilder = new JcaPKCS10CertificationRequestBuilder(new X500Principal(requestedDn), keyPair.getPublic());
         JcaContentSignerBuilder jcaContentSignerBuilder = new JcaContentSignerBuilder(signingAlgorithm);
-        return jcaPKCS10CertificationRequestBuilder.build(jcaContentSignerBuilder.build(keyPair.getPrivate()));
+        return new JcaPKCS10CertificationRequest(jcaPKCS10CertificationRequestBuilder.build(jcaContentSignerBuilder.build(keyPair.getPrivate())));
     }
 
     public X509Certificate signCsr(JcaPKCS10CertificationRequest certificationRequest, X509Certificate issuer, KeyPair issuerKeyPair) throws InvalidKeySpecException, EACException,
             CertificateException, NoSuchAlgorithmException, IOException, SignatureException, NoSuchProviderException, InvalidKeyException, OperatorCreationException, CRMFException {
         return generateIssuedCertificate(certificationRequest.getSubject(), certificationRequest.getPublicKey(), issuer, issuerKeyPair);
-    }
-
-    public PKCS10CertificationRequest readCertificationRequest(Reader reader) throws IOException {
-        try (PEMParser pemParser = new PEMParser(reader)) {
-            Object o = pemParser.readObject();
-            if (!PKCS10CertificationRequest.class.isInstance(o)) {
-                throw new IOException("Expecting instance of " + PKCS10CertificationRequest.class + " but got " + o);
-            }
-            return (PKCS10CertificationRequest) o;
-        }
-    }
-
-    public void writeCertificationRequest(PKCS10CertificationRequest pkcs10CertificationRequest, Writer writer) throws IOException {
-        try (PemWriter pemWriter = new PemWriter(writer)) {
-            pemWriter.writeObject(new JcaMiscPEMGenerator(pkcs10CertificationRequest));
-        }
     }
 
     public X509Certificate readCertificate(Reader reader) throws IOException, CertificateException {
