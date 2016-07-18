@@ -19,12 +19,12 @@ package org.apache.nifi.toolkit.tls.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.nifi.toolkit.tls.TlsToolkitMain;
-import org.apache.nifi.toolkit.tls.commandLine.TlsToolkitCommandLine;
 import org.apache.nifi.toolkit.tls.configuration.TlsClientConfig;
 import org.apache.nifi.toolkit.tls.configuration.TlsConfig;
 import org.apache.nifi.toolkit.tls.configuration.TlsHelperConfig;
 import org.apache.nifi.toolkit.tls.util.InputStreamFactory;
 import org.apache.nifi.toolkit.tls.util.OutputStreamFactory;
+import org.apache.nifi.toolkit.tls.util.PropertiesUtil;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -51,6 +51,8 @@ import java.security.SignatureException;
 import java.security.UnrecoverableEntryException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -113,11 +115,8 @@ public class TlsCertificateAuthorityTest {
         tlsHelperConfig = new TlsHelperConfig();
         tlsHelperConfig.setDays(5);
         tlsHelperConfig.setKeySize(2048);
-        tlsHelperConfig.setKeyPairAlgorithm(TlsToolkitCommandLine.DEFAULT_KEY_ALGORITHM);
-        tlsHelperConfig.setSigningAlgorithm(TlsToolkitCommandLine.DEFAULT_SIGNING_ALGORITHM);
-        tlsHelperConfig.setKeyStoreType(TlsToolkitCommandLine.DEFAULT_KEY_STORE_TYPE);
-        serverConfig.setSslHelper(tlsHelperConfig);
-        clientConfig.setSslHelper(tlsHelperConfig);
+        serverConfig.setTlsHelperConfig(tlsHelperConfig);
+        clientConfig.setTlsHelperConfig(tlsHelperConfig);
 
         outputStreamFactory = mock(OutputStreamFactory.class);
         mockReturnOutputStream(outputStreamFactory, new File(serverKeyStore), serverKeyStoreOutputStream);
@@ -127,14 +126,16 @@ public class TlsCertificateAuthorityTest {
         mockReturnOutputStream(outputStreamFactory, clientConfigFile, clientConfigFileOutputStream);
 
         inputStreamFactory = mock(InputStreamFactory.class);
-        mockReturnJson(inputStreamFactory, serverConfigFile, serverConfig);
-        mockReturnJson(inputStreamFactory, clientConfigFile, clientConfig);
+        mockReturnProperties(inputStreamFactory, serverConfigFile, serverConfig);
+        mockReturnProperties(inputStreamFactory, clientConfigFile, clientConfig);
     }
 
-    private void mockReturnJson(InputStreamFactory inputStreamFactory, File file, Object object) throws FileNotFoundException {
+    private void mockReturnProperties(InputStreamFactory inputStreamFactory, File file, TlsConfig tlsConfig) throws FileNotFoundException {
         when(inputStreamFactory.create(eq(file))).thenAnswer(invocation -> {
+            Map<String, String> map = new HashMap<>();
+            tlsConfig.save(map);
             ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-            objectMapper.writeValue(byteArrayOutputStream, object);
+            PropertiesUtil.saveFromMap(map, byteArrayOutputStream);
             return new ByteArrayInputStream(byteArrayOutputStream.toByteArray());
         });
     }
@@ -177,7 +178,7 @@ public class TlsCertificateAuthorityTest {
 
     private Certificate validateServerKeyStore() throws KeyStoreException, CertificateException, NoSuchAlgorithmException, IOException, UnrecoverableEntryException,
             InvalidKeyException, NoSuchProviderException, SignatureException {
-        serverConfig = objectMapper.readValue(new ByteArrayInputStream(serverConfigFileOutputStream.toByteArray()), TlsConfig.class);
+        serverConfig = new TlsConfig(PropertiesUtil.loadToMap(new ByteArrayInputStream(serverConfigFileOutputStream.toByteArray())));
 
         KeyStore serverKeyStore = KeyStore.getInstance(serverConfig.getKeyStoreType());
         serverKeyStore.load(new ByteArrayInputStream(serverKeyStoreOutputStream.toByteArray()), serverConfig.getKeyStorePassword().toCharArray());
@@ -195,7 +196,7 @@ public class TlsCertificateAuthorityTest {
 
     private void validateClient(Certificate caCertificate) throws IOException, KeyStoreException, CertificateException, NoSuchAlgorithmException,
             UnrecoverableEntryException, InvalidKeyException, NoSuchProviderException, SignatureException {
-        clientConfig = objectMapper.readValue(new ByteArrayInputStream(clientConfigFileOutputStream.toByteArray()), TlsClientConfig.class);
+        clientConfig = new TlsClientConfig(PropertiesUtil.loadToMap(new ByteArrayInputStream(clientConfigFileOutputStream.toByteArray())));
 
         KeyStore clientKeyStore = KeyStore.getInstance(clientConfig.getKeyStoreType());
         clientKeyStore.load(new ByteArrayInputStream(clientKeyStoreOutputStream.toByteArray()), clientConfig.getKeyStorePassword().toCharArray());
@@ -215,12 +216,12 @@ public class TlsCertificateAuthorityTest {
     }
 
     private void assertPrivateAndPublicKeyMatch(PrivateKey privateKey, PublicKey publicKey) throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
-        Signature signature = Signature.getInstance(TlsToolkitCommandLine.DEFAULT_SIGNING_ALGORITHM);
+        Signature signature = Signature.getInstance(TlsHelperConfig.DEFAULT_SIGNING_ALGORITHM);
         signature.initSign(privateKey);
         byte[] bytes = "test string".getBytes(StandardCharsets.UTF_8);
         signature.update(bytes);
 
-        Signature verify = Signature.getInstance(TlsToolkitCommandLine.DEFAULT_SIGNING_ALGORITHM);
+        Signature verify = Signature.getInstance(TlsHelperConfig.DEFAULT_SIGNING_ALGORITHM);
         verify.initVerify(publicKey);
         verify.update(bytes);
         verify.verify(signature.sign());

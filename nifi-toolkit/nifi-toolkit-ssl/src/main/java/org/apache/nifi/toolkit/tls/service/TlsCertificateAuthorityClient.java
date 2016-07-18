@@ -33,7 +33,9 @@ import org.apache.nifi.toolkit.tls.configuration.TlsClientConfig;
 import org.apache.nifi.toolkit.tls.util.InputStreamFactory;
 import org.apache.nifi.toolkit.tls.util.OutputStreamFactory;
 import org.apache.nifi.toolkit.tls.util.PasswordUtil;
+import org.apache.nifi.toolkit.tls.util.PropertiesUtil;
 import org.apache.nifi.toolkit.tls.util.TlsHelper;
+import org.apache.nifi.util.StringUtils;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest;
 import org.eclipse.jetty.server.Response;
@@ -51,7 +53,9 @@ import java.security.SecureRandom;
 import java.security.Security;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class TlsCertificateAuthorityClient {
     private final File configFile;
@@ -69,15 +73,18 @@ public class TlsCertificateAuthorityClient {
             throws IOException, NoSuchAlgorithmException {
         this.configFile = configFile;
         this.objectMapper = new ObjectMapper();
-        this.tlsClientConfig = objectMapper.readValue(inputStreamFactory.create(configFile), TlsClientConfig.class);
-        this.tlsHelper = new TlsHelper(tlsClientConfig.getSslHelper());
+        this.tlsClientConfig = new TlsClientConfig(PropertiesUtil.loadToMap(inputStreamFactory.create(configFile)));
+        this.tlsHelper = new TlsHelper(tlsClientConfig.getTlsHelperConfig());
         this.passwordUtil = new PasswordUtil(new SecureRandom());
         this.outputStreamFactory = outputStreamFactory;
     }
 
     public static void main(String[] args) throws Exception {
         Security.addProvider(new BouncyCastleProvider());
-        new TlsCertificateAuthorityClient(new File("./conf/config-client.json")).generateCertificateAndGetItSigned();
+        if (args.length != 1 || StringUtils.isEmpty(args[0])) {
+            throw new Exception("Expected config file as only argument");
+        }
+        new TlsCertificateAuthorityClient(new File(args[0])).generateCertificateAndGetItSigned();
     }
 
     public void generateCertificateAndGetItSigned() throws Exception {
@@ -91,7 +98,6 @@ public class TlsCertificateAuthorityClient {
         sslContextBuilder.loadTrustMaterial(null, new TrustSelfSignedStrategy());
         httpClientBuilder.setSSLSocketFactory(new TlsCertificateAuthorityClientSocketFactory(sslContextBuilder.build(), tlsClientConfig.getCaHostname(), certificates));
 
-        ObjectMapper objectMapper = new ObjectMapper();
         String jsonResponseString;
         int responseCode;
         try (CloseableHttpClient client = httpClientBuilder.build()) {
@@ -154,8 +160,10 @@ public class TlsCertificateAuthorityClient {
         tlsClientConfig.setTrustStorePassword(trustStorePassword);
         tlsClientConfig.setTrustStoreType(tlsHelper.getKeyStoreType());
 
+        Map<String, String> map = new HashMap<>();
+        tlsClientConfig.save(map);
         try (OutputStream outputStream = outputStreamFactory.create(configFile)) {
-            objectMapper.writer().writeValue(outputStream, tlsClientConfig);
+            PropertiesUtil.saveFromMap(map, outputStream);
         }
     }
 }

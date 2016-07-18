@@ -17,8 +17,21 @@
 
 package org.apache.nifi.toolkit.tls.configuration;
 
+import org.apache.nifi.util.StringUtils;
+
+import java.util.Collections;
+import java.util.Map;
+
 public class TlsConfig {
-    private TlsHelperConfig sslHelper;
+    public static final String NIFI_TOOLKIT_TLS_KEY_STORE = "nifi.toolkit.tls.keyStore";
+    public static final String NIFI_TOOLKIT_TLS_KEY_STORE_TYPE = "nifi.toolkit.tls.keyStoreType";
+    public static final String NIFI_TOOLKIT_TLS_KEY_STORE_PASSWORD = "nifi.toolkit.tls.keyStorePassword";
+    public static final String NIFI_TOOLKIT_TLS_KEY_PASSWORD = "nifi.toolkit.tls.keyPassword";
+    public static final String NIFI_TOOLKIT_TLS_TOKEN = "nifi.toolkit.tls.token";
+    public static final String NIFI_TOOLKIT_TLS_HOSTNAME = "nifi.toolkit.tls.hostname";
+    public static final String NIFI_TOOLKIT_TLS_PORT = "nifi.toolkit.tls.port";
+    public static final String DEFAULT_PORT = "8443";
+    private TlsHelperConfig tlsHelperConfig;
     private String keyStore;
     private String keyStoreType;
     private String keyStorePassword;
@@ -28,6 +41,33 @@ public class TlsConfig {
     private int port;
 
     public TlsConfig() {
+        this(Collections.emptyMap());
+    }
+
+    public TlsConfig(Map<String, String> map) {
+        keyStore = map.get(NIFI_TOOLKIT_TLS_KEY_STORE);
+        keyStoreType = map.get(NIFI_TOOLKIT_TLS_KEY_STORE_TYPE);
+        keyStorePassword = map.get(NIFI_TOOLKIT_TLS_KEY_STORE_PASSWORD);
+        keyPassword = map.get(NIFI_TOOLKIT_TLS_KEY_PASSWORD);
+        token = map.get(NIFI_TOOLKIT_TLS_TOKEN);
+        hostname = map.get(NIFI_TOOLKIT_TLS_HOSTNAME);
+        String portString = map.get(NIFI_TOOLKIT_TLS_PORT);
+        if (StringUtils.isEmpty(portString)) {
+            portString = DEFAULT_PORT;
+        }
+        port = Integer.parseInt(portString);
+        tlsHelperConfig = new TlsHelperConfig(map);
+    }
+
+    public void save(Map<String, String> map) {
+        map.put(NIFI_TOOLKIT_TLS_KEY_STORE, keyStore);
+        map.put(NIFI_TOOLKIT_TLS_KEY_STORE_TYPE, keyStoreType);
+        map.put(NIFI_TOOLKIT_TLS_KEY_STORE_PASSWORD, keyStorePassword);
+        map.put(NIFI_TOOLKIT_TLS_KEY_PASSWORD, keyPassword);
+        map.put(NIFI_TOOLKIT_TLS_TOKEN, token);
+        map.put(NIFI_TOOLKIT_TLS_HOSTNAME, hostname);
+        map.put(NIFI_TOOLKIT_TLS_PORT, Integer.toString(port));
+        tlsHelperConfig.save(map);
     }
 
     public int getPort() {
@@ -38,12 +78,12 @@ public class TlsConfig {
         this.port = port;
     }
 
-    public TlsHelperConfig getSslHelper() {
-        return sslHelper;
+    public TlsHelperConfig getTlsHelperConfig() {
+        return tlsHelperConfig;
     }
 
-    public void setSslHelper(TlsHelperConfig sslHelper) {
-        this.sslHelper = sslHelper;
+    public void setTlsHelperConfig(TlsHelperConfig tlsHelperConfig) {
+        this.tlsHelperConfig = tlsHelperConfig;
     }
 
     public String getKeyStore() {

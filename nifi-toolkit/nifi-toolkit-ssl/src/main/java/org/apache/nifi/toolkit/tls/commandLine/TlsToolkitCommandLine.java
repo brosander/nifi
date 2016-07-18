@@ -24,6 +24,7 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.nifi.toolkit.tls.TlsToolkitMain;
+import org.apache.nifi.toolkit.tls.configuration.TlsHelperConfig;
 import org.apache.nifi.toolkit.tls.properties.NiFiPropertiesWriterFactory;
 import org.apache.nifi.toolkit.tls.util.PasswordUtil;
 import org.apache.nifi.util.StringUtils;
@@ -65,12 +66,7 @@ public class TlsToolkitCommandLine {
     public static final String HOSTNAMES_ARG = "hostnames";
     public static final String HTTPS_PORT_ARG = "httpsPort";
 
-    public static final String DEFAULT_CERT_DAYS = "365";
-    public static final String DEFAULT_KEYSIZE = "2048";
-    public static final String DEFAULT_KEY_ALGORITHM = "RSA";
     public static final String DEFAULT_OUTPUT_DIRECTORY = new File(".").getAbsolutePath();
-    public static final String DEFAULT_SIGNING_ALGORITHM = "SHA256WITHRSA";
-    public static final String DEFAULT_KEY_STORE_TYPE = "jks";
 
     public static final String JAVA_HOME = "JAVA_HOME";
     public static final String NIFI_TOOLKIT_HOME = "NIFI_TOOLKIT_HOME";
@@ -100,11 +96,11 @@ public class TlsToolkitCommandLine {
         this.passwordUtil = new PasswordUtil(secureRandom);
         options = new Options();
         options.addOption("h", HELP_ARG, false, "Print help and exit.");
-        addOptionWithArg(options, "a", KEY_ALGORITHM_ARG, "Algorithm to use for generated keys.", DEFAULT_KEY_ALGORITHM);
-        addOptionWithArg(options, "k", KEY_SIZE_ARG, "Number of bits for generated keys.", DEFAULT_KEYSIZE);
-        addOptionWithArg(options, "s", SIGNING_ALGORITHM_ARG, "Algorithm to use for signing certificates.", DEFAULT_SIGNING_ALGORITHM);
-        addOptionWithArg(options, "d", DAYS_ARG, "Number of days self signed certificate should be valid for.", DEFAULT_CERT_DAYS);
-        addOptionWithArg(options, "t", KEY_STORE_TYPE_ARG, "The type of keyStores to generate.", DEFAULT_KEY_STORE_TYPE);
+        addOptionWithArg(options, "a", KEY_ALGORITHM_ARG, "Algorithm to use for generated keys.", TlsHelperConfig.DEFAULT_KEY_PAIR_ALGORITHM);
+        addOptionWithArg(options, "k", KEY_SIZE_ARG, "Number of bits for generated keys.", TlsHelperConfig.DEFAULT_KEY_SIZE);
+        addOptionWithArg(options, "s", SIGNING_ALGORITHM_ARG, "Algorithm to use for signing certificates.", TlsHelperConfig.DEFAULT_SIGNING_ALGORITHM);
+        addOptionWithArg(options, "d", DAYS_ARG, "Number of days self signed certificate should be valid for.", TlsHelperConfig.DEFAULT_DAYS);
+        addOptionWithArg(options, "t", KEY_STORE_TYPE_ARG, "The type of keyStores to generate.", TlsHelperConfig.DEFAULT_KEY_STORE_TYPE);
         addOptionWithArg(options, "o", OUTPUT_DIRECTORY_ARG, "The directory to output keystores, truststore, config files.", DEFAULT_OUTPUT_DIRECTORY);
         addOptionWithArg(options, "n", HOSTNAMES_ARG, "Comma separated list of hostnames.", DEFAULT_HOSTNAMES);
         addOptionWithArg(options, "p", HTTPS_PORT_ARG, "Https port to use.", "");
@@ -157,21 +153,21 @@ public class TlsToolkitCommandLine {
 
         days = 0;
         try {
-            days = Integer.parseInt(commandLine.getOptionValue(DAYS_ARG, DEFAULT_CERT_DAYS));
+            days = Integer.parseInt(commandLine.getOptionValue(DAYS_ARG, TlsHelperConfig.DEFAULT_DAYS));
         } catch (NumberFormatException e) {
             printUsageAndThrow("Expected integer for days argument. (" + e.getMessage() + ")", ERROR_PARSING_INT_DAYS);
         }
 
         keySize = 0;
         try {
-            keySize = Integer.parseInt(commandLine.getOptionValue(KEY_SIZE_ARG, DEFAULT_KEYSIZE));
+            keySize = Integer.parseInt(commandLine.getOptionValue(KEY_SIZE_ARG, TlsHelperConfig.DEFAULT_KEY_SIZE));
         } catch (NumberFormatException e) {
             printUsageAndThrow("Expected integer for keySize argument. (" + e.getMessage() + ")", ERROR_PARSING_INT_KEYSIZE);
         }
 
-        keyAlgorithm = commandLine.getOptionValue(KEY_ALGORITHM_ARG, DEFAULT_KEY_ALGORITHM);
-        signingAlgorithm = commandLine.getOptionValue(SIGNING_ALGORITHM_ARG, DEFAULT_SIGNING_ALGORITHM);
-        keyStoreType = commandLine.getOptionValue(KEY_STORE_TYPE_ARG, DEFAULT_KEY_STORE_TYPE);
+        keyAlgorithm = commandLine.getOptionValue(KEY_ALGORITHM_ARG, TlsHelperConfig.DEFAULT_KEY_PAIR_ALGORITHM);
+        signingAlgorithm = commandLine.getOptionValue(SIGNING_ALGORITHM_ARG, TlsHelperConfig.DEFAULT_SIGNING_ALGORITHM);
+        keyStoreType = commandLine.getOptionValue(KEY_STORE_TYPE_ARG, TlsHelperConfig.DEFAULT_KEY_STORE_TYPE);
         String outputDirectory = commandLine.getOptionValue(OUTPUT_DIRECTORY_ARG, DEFAULT_OUTPUT_DIRECTORY);
         baseDir = new File(outputDirectory);
         hostnames = Arrays.stream(commandLine.getOptionValue(HOSTNAMES_ARG, DEFAULT_HOSTNAMES).split(",")).map(String::trim).collect(Collectors.toList());

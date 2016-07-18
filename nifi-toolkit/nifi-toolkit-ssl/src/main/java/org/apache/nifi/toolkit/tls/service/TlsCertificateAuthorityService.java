@@ -24,7 +24,9 @@ import org.apache.nifi.toolkit.tls.configuration.TlsConfig;
 import org.apache.nifi.toolkit.tls.util.InputStreamFactory;
 import org.apache.nifi.toolkit.tls.util.OutputStreamFactory;
 import org.apache.nifi.toolkit.tls.util.PasswordUtil;
+import org.apache.nifi.toolkit.tls.util.PropertiesUtil;
 import org.apache.nifi.toolkit.tls.util.TlsHelper;
+import org.apache.nifi.util.StringUtils;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest;
 import org.eclipse.jetty.http.HttpVersion;
@@ -54,12 +56,10 @@ import java.security.SecureRandom;
 import java.security.Security;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
+import java.util.HashMap;
+import java.util.Map;
 
 public class TlsCertificateAuthorityService extends AbstractHandler {
-    public static final String CSR = "csr";
-    public static final String HMAC = "hmac";
-    public static final String CERTIFICATE = "certificate";
-    public static final String ERROR = "error";
     private final KeyPair keyPair;
     private final X509Certificate caCert;
     private final TlsHelper tlsHelper;
@@ -74,8 +74,8 @@ public class TlsCertificateAuthorityService extends AbstractHandler {
     public TlsCertificateAuthorityService(File configInput, InputStreamFactory inputStreamFactory, OutputStreamFactory outputStreamFactory) throws Exception {
         passwordUtil = new PasswordUtil(new SecureRandom());
         ObjectMapper objectMapper = new ObjectMapper();
-        TlsConfig configuration = objectMapper.readValue(inputStreamFactory.create(configInput), TlsConfig.class);
-        tlsHelper = new TlsHelper(configuration.getSslHelper());
+        TlsConfig configuration = new TlsConfig(PropertiesUtil.loadToMap(inputStreamFactory.create(configInput)));
+        tlsHelper = new TlsHelper(configuration.getTlsHelperConfig());
         String keyStoreFile = configuration.getKeyStore();
         KeyStore keyStore;
         String keyPassword;
@@ -115,7 +115,9 @@ public class TlsCertificateAuthorityService extends AbstractHandler {
             configuration.setKeyStoreType(this.tlsHelper.getKeyStoreType());
             configuration.setKeyStorePassword(keyStorePassword);
             configuration.setKeyPassword(keyPassword);
-            objectMapper.writeValue(outputStreamFactory.create(configInput), configuration);
+            Map<String, String> map = new HashMap<>();
+            configuration.save(map);
+            PropertiesUtil.saveFromMap(map, outputStreamFactory.create(configInput));
         }
         token = configuration.getToken();
 
@@ -140,7 +142,11 @@ public class TlsCertificateAuthorityService extends AbstractHandler {
 
     public static void main(String[] args) throws Exception {
         Security.addProvider(new BouncyCastleProvider());
-        new TlsCertificateAuthorityService(new File("./conf/config-server.json")).start();
+        if (args.length != 1 || StringUtils.isEmpty(args[0])) {
+            System.out.println("Expected configuration file as only argument");
+        }
+        TlsCertificateAuthorityService tlsCertificateAuthorityService = new TlsCertificateAuthorityService(new File(args[0]));
+        tlsCertificateAuthorityService.start();
     }
 
     public void shutdown() throws Exception {

@@ -109,7 +109,7 @@ run() {
 
    export JAVA_HOME="$JAVA_HOME"
    export NIFI_TOOLKIT_HOME="$NIFI_TOOLKIT_HOME"
-   cd "$NIFI_TOOLKIT_HOME" && "${JAVA}" -cp "${CLASSPATH}" -Xms12m -Xmx24m org.apache.nifi.toolkit.tls.service.TlsCertificateAuthorityService $@
+   "${JAVA}" -cp "${CLASSPATH}" -Xms12m -Xmx24m org.apache.nifi.toolkit.tls.service.TlsCertificateAuthorityService $@
    return $?
 }
 

@@ -17,7 +17,23 @@
 
 package org.apache.nifi.toolkit.tls.configuration;
 
+import org.apache.nifi.util.StringUtils;
+
+import java.util.Collections;
+import java.util.Map;
+
 public class TlsHelperConfig {
+    public static final String NIFI_TOOLKIT_TLS_HELPER_DAYS = "nifi.toolkit.tls.helper.days";
+    public static final String NIFI_TOOLKIT_TLS_HELPER_KEY_SIZE = "nifi.toolkit.tls.helper.keySize";
+    public static final String NIFI_TOOLKIT_TLS_HELPER_KEY_PAIR_ALGORITHM = "nifi.toolkit.tls.helper.keyPairAlgorithm";
+    public static final String NIFI_TOOLKIT_TLS_HELPER_SIGNING_ALGORITHM = "nifi.toolkit.tls.helper.signingAlgorithm";
+    public static final String NIFI_TOOLKIT_TLS_HELPER_KEY_STORE_TYPE = "nifi.toolkit.tls.helper.keyStoreType";
+    public static final String DEFAULT_DAYS = "365";
+    public static final String DEFAULT_KEY_SIZE = "2048";
+    public static final String DEFAULT_KEY_PAIR_ALGORITHM = "RSA";
+    public static final String DEFAULT_SIGNING_ALGORITHM = "SHA256WITHRSA";
+    public static final String DEFAULT_KEY_STORE_TYPE = "jks";
+
     private int days;
     private int keySize;
     private String keyPairAlgorithm;
@@ -25,6 +41,44 @@ public class TlsHelperConfig {
     private String keyStoreType;
 
     public TlsHelperConfig() {
+        this(Collections.emptyMap());
+    }
+
+    public TlsHelperConfig(Map<String, String> map) {
+        String daysString = map.get(NIFI_TOOLKIT_TLS_HELPER_DAYS);
+        if (StringUtils.isEmpty(daysString)) {
+            daysString = DEFAULT_DAYS;
+        }
+        days = Integer.parseInt(daysString);
+
+        String keySizeString = map.get(NIFI_TOOLKIT_TLS_HELPER_KEY_SIZE);
+        if (StringUtils.isEmpty(keySizeString)) {
+            keySizeString = DEFAULT_KEY_SIZE;
+        }
+        keySize = Integer.parseInt(keySizeString);
+
+        keyPairAlgorithm = map.get(NIFI_TOOLKIT_TLS_HELPER_KEY_PAIR_ALGORITHM);
+        if (StringUtils.isEmpty(keyPairAlgorithm)) {
+            keyPairAlgorithm = DEFAULT_KEY_PAIR_ALGORITHM;
+        }
+
+        signingAlgorithm = map.get(NIFI_TOOLKIT_TLS_HELPER_SIGNING_ALGORITHM);
+        if (StringUtils.isEmpty(signingAlgorithm)) {
+            signingAlgorithm = DEFAULT_SIGNING_ALGORITHM;
+        }
+
+        keyStoreType = map.get(NIFI_TOOLKIT_TLS_HELPER_KEY_STORE_TYPE);
+        if (StringUtils.isEmpty(keyStoreType)) {
+            keyStoreType = DEFAULT_KEY_STORE_TYPE;
+        }
+    }
+
+    public void save(Map<String, String> map) {
+        map.put(NIFI_TOOLKIT_TLS_HELPER_DAYS, Integer.toString(days));
+        map.put(NIFI_TOOLKIT_TLS_HELPER_KEY_SIZE, Integer.toString(keySize));
+        map.put(NIFI_TOOLKIT_TLS_HELPER_KEY_PAIR_ALGORITHM, keyPairAlgorithm);
+        map.put(NIFI_TOOLKIT_TLS_HELPER_SIGNING_ALGORITHM, signingAlgorithm);
+        map.put(NIFI_TOOLKIT_TLS_HELPER_KEY_STORE_TYPE, keyStoreType);
     }
 
     public int getDays() {

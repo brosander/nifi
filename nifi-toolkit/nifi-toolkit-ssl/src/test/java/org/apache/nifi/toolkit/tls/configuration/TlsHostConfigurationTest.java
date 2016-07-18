@@ -18,7 +18,6 @@
 package org.apache.nifi.toolkit.tls.configuration;
 
 import org.apache.nifi.toolkit.tls.TlsToolkitMain;
-import org.apache.nifi.toolkit.tls.commandLine.TlsToolkitCommandLine;
 import org.apache.nifi.toolkit.tls.properties.NiFiPropertiesWriter;
 import org.apache.nifi.toolkit.tls.properties.NiFiPropertiesWriterFactory;
 import org.apache.nifi.toolkit.tls.util.OutputStreamFactory;
@@ -100,8 +99,8 @@ public class TlsHostConfigurationTest {
     }
 
     private void buildSslHostConfiguration() throws Exception {
-        tlsHelper = new TlsHelper(Integer.parseInt(TlsToolkitCommandLine.DEFAULT_CERT_DAYS), Integer.parseInt(TlsToolkitCommandLine.DEFAULT_KEYSIZE),
-                TlsToolkitCommandLine.DEFAULT_KEY_ALGORITHM, TlsToolkitCommandLine.DEFAULT_SIGNING_ALGORITHM, TlsToolkitCommandLine.DEFAULT_KEY_STORE_TYPE);
+        tlsHelper = new TlsHelper(Integer.parseInt(TlsHelperConfig.DEFAULT_DAYS), Integer.parseInt(TlsHelperConfig.DEFAULT_KEY_SIZE),
+                TlsHelperConfig.DEFAULT_KEY_PAIR_ALGORITHM, TlsHelperConfig.DEFAULT_SIGNING_ALGORITHM, TlsHelperConfig.DEFAULT_KEY_STORE_TYPE);
         keyStore = KeyStore.getInstance("jks");
         keyStore.load(null, null);
 
