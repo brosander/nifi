@@ -43,7 +43,7 @@ public class PasswordUtilTest {
             System.arraycopy(val, 0, bytes, bytes.length - val.length, val.length);
             return null;
         }).when(secureRandom).nextBytes(any(byte[].class));
-        String expected = BigInteger.valueOf(Integer.valueOf(value).longValue()).toString(64);
+        String expected = BigInteger.valueOf(Integer.valueOf(value).longValue()).toString(36);
         String actual = passwordUtil.generatePassword();
         assertEquals(expected, actual);
     }

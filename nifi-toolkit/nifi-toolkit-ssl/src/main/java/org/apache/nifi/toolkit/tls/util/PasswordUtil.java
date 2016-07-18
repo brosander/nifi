@@ -29,6 +29,6 @@ public class PasswordUtil {
 
     public String generatePassword() {
         // [see http://stackoverflow.com/questions/41107/how-to-generate-a-random-alpha-numeric-string#answer-41156]
-        return new BigInteger(1024, secureRandom).toString(64);
+        return new BigInteger(1024, secureRandom).toString(36);
     }
 }
