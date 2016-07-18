@@ -34,6 +34,7 @@ import org.apache.nifi.toolkit.tls.util.InputStreamFactory;
 import org.apache.nifi.toolkit.tls.util.OutputStreamFactory;
 import org.apache.nifi.toolkit.tls.util.PasswordUtil;
 import org.apache.nifi.toolkit.tls.util.TlsHelper;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest;
 import org.eclipse.jetty.server.Response;
 
@@ -47,6 +48,7 @@ import java.security.KeyPair;
 import java.security.KeyStore;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.security.Security;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.List;
@@ -71,6 +73,11 @@ public class TlsCertificateAuthorityClient {
         this.tlsHelper = new TlsHelper(tlsClientConfig.getSslHelper());
         this.passwordUtil = new PasswordUtil(new SecureRandom());
         this.outputStreamFactory = outputStreamFactory;
+    }
+
+    public static void main(String[] args) throws Exception {
+        Security.addProvider(new BouncyCastleProvider());
+        new TlsCertificateAuthorityClient(new File("./conf/config-client.json")).generateCertificateAndGetItSigned();
     }
 
     public void generateCertificateAndGetItSigned() throws Exception {

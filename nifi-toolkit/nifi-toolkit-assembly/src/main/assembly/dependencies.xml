@@ -38,12 +38,17 @@
         <fileSet>
             <directory>${project.basedir}/src/main/resources/bin</directory>
             <outputDirectory>bin/</outputDirectory>
-            <fileMode>0755</fileMode>
+            <fileMode>0700</fileMode>
+        </fileSet>
+        <fileSet>
+            <directory>${project.basedir}/src/main/resources/conf</directory>
+            <outputDirectory>conf/</outputDirectory>
+            <fileMode>0600</fileMode>
         </fileSet>
         <fileSet>
             <directory>${project.build.directory}/nifi-resources/conf</directory>
             <outputDirectory>lib/</outputDirectory>
-            <fileMode>0644</fileMode>
+            <fileMode>0600</fileMode>
         </fileSet>
     </fileSets>
     <files>

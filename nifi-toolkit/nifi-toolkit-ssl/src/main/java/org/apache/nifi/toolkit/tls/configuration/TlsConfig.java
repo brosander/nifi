@@ -25,7 +25,6 @@ public class TlsConfig {
     private String keyPassword;
     private String token;
     private String hostname;
-    private String sslCipher;
     private int port;
 
     public TlsConfig() {
@@ -37,14 +36,6 @@ public class TlsConfig {
 
     public void setPort(int port) {
         this.port = port;
-    }
-
-    public String getSslCipher() {
-        return sslCipher;
-    }
-
-    public void setSslCipher(String sslCipher) {
-        this.sslCipher = sslCipher;
     }
 
     public TlsHelperConfig getSslHelper() {

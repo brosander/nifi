@@ -34,7 +34,6 @@ import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.bouncycastle.cert.jcajce.JcaX509ExtensionUtils;
 import org.bouncycastle.eac.EACException;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import org.bouncycastle.openssl.PEMParser;
 import org.bouncycastle.operator.ContentSigner;
 import org.bouncycastle.operator.OperatorCreationException;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
@@ -45,7 +44,6 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import javax.security.auth.x500.X500Principal;
 import java.io.IOException;
-import java.io.Reader;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
@@ -190,16 +188,6 @@ public class TlsHelper {
     public X509Certificate signCsr(JcaPKCS10CertificationRequest certificationRequest, X509Certificate issuer, KeyPair issuerKeyPair) throws InvalidKeySpecException, EACException,
             CertificateException, NoSuchAlgorithmException, IOException, SignatureException, NoSuchProviderException, InvalidKeyException, OperatorCreationException, CRMFException {
         return generateIssuedCertificate(certificationRequest.getSubject(), certificationRequest.getPublicKey(), issuer, issuerKeyPair);
-    }
-
-    public X509Certificate readCertificate(Reader reader) throws IOException, CertificateException {
-        try (PEMParser pemParser = new PEMParser(reader)) {
-            Object object = pemParser.readObject();
-            if (!X509CertificateHolder.class.isInstance(object)) {
-                throw new IOException("Expected " + X509CertificateHolder.class);
-            }
-            return new JcaX509CertificateConverter().setProvider(TlsHelper.PROVIDER).getCertificate((X509CertificateHolder) object);
-        }
     }
 
     public boolean checkHMac(byte[] hmac, String token, PublicKey publicKey) throws CRMFException, NoSuchProviderException, NoSuchAlgorithmException, InvalidKeyException {

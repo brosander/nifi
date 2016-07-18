@@ -99,7 +99,6 @@ public class TlsCertificateAuthorityTest {
         serverConfig = new TlsConfig();
         serverConfig.setHostname("localhost");
         serverConfig.setToken(myTestTokenUseSomethingStronger);
-        serverConfig.setSslCipher("TLS_RSA_WITH_AES_128_GCM_SHA256");
         serverConfig.setKeyStore(serverKeyStore);
         serverConfig.setPort(port);
 

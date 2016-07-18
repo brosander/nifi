@@ -25,6 +25,7 @@ import org.apache.nifi.toolkit.tls.util.InputStreamFactory;
 import org.apache.nifi.toolkit.tls.util.OutputStreamFactory;
 import org.apache.nifi.toolkit.tls.util.PasswordUtil;
 import org.apache.nifi.toolkit.tls.util.TlsHelper;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest;
 import org.eclipse.jetty.http.HttpVersion;
 import org.eclipse.jetty.server.HttpConfiguration;
@@ -41,17 +42,17 @@ import org.eclipse.jetty.util.ssl.SslContextFactory;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.security.KeyPair;
 import java.security.KeyStore;
 import java.security.SecureRandom;
+import java.security.Security;
+import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 
 public class TlsCertificateAuthorityService extends AbstractHandler {
@@ -91,7 +92,16 @@ public class TlsCertificateAuthorityService extends AbstractHandler {
             }
             KeyStore.PrivateKeyEntry privateKeyEntry = (KeyStore.PrivateKeyEntry) keyStoreEntry;
             keyPair = new KeyPair(privateKeyEntry.getCertificate().getPublicKey(), privateKeyEntry.getPrivateKey());
-            caCert = this.tlsHelper.readCertificate(new InputStreamReader(new ByteArrayInputStream(privateKeyEntry.getCertificate().getEncoded())));
+            Certificate[] certificateChain = privateKeyEntry.getCertificateChain();
+            if (certificateChain.length != 1) {
+                throw new IOException("Expected root ca cert to be only certificate in chain");
+            }
+            Certificate certificate = certificateChain[0];
+            if (certificate instanceof X509Certificate) {
+                caCert = (X509Certificate) certificate;
+            } else {
+                throw new IOException("Expected " + X509Certificate.class + " as root ca cert");
+            }
         } else {
             keyPair = this.tlsHelper.generateKeyPair();
             caCert = this.tlsHelper.generateSelfSignedX509Certificate(keyPair, "CN=" + hostname + ",OU=NIFI");
@@ -112,7 +122,6 @@ public class TlsCertificateAuthorityService extends AbstractHandler {
         SslContextFactory sslContextFactory = new SslContextFactory();
         sslContextFactory.setKeyStore(keyStore);
         sslContextFactory.setKeyManagerPassword(keyPassword);
-        sslContextFactory.setIncludeCipherSuites(configuration.getSslCipher());
 
         HttpConfiguration httpsConfig = new HttpConfiguration();
         httpsConfig.addCustomizer(new SecureRequestCustomizer());
@@ -127,6 +136,11 @@ public class TlsCertificateAuthorityService extends AbstractHandler {
 
         server.start();
         server.dumpStdErr();
+    }
+
+    public static void main(String[] args) throws Exception {
+        Security.addProvider(new BouncyCastleProvider());
+        new TlsCertificateAuthorityService(new File("./conf/config-server.json")).start();
     }
 
     public void shutdown() throws Exception {

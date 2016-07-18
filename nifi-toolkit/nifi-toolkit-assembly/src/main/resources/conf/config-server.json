@@ -1,0 +1,14 @@
+{
+  "port": 8443,
+  "keyStore": "conf/server-keystore",
+  "token": "pleasePutALongRandomStringHere",
+  "hostname": "localhost",
+
+  "sslHelper" : {
+    "days": 365,
+    "keySize": 2048,
+    "keyPairAlgorithm": "RSA",
+    "signingAlgorithm": "SHA256WITHRSA",
+    "keyStoreType": "jks"
+  }
+}
