@@ -84,7 +84,14 @@ public class TlsCertificateAuthorityClient {
         if (args.length != 1 || StringUtils.isEmpty(args[0])) {
             throw new Exception("Expected config file as only argument");
         }
-        new TlsCertificateAuthorityClient(new File(args[0])).generateCertificateAndGetItSigned();
+        TlsCertificateAuthorityClient tlsCertificateAuthorityClient = new TlsCertificateAuthorityClient(new File(args[0]));
+        if (tlsCertificateAuthorityClient.needsRun()) {
+            tlsCertificateAuthorityClient.generateCertificateAndGetItSigned();
+        }
+    }
+
+    public boolean needsRun() {
+        return !(new File(tlsClientConfig.getKeyStore()).exists() && new File(tlsClientConfig.getTrustStore()).exists());
     }
 
     public void generateCertificateAndGetItSigned() throws Exception {
