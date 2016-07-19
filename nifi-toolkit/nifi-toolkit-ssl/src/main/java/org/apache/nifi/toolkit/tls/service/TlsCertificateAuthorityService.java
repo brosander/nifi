@@ -147,6 +147,8 @@ public class TlsCertificateAuthorityService extends AbstractHandler {
         }
         TlsCertificateAuthorityService tlsCertificateAuthorityService = new TlsCertificateAuthorityService(new File(args[0]));
         tlsCertificateAuthorityService.start();
+        System.out.println("Server Started");
+        System.out.flush();
     }
 
     public void shutdown() throws Exception {

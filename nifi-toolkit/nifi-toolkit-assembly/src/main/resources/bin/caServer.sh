@@ -112,8 +112,32 @@ run() {
 
    if [ "$1" = "start" ]; then
      echo "Starting NiFi CA server"
-     "${JAVA}" -cp "${CLASSPATH}" -Xms12m -Xmx24m org.apache.nifi.toolkit.tls.service.TlsCertificateAuthorityService ${@:3} &
+     rm "$3" "$4"
+     nohup "${JAVA}" -cp "${CLASSPATH}" -Xms12m -Xmx24m org.apache.nifi.toolkit.tls.service.TlsCertificateAuthorityService ${@:5} > "$3" 2> "$4" < /dev/null &
      echo $! > "$2"
+
+     #Want to wait until Jetty starts
+     #See http://superuser.com/questions/270529/monitoring-a-file-until-a-string-is-found#answer-548193
+
+     fifo=/tmp/notifyfifo.$$
+     mkfifo "${fifo}" || exit 1
+     {
+         # run tail in the background so that the shell can
+         # kill tail when notified that grep has exited
+         tail -f "$3" &
+         # remember tail's PID
+         tailpid=$!
+         # wait for notification that grep has exited
+         read foo <${fifo}
+         # grep has exited, time to go
+         kill "${tailpid}"
+     } | {
+         timeout 180 grep -m 1 "Server Started" || exit 1
+         # notify the first pipeline stage that grep is done
+         echo >${fifo}
+     }
+     # clean up
+     rm "${fifo}"
    elif [ "$1" = "run" ]; then
      "${JAVA}" -cp "${CLASSPATH}" -Xms12m -Xmx24m org.apache.nifi.toolkit.tls.service.TlsCertificateAuthorityService ${@:2}
    else
