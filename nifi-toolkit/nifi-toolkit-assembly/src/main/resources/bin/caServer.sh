@@ -109,7 +109,17 @@ run() {
 
    export JAVA_HOME="$JAVA_HOME"
    export NIFI_TOOLKIT_HOME="$NIFI_TOOLKIT_HOME"
-   "${JAVA}" -cp "${CLASSPATH}" -Xms12m -Xmx24m org.apache.nifi.toolkit.tls.service.TlsCertificateAuthorityService $@
+
+   if [ "$1" = "start" ]; then
+     echo "Starting NiFi CA server"
+     "${JAVA}" -cp "${CLASSPATH}" -Xms12m -Xmx24m org.apache.nifi.toolkit.tls.service.TlsCertificateAuthorityService ${@:3} &
+     echo $! > "$2"
+   elif [ "$1" = "run" ]; then
+     "${JAVA}" -cp "${CLASSPATH}" -Xms12m -Xmx24m org.apache.nifi.toolkit.tls.service.TlsCertificateAuthorityService ${@:2}
+   else
+     echo "Expected first argument to be the command (start or run)"
+     exit 1
+   fi
    return $?
 }
 
