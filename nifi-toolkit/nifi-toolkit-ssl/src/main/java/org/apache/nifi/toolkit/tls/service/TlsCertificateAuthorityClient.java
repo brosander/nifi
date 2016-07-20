@@ -144,7 +144,7 @@ public class TlsCertificateAuthorityClient {
 
         String keyStoreType = tlsClientConfig.getKeyStoreType();
         if (StringUtils.isEmpty(keyStoreType)) {
-            keyStoreType = tlsClientConfig.getKeyStoreType();
+            keyStoreType = tlsHelper.getKeyStoreType();
             tlsClientConfig.setKeyStoreType(keyStoreType);
         }
 
