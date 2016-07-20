@@ -19,6 +19,7 @@ package org.apache.nifi.toolkit.tls;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.nifi.toolkit.tls.commandLine.TlsToolkitCommandLine;
+import org.apache.nifi.toolkit.tls.configuration.TlsConfig;
 import org.apache.nifi.toolkit.tls.configuration.TlsHelperConfig;
 import org.apache.nifi.toolkit.tls.util.TlsHelperTest;
 import org.apache.nifi.util.NiFiProperties;
@@ -108,7 +109,7 @@ public class TlsToolkitMainTest {
         runAndAssertExitCode(0, "-o", tempDir.getAbsolutePath());
         X509Certificate x509Certificate = checkLoadCertPrivateKey(TlsHelperConfig.DEFAULT_KEY_PAIR_ALGORITHM);
 
-        Properties nifiProperties = checkHostDirAndReturnNifiProperties(TlsToolkitCommandLine.DEFAULT_HOSTNAMES, x509Certificate);
+        Properties nifiProperties = checkHostDirAndReturnNifiProperties(TlsConfig.DEFAULT_HOSTNAME, x509Certificate);
         assertNull(nifiProperties.get("nifi.fake.property"));
         assertNotEquals(nifiProperties.getProperty(NiFiProperties.SECURITY_KEYSTORE_PASSWD), nifiProperties.getProperty(NiFiProperties.SECURITY_KEY_PASSWD));
     }
@@ -118,7 +119,7 @@ public class TlsToolkitMainTest {
         runAndAssertExitCode(0, "-o", tempDir.getAbsolutePath(), "-f", TEST_NIFI_PROPERTIES);
         X509Certificate x509Certificate = checkLoadCertPrivateKey(TlsHelperConfig.DEFAULT_KEY_PAIR_ALGORITHM);
 
-        Properties nifiProperties = checkHostDirAndReturnNifiProperties(TlsToolkitCommandLine.DEFAULT_HOSTNAMES, x509Certificate);
+        Properties nifiProperties = checkHostDirAndReturnNifiProperties(TlsConfig.DEFAULT_HOSTNAME, x509Certificate);
         assertEquals(FAKE_VALUE, nifiProperties.get(NIFI_FAKE_PROPERTY));
     }
 
@@ -141,7 +142,7 @@ public class TlsToolkitMainTest {
         runAndAssertExitCode(0, "-o", tempDir.getAbsolutePath(), "-R");
         X509Certificate x509Certificate = checkLoadCertPrivateKey(TlsHelperConfig.DEFAULT_KEY_PAIR_ALGORITHM);
 
-        Properties nifiProperties = checkHostDirAndReturnNifiProperties(TlsToolkitCommandLine.DEFAULT_HOSTNAMES, x509Certificate);
+        Properties nifiProperties = checkHostDirAndReturnNifiProperties(TlsConfig.DEFAULT_HOSTNAME, x509Certificate);
         assertEquals(nifiProperties.getProperty(NiFiProperties.SECURITY_KEYSTORE_PASSWD), nifiProperties.getProperty(NiFiProperties.SECURITY_KEY_PASSWD));
     }
 
@@ -151,7 +152,7 @@ public class TlsToolkitMainTest {
         runAndAssertExitCode(0, "-o", tempDir.getAbsolutePath(), "-K", testKey);
         X509Certificate x509Certificate = checkLoadCertPrivateKey(TlsHelperConfig.DEFAULT_KEY_PAIR_ALGORITHM);
 
-        Properties nifiProperties = checkHostDirAndReturnNifiProperties(TlsToolkitCommandLine.DEFAULT_HOSTNAMES, x509Certificate);
+        Properties nifiProperties = checkHostDirAndReturnNifiProperties(TlsConfig.DEFAULT_HOSTNAME, x509Certificate);
         assertEquals(testKey, nifiProperties.getProperty(NiFiProperties.SECURITY_KEY_PASSWD));
     }
 
@@ -161,7 +162,7 @@ public class TlsToolkitMainTest {
         runAndAssertExitCode(0, "-o", tempDir.getAbsolutePath(), "-S", testKeyStore);
         X509Certificate x509Certificate = checkLoadCertPrivateKey(TlsHelperConfig.DEFAULT_KEY_PAIR_ALGORITHM);
 
-        Properties nifiProperties = checkHostDirAndReturnNifiProperties(TlsToolkitCommandLine.DEFAULT_HOSTNAMES, x509Certificate);
+        Properties nifiProperties = checkHostDirAndReturnNifiProperties(TlsConfig.DEFAULT_HOSTNAME, x509Certificate);
         assertEquals(testKeyStore, nifiProperties.getProperty(NiFiProperties.SECURITY_KEYSTORE_PASSWD));
     }
 
@@ -171,7 +172,7 @@ public class TlsToolkitMainTest {
         runAndAssertExitCode(0, "-o", tempDir.getAbsolutePath(), "-T", testTrustStore);
         X509Certificate x509Certificate = checkLoadCertPrivateKey(TlsHelperConfig.DEFAULT_KEY_PAIR_ALGORITHM);
 
-        Properties nifiProperties = checkHostDirAndReturnNifiProperties(TlsToolkitCommandLine.DEFAULT_HOSTNAMES, x509Certificate);
+        Properties nifiProperties = checkHostDirAndReturnNifiProperties(TlsConfig.DEFAULT_HOSTNAME, x509Certificate);
         assertEquals(testTrustStore, nifiProperties.getProperty(NiFiProperties.SECURITY_TRUSTSTORE_PASSWD));
     }
 

@@ -24,7 +24,6 @@ import org.apache.nifi.toolkit.tls.configuration.TlsConfig;
 import org.apache.nifi.toolkit.tls.util.InputStreamFactory;
 import org.apache.nifi.toolkit.tls.util.OutputStreamFactory;
 import org.apache.nifi.toolkit.tls.util.PasswordUtil;
-import org.apache.nifi.toolkit.tls.util.PropertiesUtil;
 import org.apache.nifi.toolkit.tls.util.TlsHelper;
 import org.apache.nifi.util.StringUtils;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
@@ -56,8 +55,6 @@ import java.security.SecureRandom;
 import java.security.Security;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
-import java.util.HashMap;
-import java.util.Map;
 
 public class TlsCertificateAuthorityService extends AbstractHandler {
     private final KeyPair keyPair;
@@ -74,7 +71,7 @@ public class TlsCertificateAuthorityService extends AbstractHandler {
     public TlsCertificateAuthorityService(File configInput, InputStreamFactory inputStreamFactory, OutputStreamFactory outputStreamFactory) throws Exception {
         passwordUtil = new PasswordUtil(new SecureRandom());
         ObjectMapper objectMapper = new ObjectMapper();
-        TlsConfig configuration = new TlsConfig(PropertiesUtil.loadToMap(inputStreamFactory.create(configInput)));
+        TlsConfig configuration = objectMapper.readValue(inputStreamFactory.create(configInput), TlsConfig.class);
         tlsHelper = new TlsHelper(configuration.getTlsHelperConfig());
         String keyStoreFile = configuration.getKeyStore();
         KeyStore keyStore;
@@ -115,9 +112,7 @@ public class TlsCertificateAuthorityService extends AbstractHandler {
             configuration.setKeyStoreType(this.tlsHelper.getKeyStoreType());
             configuration.setKeyStorePassword(keyStorePassword);
             configuration.setKeyPassword(keyPassword);
-            Map<String, String> map = new HashMap<>();
-            configuration.save(map);
-            PropertiesUtil.saveFromMap(map, outputStreamFactory.create(configInput));
+            objectMapper.writeValue(outputStreamFactory.create(configInput), configuration);
         }
         token = configuration.getToken();
 

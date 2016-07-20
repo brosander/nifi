@@ -99,7 +99,7 @@ public class TlsHostConfigurationTest {
     }
 
     private void buildSslHostConfiguration() throws Exception {
-        tlsHelper = new TlsHelper(Integer.parseInt(TlsHelperConfig.DEFAULT_DAYS), Integer.parseInt(TlsHelperConfig.DEFAULT_KEY_SIZE),
+        tlsHelper = new TlsHelper(TlsHelperConfig.DEFAULT_DAYS, TlsHelperConfig.DEFAULT_KEY_SIZE,
                 TlsHelperConfig.DEFAULT_KEY_PAIR_ALGORITHM, TlsHelperConfig.DEFAULT_SIGNING_ALGORITHM, TlsHelperConfig.DEFAULT_KEY_STORE_TYPE);
         keyStore = KeyStore.getInstance("jks");
         keyStore.load(null, null);

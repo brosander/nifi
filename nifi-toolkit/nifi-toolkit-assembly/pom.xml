@@ -22,6 +22,16 @@ language governing permissions and limitations under the License. -->
     <build>
         <plugins>
             <plugin>
+                <groupId>org.apache.rat</groupId>
+                <artifactId>apache-rat-plugin</artifactId>
+                <configuration>
+                    <excludes combine.children="append">
+                        <exclude>src/main/resources/conf/config-client.json</exclude>
+                        <exclude>src/main/resources/conf/config-server.json</exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
+            <plugin>
                 <artifactId>maven-assembly-plugin</artifactId>
                 <configuration>
                     <finalName>nifi-toolkit-${project.version}</finalName>

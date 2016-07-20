@@ -24,6 +24,7 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.nifi.toolkit.tls.TlsToolkitMain;
+import org.apache.nifi.toolkit.tls.configuration.TlsConfig;
 import org.apache.nifi.toolkit.tls.configuration.TlsHelperConfig;
 import org.apache.nifi.toolkit.tls.properties.NiFiPropertiesWriterFactory;
 import org.apache.nifi.toolkit.tls.util.PasswordUtil;
@@ -62,7 +63,6 @@ public class TlsToolkitCommandLine {
     public static final String TRUST_STORE_PASSWORD_ARG = "trustStorePassword";
     public static final String KEY_PASSWORD_ARG = "keyPassword";
     public static final String SAME_KEY_AND_KEY_STORE_PASSWORD_ARG = "sameKeyAndKeyStorePassword";
-    public static final String DEFAULT_HOSTNAMES = "localhost";
     public static final String HOSTNAMES_ARG = "hostnames";
     public static final String HTTPS_PORT_ARG = "httpsPort";
 
@@ -102,7 +102,7 @@ public class TlsToolkitCommandLine {
         addOptionWithArg(options, "d", DAYS_ARG, "Number of days self signed certificate should be valid for.", TlsHelperConfig.DEFAULT_DAYS);
         addOptionWithArg(options, "t", KEY_STORE_TYPE_ARG, "The type of keyStores to generate.", TlsHelperConfig.DEFAULT_KEY_STORE_TYPE);
         addOptionWithArg(options, "o", OUTPUT_DIRECTORY_ARG, "The directory to output keystores, truststore, config files.", DEFAULT_OUTPUT_DIRECTORY);
-        addOptionWithArg(options, "n", HOSTNAMES_ARG, "Comma separated list of hostnames.", DEFAULT_HOSTNAMES);
+        addOptionWithArg(options, "n", HOSTNAMES_ARG, "Comma separated list of hostnames.", TlsConfig.DEFAULT_HOSTNAME);
         addOptionWithArg(options, "p", HTTPS_PORT_ARG, "Https port to use.", "");
         addOptionWithArg(options, "f", NIFI_PROPERTIES_FILE_ARG, "Base nifi.properties file to update.", "");
         options.addOption("R", SAME_KEY_AND_KEY_STORE_PASSWORD_ARG, false, "Use the same password for KeyStore and Key, only KeyStore password should be specified if autogenerate not desired.");
@@ -153,14 +153,14 @@ public class TlsToolkitCommandLine {
 
         days = 0;
         try {
-            days = Integer.parseInt(commandLine.getOptionValue(DAYS_ARG, TlsHelperConfig.DEFAULT_DAYS));
+            days = Integer.parseInt(commandLine.getOptionValue(DAYS_ARG, Integer.toString(TlsHelperConfig.DEFAULT_DAYS)));
         } catch (NumberFormatException e) {
             printUsageAndThrow("Expected integer for days argument. (" + e.getMessage() + ")", ERROR_PARSING_INT_DAYS);
         }
 
         keySize = 0;
         try {
-            keySize = Integer.parseInt(commandLine.getOptionValue(KEY_SIZE_ARG, TlsHelperConfig.DEFAULT_KEY_SIZE));
+            keySize = Integer.parseInt(commandLine.getOptionValue(KEY_SIZE_ARG, Integer.toString(TlsHelperConfig.DEFAULT_KEY_SIZE)));
         } catch (NumberFormatException e) {
             printUsageAndThrow("Expected integer for keySize argument. (" + e.getMessage() + ")", ERROR_PARSING_INT_KEYSIZE);
         }
@@ -170,7 +170,7 @@ public class TlsToolkitCommandLine {
         keyStoreType = commandLine.getOptionValue(KEY_STORE_TYPE_ARG, TlsHelperConfig.DEFAULT_KEY_STORE_TYPE);
         String outputDirectory = commandLine.getOptionValue(OUTPUT_DIRECTORY_ARG, DEFAULT_OUTPUT_DIRECTORY);
         baseDir = new File(outputDirectory);
-        hostnames = Arrays.stream(commandLine.getOptionValue(HOSTNAMES_ARG, DEFAULT_HOSTNAMES).split(",")).map(String::trim).collect(Collectors.toList());
+        hostnames = Arrays.stream(commandLine.getOptionValue(HOSTNAMES_ARG, TlsConfig.DEFAULT_HOSTNAME).split(",")).map(String::trim).collect(Collectors.toList());
         httpsPort = commandLine.getOptionValue(HTTPS_PORT_ARG, "");
 
         int numHosts = hostnames.size();

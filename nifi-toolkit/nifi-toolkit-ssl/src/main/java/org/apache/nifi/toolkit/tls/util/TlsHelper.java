@@ -105,7 +105,11 @@ public class TlsHelper {
         keyStore.setKeyEntry(alias, keyPair.getPrivate(), passphrase, certificates);
     }
 
-    public KeyStore createKeyStore() throws KeyStoreException, CertificateException, NoSuchAlgorithmException, IOException {
+    public KeyStore createKeyStore() throws CertificateException, NoSuchAlgorithmException, KeyStoreException, IOException {
+        return createKeyStore(keyStoreType);
+    }
+
+    public KeyStore createKeyStore(String keyStoreType) throws KeyStoreException, CertificateException, NoSuchAlgorithmException, IOException {
         KeyStore keyStore = KeyStore.getInstance(keyStoreType);
         keyStore.load(null, null);
         return keyStore;

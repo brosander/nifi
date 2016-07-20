@@ -33,7 +33,6 @@ import org.apache.nifi.toolkit.tls.configuration.TlsClientConfig;
 import org.apache.nifi.toolkit.tls.util.InputStreamFactory;
 import org.apache.nifi.toolkit.tls.util.OutputStreamFactory;
 import org.apache.nifi.toolkit.tls.util.PasswordUtil;
-import org.apache.nifi.toolkit.tls.util.PropertiesUtil;
 import org.apache.nifi.toolkit.tls.util.TlsHelper;
 import org.apache.nifi.util.StringUtils;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
@@ -53,9 +52,7 @@ import java.security.SecureRandom;
 import java.security.Security;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 public class TlsCertificateAuthorityClient {
     private final File configFile;
@@ -73,7 +70,7 @@ public class TlsCertificateAuthorityClient {
             throws IOException, NoSuchAlgorithmException {
         this.configFile = configFile;
         this.objectMapper = new ObjectMapper();
-        this.tlsClientConfig = new TlsClientConfig(PropertiesUtil.loadToMap(inputStreamFactory.create(configFile)));
+        this.tlsClientConfig = objectMapper.readValue(inputStreamFactory.create(configFile), TlsClientConfig.class);
         this.tlsHelper = new TlsHelper(tlsClientConfig.getTlsHelperConfig());
         this.passwordUtil = new PasswordUtil(new SecureRandom());
         this.outputStreamFactory = outputStreamFactory;
@@ -145,32 +142,51 @@ public class TlsCertificateAuthorityClient {
         X509Certificate x509Certificate = tlsCertificateAuthorityResponse.parseCertificate();
         x509Certificate.verify(caCertificate.getPublicKey());
 
+        String keyStoreType = tlsClientConfig.getKeyStoreType();
+        if (StringUtils.isEmpty(keyStoreType)) {
+            keyStoreType = tlsClientConfig.getKeyStoreType();
+            tlsClientConfig.setKeyStoreType(keyStoreType);
+        }
+
         KeyStore keyStore = tlsHelper.createKeyStore();
-        String keyPassword = passwordUtil.generatePassword();
+        String keyPassword = tlsClientConfig.getKeyPassword();
+        if (StringUtils.isEmpty(keyPassword)) {
+            keyPassword = passwordUtil.generatePassword();
+            tlsClientConfig.setKeyPassword(keyPassword);
+        }
         tlsHelper.addToKeyStore(keyStore, keyPair, TlsToolkitMain.NIFI_KEY, keyPassword.toCharArray(), x509Certificate, caCertificate);
-        String keyStorePassword = passwordUtil.generatePassword();
+
+        String keyStorePassword = tlsClientConfig.getKeyStorePassword();
+        if (StringUtils.isEmpty(keyStorePassword)) {
+            keyStorePassword = passwordUtil.generatePassword();
+            tlsClientConfig.setKeyStorePassword(keyStorePassword);
+        }
+
         try (OutputStream outputStream = outputStreamFactory.create(new File(tlsClientConfig.getKeyStore()))) {
             keyStore.store(outputStream, keyStorePassword.toCharArray());
         }
 
-        KeyStore trustStore = tlsHelper.createKeyStore();
+        String trustStoreType = tlsClientConfig.getTrustStoreType();
+        if (StringUtils.isEmpty(trustStoreType)) {
+            trustStoreType = tlsHelper.getKeyStoreType();
+            tlsClientConfig.setTrustStoreType(trustStoreType);
+        }
+
+        KeyStore trustStore = tlsHelper.createKeyStore(trustStoreType);
         trustStore.setCertificateEntry(TlsToolkitMain.NIFI_CERT, caCertificate);
-        String trustStorePassword = passwordUtil.generatePassword();
+
+        String trustStorePassword = tlsClientConfig.getTrustStorePassword();
+        if (StringUtils.isEmpty(trustStorePassword)) {
+            trustStorePassword = passwordUtil.generatePassword();
+            tlsClientConfig.setTrustStorePassword(trustStorePassword);
+        }
+
         try (OutputStream outputStream = outputStreamFactory.create(new File(tlsClientConfig.getTrustStore()))) {
             trustStore.store(outputStream, trustStorePassword.toCharArray());
         }
 
-        tlsClientConfig.setKeyStorePassword(keyStorePassword);
-        tlsClientConfig.setKeyPassword(keyPassword);
-        tlsClientConfig.setKeyStoreType(tlsHelper.getKeyStoreType());
-
-        tlsClientConfig.setTrustStorePassword(trustStorePassword);
-        tlsClientConfig.setTrustStoreType(tlsHelper.getKeyStoreType());
-
-        Map<String, String> map = new HashMap<>();
-        tlsClientConfig.save(map);
         try (OutputStream outputStream = outputStreamFactory.create(configFile)) {
-            PropertiesUtil.saveFromMap(map, outputStream);
+            objectMapper.writeValue(outputStream, tlsClientConfig);
         }
     }
 }

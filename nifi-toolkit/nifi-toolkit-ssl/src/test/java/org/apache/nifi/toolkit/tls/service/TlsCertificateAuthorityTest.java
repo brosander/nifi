@@ -24,7 +24,6 @@ import org.apache.nifi.toolkit.tls.configuration.TlsConfig;
 import org.apache.nifi.toolkit.tls.configuration.TlsHelperConfig;
 import org.apache.nifi.toolkit.tls.util.InputStreamFactory;
 import org.apache.nifi.toolkit.tls.util.OutputStreamFactory;
-import org.apache.nifi.toolkit.tls.util.PropertiesUtil;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -51,8 +50,6 @@ import java.security.SignatureException;
 import java.security.UnrecoverableEntryException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
-import java.util.HashMap;
-import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -132,10 +129,8 @@ public class TlsCertificateAuthorityTest {
 
     private void mockReturnProperties(InputStreamFactory inputStreamFactory, File file, TlsConfig tlsConfig) throws FileNotFoundException {
         when(inputStreamFactory.create(eq(file))).thenAnswer(invocation -> {
-            Map<String, String> map = new HashMap<>();
-            tlsConfig.save(map);
             ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-            PropertiesUtil.saveFromMap(map, byteArrayOutputStream);
+            objectMapper.writeValue(byteArrayOutputStream, tlsConfig);
             return new ByteArrayInputStream(byteArrayOutputStream.toByteArray());
         });
     }
@@ -178,7 +173,7 @@ public class TlsCertificateAuthorityTest {
 
     private Certificate validateServerKeyStore() throws KeyStoreException, CertificateException, NoSuchAlgorithmException, IOException, UnrecoverableEntryException,
             InvalidKeyException, NoSuchProviderException, SignatureException {
-        serverConfig = new TlsConfig(PropertiesUtil.loadToMap(new ByteArrayInputStream(serverConfigFileOutputStream.toByteArray())));
+        serverConfig = objectMapper.readValue(new ByteArrayInputStream(serverConfigFileOutputStream.toByteArray()), TlsConfig.class);
 
         KeyStore serverKeyStore = KeyStore.getInstance(serverConfig.getKeyStoreType());
         serverKeyStore.load(new ByteArrayInputStream(serverKeyStoreOutputStream.toByteArray()), serverConfig.getKeyStorePassword().toCharArray());
@@ -196,7 +191,7 @@ public class TlsCertificateAuthorityTest {
 
     private void validateClient(Certificate caCertificate) throws IOException, KeyStoreException, CertificateException, NoSuchAlgorithmException,
             UnrecoverableEntryException, InvalidKeyException, NoSuchProviderException, SignatureException {
-        clientConfig = new TlsClientConfig(PropertiesUtil.loadToMap(new ByteArrayInputStream(clientConfigFileOutputStream.toByteArray())));
+        clientConfig = objectMapper.readValue(new ByteArrayInputStream(clientConfigFileOutputStream.toByteArray()), TlsClientConfig.class);
 
         KeyStore clientKeyStore = KeyStore.getInstance(clientConfig.getKeyStoreType());
         clientKeyStore.load(new ByteArrayInputStream(clientKeyStoreOutputStream.toByteArray()), clientConfig.getKeyStorePassword().toCharArray());
