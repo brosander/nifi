@@ -34,16 +34,22 @@ import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.bouncycastle.cert.jcajce.JcaX509ExtensionUtils;
 import org.bouncycastle.eac.EACException;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.bouncycastle.openssl.PEMParser;
+import org.bouncycastle.openssl.jcajce.JcaMiscPEMGenerator;
 import org.bouncycastle.operator.ContentSigner;
 import org.bouncycastle.operator.OperatorCreationException;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
+import org.bouncycastle.pkcs.PKCS10CertificationRequest;
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest;
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequestBuilder;
+import org.bouncycastle.util.io.pem.PemWriter;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import javax.security.auth.x500.X500Principal;
 import java.io.IOException;
+import java.io.StringReader;
+import java.io.StringWriter;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
@@ -76,8 +82,7 @@ public class TlsHelper {
     }
 
     public TlsHelper(TlsToolkitCommandLine tlsToolkitCommandLine) throws NoSuchAlgorithmException {
-        this(tlsToolkitCommandLine.getDays(), tlsToolkitCommandLine.getKeySize(), tlsToolkitCommandLine.getKeyAlgorithm(),
-                tlsToolkitCommandLine.getSigningAlgorithm(), tlsToolkitCommandLine.getKeyStoreType());
+        this(tlsToolkitCommandLine.getTlsHelperConfig());
     }
 
     public TlsHelper(int days, int keySize, String keyPairAlgorithm, String signingAlgorithm, String keyStoreType) throws NoSuchAlgorithmException {
@@ -207,6 +212,34 @@ public class TlsHelper {
 
     public byte[] getKeyIdentifier(PublicKey publicKey) throws NoSuchAlgorithmException {
         return new JcaX509ExtensionUtils().createSubjectKeyIdentifier(publicKey).getKeyIdentifier();
+    }
+
+    public String pemEncodeJcaObject(Object object) throws IOException {
+        StringWriter writer = new StringWriter();
+        try (PemWriter pemWriter = new PemWriter(writer)) {
+            pemWriter.writeObject(new JcaMiscPEMGenerator(object));
+        }
+        return writer.toString();
+    }
+
+    public X509Certificate parseCertificate(String pemEncodedCertificate) throws IOException, CertificateException {
+        try (PEMParser pemParser = new PEMParser(new StringReader(pemEncodedCertificate))) {
+            Object object = pemParser.readObject();
+            if (!X509CertificateHolder.class.isInstance(object)) {
+                throw new IOException("Expected " + X509CertificateHolder.class);
+            }
+            return new JcaX509CertificateConverter().setProvider(BouncyCastleProvider.PROVIDER_NAME).getCertificate((X509CertificateHolder) object);
+        }
+    }
+
+    public JcaPKCS10CertificationRequest parseCsr(String pemEncodedCsr) throws IOException {
+        try (PEMParser pemParser = new PEMParser(new StringReader(pemEncodedCsr))) {
+            Object o = pemParser.readObject();
+            if (!PKCS10CertificationRequest.class.isInstance(o)) {
+                throw new IOException("Expecting instance of " + PKCS10CertificationRequest.class + " but got " + o);
+            }
+            return new JcaPKCS10CertificationRequest((PKCS10CertificationRequest) o);
+        }
     }
 
     public String getKeyStoreType() {

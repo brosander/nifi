@@ -74,7 +74,7 @@ public class TlsToolkitCommandLineTest {
     public void testKeyAlgorithm() throws CommandLineParseException {
         String testKeyAlgorithm = "testKeyAlgorithm";
         tlsToolkitCommandLine.parse("-a", testKeyAlgorithm);
-        assertEquals(testKeyAlgorithm, tlsToolkitCommandLine.getKeyAlgorithm());
+        assertEquals(testKeyAlgorithm, tlsToolkitCommandLine.getTlsHelperConfig().getKeyPairAlgorithm());
     }
 
     @Test
@@ -91,14 +91,14 @@ public class TlsToolkitCommandLineTest {
     public void testKeySize() throws CommandLineParseException {
         int testKeySize = 4096;
         tlsToolkitCommandLine.parse("-k", Integer.toString(testKeySize));
-        assertEquals(testKeySize, tlsToolkitCommandLine.getKeySize());
+        assertEquals(testKeySize, tlsToolkitCommandLine.getTlsHelperConfig().getKeySize());
     }
 
     @Test
     public void testSigningAlgorithm() throws CommandLineParseException {
         String testSigningAlgorithm = "testSigningAlgorithm";
         tlsToolkitCommandLine.parse("-s", testSigningAlgorithm);
-        assertEquals(testSigningAlgorithm, tlsToolkitCommandLine.getSigningAlgorithm());
+        assertEquals(testSigningAlgorithm, tlsToolkitCommandLine.getTlsHelperConfig().getSigningAlgorithm());
     }
 
     @Test
@@ -114,14 +114,14 @@ public class TlsToolkitCommandLineTest {
     public void testDays() throws CommandLineParseException {
         int testDays = 29;
         tlsToolkitCommandLine.parse("-d", Integer.toString(testDays));
-        assertEquals(testDays, tlsToolkitCommandLine.getDays());
+        assertEquals(testDays, tlsToolkitCommandLine.getTlsHelperConfig().getDays());
     }
 
     @Test
     public void testKeyStoreType() throws CommandLineParseException {
         String testKeyStoreType = "testKeyStoreType";
         tlsToolkitCommandLine.parse("-t", testKeyStoreType);
-        assertEquals(testKeyStoreType, tlsToolkitCommandLine.getKeyStoreType());
+        assertEquals(testKeyStoreType, tlsToolkitCommandLine.getTlsHelperConfig().getKeyStoreType());
     }
 
     @Test

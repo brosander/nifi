@@ -35,6 +35,17 @@ public class TlsHelperConfig {
     private String signingAlgorithm = DEFAULT_SIGNING_ALGORITHM;
     private String keyStoreType = DEFAULT_KEY_STORE_TYPE;
 
+    public TlsHelperConfig() {
+    }
+
+    public TlsHelperConfig(int days, int keySize, String keyPairAlgorithm, String signingAlgorithm, String keyStoreType) {
+        this.days = days;
+        this.keySize = keySize;
+        this.keyPairAlgorithm = keyPairAlgorithm;
+        this.signingAlgorithm = signingAlgorithm;
+        this.keyStoreType = keyStoreType;
+    }
+
     public int getDays() {
         return days;
     }

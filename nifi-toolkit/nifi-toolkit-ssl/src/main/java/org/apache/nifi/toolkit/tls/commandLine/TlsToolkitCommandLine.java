@@ -79,11 +79,6 @@ public class TlsToolkitCommandLine {
 
     private final Options options;
     private final PasswordUtil passwordUtil;
-    private int days;
-    private int keySize;
-    private String keyAlgorithm;
-    private String signingAlgorithm;
-    private String keyStoreType;
     private File baseDir;
     private List<String> hostnames;
     private String httpsPort;
@@ -91,6 +86,7 @@ public class TlsToolkitCommandLine {
     private List<String> keyStorePasswords;
     private List<String> keyPasswords;
     private List<String> trustStorePasswords;
+    private TlsHelperConfig tlsHelperConfig;
 
     public TlsToolkitCommandLine(SecureRandom secureRandom) {
         this.passwordUtil = new PasswordUtil(secureRandom);
@@ -151,23 +147,24 @@ public class TlsToolkitCommandLine {
             printUsageAndThrow(null, HELP_EXIT_CODE);
         }
 
-        days = 0;
+        int days = 0;
         try {
             days = Integer.parseInt(commandLine.getOptionValue(DAYS_ARG, Integer.toString(TlsHelperConfig.DEFAULT_DAYS)));
         } catch (NumberFormatException e) {
             printUsageAndThrow("Expected integer for days argument. (" + e.getMessage() + ")", ERROR_PARSING_INT_DAYS);
         }
 
-        keySize = 0;
+        int keySize = 0;
         try {
             keySize = Integer.parseInt(commandLine.getOptionValue(KEY_SIZE_ARG, Integer.toString(TlsHelperConfig.DEFAULT_KEY_SIZE)));
         } catch (NumberFormatException e) {
             printUsageAndThrow("Expected integer for keySize argument. (" + e.getMessage() + ")", ERROR_PARSING_INT_KEYSIZE);
         }
 
-        keyAlgorithm = commandLine.getOptionValue(KEY_ALGORITHM_ARG, TlsHelperConfig.DEFAULT_KEY_PAIR_ALGORITHM);
-        signingAlgorithm = commandLine.getOptionValue(SIGNING_ALGORITHM_ARG, TlsHelperConfig.DEFAULT_SIGNING_ALGORITHM);
-        keyStoreType = commandLine.getOptionValue(KEY_STORE_TYPE_ARG, TlsHelperConfig.DEFAULT_KEY_STORE_TYPE);
+        String keyAlgorithm = commandLine.getOptionValue(KEY_ALGORITHM_ARG, TlsHelperConfig.DEFAULT_KEY_PAIR_ALGORITHM);
+        String signingAlgorithm = commandLine.getOptionValue(SIGNING_ALGORITHM_ARG, TlsHelperConfig.DEFAULT_SIGNING_ALGORITHM);
+        String keyStoreType = commandLine.getOptionValue(KEY_STORE_TYPE_ARG, TlsHelperConfig.DEFAULT_KEY_STORE_TYPE);
+        tlsHelperConfig = new TlsHelperConfig(days, keySize, keyAlgorithm, signingAlgorithm, keyStoreType);
         String outputDirectory = commandLine.getOptionValue(OUTPUT_DIRECTORY_ARG, DEFAULT_OUTPUT_DIRECTORY);
         baseDir = new File(outputDirectory);
         hostnames = Arrays.stream(commandLine.getOptionValue(HOSTNAMES_ARG, TlsConfig.DEFAULT_HOSTNAME).split(",")).map(String::trim).collect(Collectors.toList());
@@ -213,26 +210,6 @@ public class TlsToolkitCommandLine {
         return getPasswords(KEY_PASSWORD_ARG, commandLine, keyStorePasswords.size());
     }
 
-    public int getDays() {
-        return days;
-    }
-
-    public int getKeySize() {
-        return keySize;
-    }
-
-    public String getKeyAlgorithm() {
-        return keyAlgorithm;
-    }
-
-    public String getSigningAlgorithm() {
-        return signingAlgorithm;
-    }
-
-    public String getKeyStoreType() {
-        return keyStoreType;
-    }
-
     public File getBaseDir() {
         return baseDir;
     }
@@ -259,5 +236,9 @@ public class TlsToolkitCommandLine {
 
     public List<String> getTrustStorePasswords() {
         return trustStorePasswords;
+    }
+
+    public TlsHelperConfig getTlsHelperConfig() {
+        return tlsHelperConfig;
     }
 }

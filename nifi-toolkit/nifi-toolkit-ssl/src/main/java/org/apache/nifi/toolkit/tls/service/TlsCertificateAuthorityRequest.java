@@ -18,18 +18,6 @@
 package org.apache.nifi.toolkit.tls.service;
 
 import org.apache.nifi.util.StringUtils;
-import org.bouncycastle.openssl.PEMParser;
-import org.bouncycastle.openssl.jcajce.JcaMiscPEMGenerator;
-import org.bouncycastle.pkcs.PKCS10CertificationRequest;
-import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequest;
-import org.bouncycastle.util.io.pem.PemWriter;
-
-import java.io.IOException;
-import java.io.StringReader;
-import java.io.StringWriter;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
 
 public class TlsCertificateAuthorityRequest {
     private byte[] hmac;
@@ -38,14 +26,9 @@ public class TlsCertificateAuthorityRequest {
     public TlsCertificateAuthorityRequest() {
     }
 
-    public TlsCertificateAuthorityRequest(byte[] hmac, JcaPKCS10CertificationRequest csr) throws IOException, NoSuchAlgorithmException,
-            InvalidKeyException, NoSuchProviderException {
+    public TlsCertificateAuthorityRequest(byte[] hmac, String csr) {
         this.hmac = hmac;
-        StringWriter writer = new StringWriter();
-        try (PemWriter pemWriter = new PemWriter(writer)) {
-            pemWriter.writeObject(new JcaMiscPEMGenerator(csr));
-        }
-        this.csr = writer.toString();
+        this.csr = csr;
     }
 
     public byte[] getHmac() {
@@ -70,15 +53,5 @@ public class TlsCertificateAuthorityRequest {
 
     public boolean hasCsr() {
         return !StringUtils.isEmpty(csr);
-    }
-
-    public JcaPKCS10CertificationRequest parseCsr() throws IOException {
-        try (PEMParser pemParser = new PEMParser(new StringReader(csr))) {
-            Object o = pemParser.readObject();
-            if (!PKCS10CertificationRequest.class.isInstance(o)) {
-                throw new IOException("Expecting instance of " + PKCS10CertificationRequest.class + " but got " + o);
-            }
-            return new JcaPKCS10CertificationRequest((PKCS10CertificationRequest) o);
-        }
     }
 }

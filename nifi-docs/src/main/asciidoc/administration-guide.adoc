@@ -145,7 +145,7 @@ NiFi provides several different configuration options for security purposes. The
 |`nifi.security.keystore` | Filename of the Keystore that contains the server's private key.
 |`nifi.security.keystoreType` | The type of Keystore. Must be either `PKCS12` or `JKS`.
 |`nifi.security.keystorePasswd` | The password for the Keystore.
-|`nifi.security.keyPasswd` | The password for the certificate in the Keystore. If not set, the value of `nifi.security.keystorePasswd` will be used.
+|`nifi.security.keyPasswd` | The password for the pemEncodedCertificate in the Keystore. If not set, the value of `nifi.security.keystorePasswd` will be used.
 |`nifi.security.truststore` | Filename of the Truststore that will be used to authorize those connecting to NiFi. If not set, all who
                             attempt to connect will be provided access as the 'Anonymous' user.
 |`nifi.security.truststoreType` | The type of the Truststore. Must be either `PKCS12` or `JKS`.
@@ -163,11 +163,11 @@ be accessible from all network interfaces, a value of `0.0.0.0` should be used.
 
 NOTE: It is important when enabling HTTPS that the `nifi.web.http.port` property be unset.
 
-Similar to `nifi.security.needClientAuth`, the web server can be configured to require certificate based client authentication for users accessing
+Similar to `nifi.security.needClientAuth`, the web server can be configured to require pemEncodedCertificate based client authentication for users accessing
 the User Interface. In order to do this it must be configured to not support username/password authentication (see below). Either of these options
-will configure the web server to WANT certificate based client authentication. This will allow it to support users with certificates and those without
+will configure the web server to WANT pemEncodedCertificate based client authentication. This will allow it to support users with certificates and those without
 that may be logging in with their credentials or those accessing anonymously. If username/password authentication and anonymous access are not configured,
-the web server will REQUIRE certificate based client authentication.
+the web server will REQUIRE pemEncodedCertificate based client authentication.
 
 Now that the User Interface has been secured, we can easily secure Site-to-Site connections and inner-cluster communications, as well. This is
 accomplished by setting the `nifi.remote.input.secure` and `nifi.cluster.protocol.is.secure` properties, respectively, to `true`.
@@ -1397,7 +1397,7 @@ Security Configuration section of this Administrator's Guide.
 |nifi.security.user.login.identity.provider|This indicates what type of login identity provider to use. The default value is blank, can be set to the identifier from a provider
 in the file specified in `nifi.login.identity.provider.configuration.file`. Setting this property will trigger NiFi to support username/password authentication.
 |nifi.security.ocsp.responder.url|This is the URL for the Online Certificate Status Protocol (OCSP) responder if one is being used. It is blank by default.
-|nifi.security.ocsp.responder.certificate|This is the location of the OCSP responder certificate if one is being used. It is blank by default.
+|nifi.security.ocsp.responder.pemEncodedCertificate|This is the location of the OCSP responder pemEncodedCertificate if one is being used. It is blank by default.
 |====
 
 ==== Cluster Common Properties

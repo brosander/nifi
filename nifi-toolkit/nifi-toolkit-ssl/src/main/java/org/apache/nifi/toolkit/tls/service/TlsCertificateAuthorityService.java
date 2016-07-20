@@ -167,11 +167,12 @@ public class TlsCertificateAuthorityService extends AbstractHandler {
                 return;
             }
 
-            JcaPKCS10CertificationRequest jcaPKCS10CertificationRequest = tlsCertificateAuthorityRequest.parseCsr();
+            JcaPKCS10CertificationRequest jcaPKCS10CertificationRequest = tlsHelper.parseCsr(tlsCertificateAuthorityRequest.getCsr());
 
             if (tlsHelper.checkHMac(tlsCertificateAuthorityRequest.getHmac(), token, jcaPKCS10CertificationRequest.getPublicKey())) {
                 X509Certificate x509Certificate = tlsHelper.signCsr(jcaPKCS10CertificationRequest, this.caCert, keyPair);
-                writeResponse(objectMapper, response, new TlsCertificateAuthorityResponse(tlsHelper.calculateHMac(token, caCert.getPublicKey()), x509Certificate), Response.SC_OK);
+                writeResponse(objectMapper, response, new TlsCertificateAuthorityResponse(tlsHelper.calculateHMac(token, caCert.getPublicKey()),
+                        tlsHelper.pemEncodeJcaObject(x509Certificate)), Response.SC_OK);
                 return;
             } else {
                 writeResponse(objectMapper, response, new TlsCertificateAuthorityResponse("forbidden"), Response.SC_FORBIDDEN);

@@ -17,6 +17,10 @@
 
 package org.apache.nifi.toolkit.tls.configuration;
 
+import org.apache.nifi.toolkit.tls.service.TlsCertificateSigningRequestPerformer;
+
+import java.security.NoSuchAlgorithmException;
+
 public class TlsClientConfig extends TlsConfig {
     public static final String NIFI_TOOLKIT_TLS_CLIENT_CA_HOSTNAME = "nifi.toolkit.tls.client.caHostname";
     public static final String NIFI_TOOLKIT_TLS_CLIENT_TRUST_STORE = "nifi.toolkit.tls.client.trustStore";
@@ -57,5 +61,9 @@ public class TlsClientConfig extends TlsConfig {
 
     public void setCaHostname(String caHostname) {
         this.caHostname = caHostname;
+    }
+
+    public TlsCertificateSigningRequestPerformer createCertificateSigningRequestPerformer() throws NoSuchAlgorithmException {
+        return new TlsCertificateSigningRequestPerformer(this);
     }
 }

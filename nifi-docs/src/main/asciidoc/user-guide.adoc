@@ -191,10 +191,10 @@ be immediately sent to the login form bypassing the canvas.
 
 image::login.png["Log In"]
 
-Once the user has logged in or if they are accessing NiFi using a client certificate loaded in their browser, they will be prompted
+Once the user has logged in or if they are accessing NiFi using a client pemEncodedCertificate loaded in their browser, they will be prompted
 to request access by submitting a justification if this is the first time they have accessed this NiFi. Fill in an optional justification 
 that the administrator will review while granting the account access. If NiFi is not configured to support anonymous access and the 
-user is using a client certificate, they will be immediately sent to the form to request access bypassing the canvas and login form.
+user is using a client pemEncodedCertificate, they will be immediately sent to the form to request access bypassing the canvas and login form.
 
 image::request-access.png["Request Access"]
 

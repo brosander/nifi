@@ -18,34 +18,18 @@
 package org.apache.nifi.toolkit.tls.service;
 
 import org.apache.nifi.util.StringUtils;
-import org.bouncycastle.cert.X509CertificateHolder;
-import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import org.bouncycastle.openssl.PEMParser;
-import org.bouncycastle.openssl.jcajce.JcaMiscPEMGenerator;
-import org.bouncycastle.util.io.pem.PemWriter;
-
-import java.io.IOException;
-import java.io.StringReader;
-import java.io.StringWriter;
-import java.security.cert.CertificateException;
-import java.security.cert.X509Certificate;
 
 public class TlsCertificateAuthorityResponse {
     private byte[] hmac;
-    private String certificate;
+    private String pemEncodedCertificate;
     private String error;
 
     public TlsCertificateAuthorityResponse() {
     }
 
-    public TlsCertificateAuthorityResponse(byte[] hmac, X509Certificate certificate) throws IOException {
+    public TlsCertificateAuthorityResponse(byte[] hmac, String pemEncodedCertificate) {
         this.hmac = hmac;
-        StringWriter writer = new StringWriter();
-        try (PemWriter pemWriter = new PemWriter(writer)) {
-            pemWriter.writeObject(new JcaMiscPEMGenerator(certificate));
-        }
-        this.certificate = writer.toString();
+        this.pemEncodedCertificate = pemEncodedCertificate;
     }
 
     public TlsCertificateAuthorityResponse(String error) {
@@ -68,29 +52,19 @@ public class TlsCertificateAuthorityResponse {
         this.hmac = hmac;
     }
 
-    public String getCertificate() {
-        return certificate;
+    public String getPemEncodedCertificate() {
+        return pemEncodedCertificate;
     }
 
-    public void setCertificate(String certificate) {
-        this.certificate = certificate;
+    public void setPemEncodedCertificate(String pemEncodedCertificate) {
+        this.pemEncodedCertificate = pemEncodedCertificate;
     }
 
     public boolean hasCertificate() {
-        return !StringUtils.isEmpty(certificate);
+        return !StringUtils.isEmpty(pemEncodedCertificate);
     }
 
     public boolean hasHmac() {
         return hmac != null && hmac.length > 0;
-    }
-
-    public X509Certificate parseCertificate() throws IOException, CertificateException {
-        try (PEMParser pemParser = new PEMParser(new StringReader(certificate))) {
-            Object object = pemParser.readObject();
-            if (!X509CertificateHolder.class.isInstance(object)) {
-                throw new IOException("Expected " + X509CertificateHolder.class);
-            }
-            return new JcaX509CertificateConverter().setProvider(BouncyCastleProvider.PROVIDER_NAME).getCertificate((X509CertificateHolder) object);
-        }
     }
 }

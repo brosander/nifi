@@ -17,6 +17,10 @@
 
 package org.apache.nifi.toolkit.tls.configuration;
 
+import org.apache.nifi.toolkit.tls.util.TlsHelper;
+
+import java.security.NoSuchAlgorithmException;
+
 public class TlsConfig {
     public static final String NIFI_TOOLKIT_TLS_KEY_STORE = "nifi.toolkit.tls.keyStore";
     public static final String NIFI_TOOLKIT_TLS_KEY_STORE_TYPE = "nifi.toolkit.tls.keyStoreType";
@@ -101,5 +105,9 @@ public class TlsConfig {
 
     public void setHostname(String hostname) {
         this.hostname = hostname;
+    }
+
+    public TlsHelper createTlsHelper() throws NoSuchAlgorithmException {
+        return new TlsHelper(getTlsHelperConfig());
     }
 }
