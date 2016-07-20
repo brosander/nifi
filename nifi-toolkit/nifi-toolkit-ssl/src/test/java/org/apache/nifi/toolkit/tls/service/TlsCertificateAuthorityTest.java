@@ -144,6 +144,7 @@ public class TlsCertificateAuthorityTest {
         TlsCertificateAuthorityService tlsCertificateAuthorityService = null;
         try {
             tlsCertificateAuthorityService = new TlsCertificateAuthorityService(serverConfigFile, inputStreamFactory, outputStreamFactory);
+            tlsCertificateAuthorityService.start();
             TlsCertificateAuthorityClient tlsCertificateAuthorityClient = new TlsCertificateAuthorityClient(clientConfigFile, inputStreamFactory, outputStreamFactory);
             tlsCertificateAuthorityClient.generateCertificateAndGetItSigned();
             validate();
