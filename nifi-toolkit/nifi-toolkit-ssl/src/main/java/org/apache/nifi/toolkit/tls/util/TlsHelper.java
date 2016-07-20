@@ -17,18 +17,10 @@
 
 package org.apache.nifi.toolkit.tls.util;
 
+import org.apache.nifi.security.util.CertificateUtils;
 import org.apache.nifi.toolkit.tls.commandLine.TlsToolkitCommandLine;
 import org.apache.nifi.toolkit.tls.configuration.TlsHelperConfig;
-import org.bouncycastle.asn1.x500.X500Name;
-import org.bouncycastle.asn1.x509.BasicConstraints;
-import org.bouncycastle.asn1.x509.ExtendedKeyUsage;
-import org.bouncycastle.asn1.x509.Extension;
-import org.bouncycastle.asn1.x509.KeyPurposeId;
-import org.bouncycastle.asn1.x509.KeyUsage;
-import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
-import org.bouncycastle.cert.CertIOException;
 import org.bouncycastle.cert.X509CertificateHolder;
-import org.bouncycastle.cert.X509v3CertificateBuilder;
 import org.bouncycastle.cert.crmf.CRMFException;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.bouncycastle.cert.jcajce.JcaX509ExtensionUtils;
@@ -36,7 +28,6 @@ import org.bouncycastle.eac.EACException;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.openssl.PEMParser;
 import org.bouncycastle.openssl.jcajce.JcaMiscPEMGenerator;
-import org.bouncycastle.operator.ContentSigner;
 import org.bouncycastle.operator.OperatorCreationException;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 import org.bouncycastle.pkcs.PKCS10CertificationRequest;
@@ -50,7 +41,6 @@ import javax.security.auth.x500.X500Principal;
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
-import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.InvalidKeyException;
@@ -67,8 +57,6 @@ import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
-import java.util.Date;
-import java.util.concurrent.TimeUnit;
 
 public class TlsHelper {
     public static final String PROVIDER = BouncyCastleProvider.PROVIDER_NAME;
@@ -120,72 +108,12 @@ public class TlsHelper {
         return keyStore;
     }
 
-    public X509Certificate generateSelfSignedX509Certificate(KeyPair keyPair, String dn) throws OperatorCreationException, CertIOException, CertificateException, NoSuchAlgorithmException {
-        ContentSigner sigGen = new JcaContentSignerBuilder(signingAlgorithm).setProvider(PROVIDER).build(keyPair.getPrivate());
-        SubjectPublicKeyInfo subPubKeyInfo = SubjectPublicKeyInfo.getInstance(keyPair.getPublic().getEncoded());
-        Date startDate = new Date();
-        Date endDate = new Date(startDate.getTime() + TimeUnit.DAYS.toMillis(days));
-
-        X509v3CertificateBuilder certBuilder = new X509v3CertificateBuilder(
-                new X500Name(dn),
-                BigInteger.valueOf(System.currentTimeMillis()),
-                startDate, endDate,
-                new X500Name(dn),
-                subPubKeyInfo);
-
-        // Set certificate extensions
-        // (1) digitalSignature extension
-        certBuilder.addExtension(Extension.keyUsage, true, new KeyUsage(KeyUsage.digitalSignature | KeyUsage.keyEncipherment | KeyUsage.dataEncipherment
-                | KeyUsage.keyAgreement | KeyUsage.nonRepudiation | KeyUsage.cRLSign | KeyUsage.keyCertSign));
-
-        certBuilder.addExtension(Extension.basicConstraints, false, new BasicConstraints(true));
-
-        certBuilder.addExtension(Extension.subjectKeyIdentifier, false, new JcaX509ExtensionUtils().createSubjectKeyIdentifier(keyPair.getPublic()));
-
-        certBuilder.addExtension(Extension.authorityKeyIdentifier, false, new JcaX509ExtensionUtils().createAuthorityKeyIdentifier(keyPair.getPublic()));
-
-        // (2) extendedKeyUsage extension
-        certBuilder.addExtension(Extension.extendedKeyUsage, false, new ExtendedKeyUsage(new KeyPurposeId[]{KeyPurposeId.id_kp_clientAuth, KeyPurposeId.id_kp_serverAuth}));
-
-        // Sign the certificate
-        X509CertificateHolder certificateHolder = certBuilder.build(sigGen);
-        return new JcaX509CertificateConverter().setProvider(PROVIDER).getCertificate(certificateHolder);
+    public X509Certificate generateSelfSignedX509Certificate(KeyPair keyPair, String dn) throws CertificateException {
+        return CertificateUtils.generateSelfSignedX509Certificate(keyPair, dn, signingAlgorithm, days);
     }
 
-    public X509Certificate generateIssuedCertificate(String dn, PublicKey publicKey, X509Certificate issuer, KeyPair issuerKeyPair)
-            throws IOException, NoSuchAlgorithmException, CertificateException, NoSuchProviderException, SignatureException, InvalidKeyException, OperatorCreationException {
-        return generateIssuedCertificate(new X500Name(dn), publicKey, issuer, issuerKeyPair);
-    }
-
-    public X509Certificate generateIssuedCertificate(X500Name dn, PublicKey publicKey, X509Certificate issuer, KeyPair issuerKeyPair)
-            throws IOException, NoSuchAlgorithmException, CertificateException, NoSuchProviderException, SignatureException, InvalidKeyException, OperatorCreationException {
-        ContentSigner sigGen = new JcaContentSignerBuilder(signingAlgorithm).setProvider(PROVIDER).build(issuerKeyPair.getPrivate());
-        SubjectPublicKeyInfo subPubKeyInfo = SubjectPublicKeyInfo.getInstance(publicKey.getEncoded());
-        Date startDate = new Date();
-        Date endDate = new Date(startDate.getTime() + TimeUnit.DAYS.toMillis(days));
-
-        X509v3CertificateBuilder certBuilder = new X509v3CertificateBuilder(
-                new X500Name(issuer.getSubjectDN().getName()),
-                BigInteger.valueOf(System.currentTimeMillis()),
-                startDate, endDate,
-                dn,
-                subPubKeyInfo);
-
-        certBuilder.addExtension(Extension.subjectKeyIdentifier, false, new JcaX509ExtensionUtils().createSubjectKeyIdentifier(publicKey));
-
-        certBuilder.addExtension(Extension.authorityKeyIdentifier, false, new JcaX509ExtensionUtils().createAuthorityKeyIdentifier(issuerKeyPair.getPublic()));
-        // Set certificate extensions
-        // (1) digitalSignature extension
-        certBuilder.addExtension(Extension.keyUsage, true,
-                new KeyUsage(KeyUsage.digitalSignature | KeyUsage.keyEncipherment | KeyUsage.dataEncipherment | KeyUsage.keyAgreement | KeyUsage.nonRepudiation));
-
-        certBuilder.addExtension(Extension.basicConstraints, false, new BasicConstraints(false));
-
-        // (2) extendedKeyUsage extension
-        certBuilder.addExtension(Extension.extendedKeyUsage, false, new ExtendedKeyUsage(new KeyPurposeId[]{KeyPurposeId.id_kp_clientAuth, KeyPurposeId.id_kp_serverAuth}));
-
-        X509CertificateHolder certificateHolder = certBuilder.build(sigGen);
-        return new JcaX509CertificateConverter().setProvider(PROVIDER).getCertificate(certificateHolder);
+    public X509Certificate generateIssuedCertificate(String dn, PublicKey publicKey, X509Certificate issuer, KeyPair issuerKeyPair) throws CertificateException {
+        return CertificateUtils.generateIssuedCertificate(dn, publicKey, issuer, issuerKeyPair, signingAlgorithm, days);
     }
 
     public JcaPKCS10CertificationRequest generateCertificationRequest(String requestedDn, KeyPair keyPair) throws OperatorCreationException {
@@ -196,7 +124,7 @@ public class TlsHelper {
 
     public X509Certificate signCsr(JcaPKCS10CertificationRequest certificationRequest, X509Certificate issuer, KeyPair issuerKeyPair) throws InvalidKeySpecException, EACException,
             CertificateException, NoSuchAlgorithmException, IOException, SignatureException, NoSuchProviderException, InvalidKeyException, OperatorCreationException, CRMFException {
-        return generateIssuedCertificate(certificationRequest.getSubject(), certificationRequest.getPublicKey(), issuer, issuerKeyPair);
+        return generateIssuedCertificate(certificationRequest.getSubject().toString(), certificationRequest.getPublicKey(), issuer, issuerKeyPair);
     }
 
     public boolean checkHMac(byte[] hmac, String token, PublicKey publicKey) throws CRMFException, NoSuchProviderException, NoSuchAlgorithmException, InvalidKeyException {
