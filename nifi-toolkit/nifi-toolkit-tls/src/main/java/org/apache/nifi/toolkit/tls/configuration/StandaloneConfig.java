@@ -25,10 +25,7 @@ import java.util.List;
 public class StandaloneConfig extends TlsConfig {
     private File baseDir;
     private NiFiPropertiesWriterFactory niFiPropertiesWriterFactory;
-    private List<String> hostnames;
-    private List<String> keyStorePasswords;
-    private List<String> keyPasswords;
-    private List<String> trustStorePasswords;
+    private List<HostDefinition> hostDefinitions;
     private List<String> clientDns;
     private List<String> clientPasswords;
     private boolean clientPasswordsGenerated;
@@ -67,38 +64,6 @@ public class StandaloneConfig extends TlsConfig {
         this.niFiPropertiesWriterFactory = niFiPropertiesWriterFactory;
     }
 
-    public List<String> getHostnames() {
-        return hostnames;
-    }
-
-    public void setHostnames(List<String> hostnames) {
-        this.hostnames = hostnames;
-    }
-
-    public List<String> getKeyStorePasswords() {
-        return keyStorePasswords;
-    }
-
-    public void setKeyStorePasswords(List<String> keyStorePasswords) {
-        this.keyStorePasswords = keyStorePasswords;
-    }
-
-    public List<String> getKeyPasswords() {
-        return keyPasswords;
-    }
-
-    public void setKeyPasswords(List<String> keyPasswords) {
-        this.keyPasswords = keyPasswords;
-    }
-
-    public List<String> getTrustStorePasswords() {
-        return trustStorePasswords;
-    }
-
-    public void setTrustStorePasswords(List<String> trustStorePasswords) {
-        this.trustStorePasswords = trustStorePasswords;
-    }
-
     public List<String> getClientPasswords() {
         return clientPasswords;
     }
@@ -121,5 +86,13 @@ public class StandaloneConfig extends TlsConfig {
 
     public void setClientPasswordsGenerated(boolean clientPasswordsGenerated) {
         this.clientPasswordsGenerated = clientPasswordsGenerated;
+    }
+
+    public List<HostDefinition> getHostDefinitions() {
+        return hostDefinitions;
+    }
+
+    public void setHostDefinitions(List<HostDefinition> hostDefinitions) {
+        this.hostDefinitions = hostDefinitions;
     }
 }

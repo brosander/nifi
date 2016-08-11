@@ -18,6 +18,7 @@
 package org.apache.nifi.toolkit.tls.standalone;
 
 import org.apache.nifi.security.util.CertificateUtils;
+import org.apache.nifi.toolkit.tls.configuration.HostDefinition;
 import org.apache.nifi.toolkit.tls.configuration.StandaloneConfig;
 import org.apache.nifi.toolkit.tls.configuration.TlsClientConfig;
 import org.apache.nifi.toolkit.tls.configuration.TlsConfig;
@@ -84,7 +85,6 @@ public class TlsToolkitStandalone {
         X509Certificate certificate;
         KeyPair caKeyPair;
 
-        List<String> hostnames = standaloneConfig.getHostnames();
         if (logger.isInfoEnabled()) {
             logger.info("Running standalone certificate generation with output directory " + baseDir);
         }
@@ -128,19 +128,22 @@ public class TlsToolkitStandalone {
             }
         }
 
-        List<String> keyStorePasswords = standaloneConfig.getKeyStorePasswords();
-        List<String> keyPasswords = standaloneConfig.getKeyPasswords();
-        List<String> trustStorePasswords = standaloneConfig.getTrustStorePasswords();
         NiFiPropertiesWriterFactory niFiPropertiesWriterFactory = standaloneConfig.getNiFiPropertiesWriterFactory();
         int httpsPort = standaloneConfig.getHttpsPort();
         boolean overwrite = standaloneConfig.isOverwrite();
 
-        if (hostnames.isEmpty() && logger.isInfoEnabled()) {
+        List<HostDefinition> hostDefinitions = standaloneConfig.getHostDefinitions();
+        if (!hostDefinitions.isEmpty() && logger.isInfoEnabled()) {
             logger.info("No " + TlsToolkitStandaloneCommandLine.HOSTNAMES_ARG + " specified, not generating any host certificates or configuration.");
         }
-        for (int i = 0; i < hostnames.size(); i++) {
-            String hostname = hostnames.get(i);
-            File hostDir = new File(baseDir, hostname);
+        for (HostDefinition hostDefinition : hostDefinitions) {
+            String hostname = hostDefinition.getHostname();
+            File hostDir;
+            if (hostDefinition.getNumber() == 1) {
+                hostDir = new File(baseDir, hostname);
+            } else {
+                hostDir = new File(baseDir, hostname + "_" + hostDefinition.getNumber());
+            }
 
             TlsClientConfig tlsClientConfig = new TlsClientConfig(standaloneConfig);
             File keystore = new File(hostDir, "keystore." + tlsClientConfig.getKeyStoreType().toLowerCase());
@@ -171,10 +174,10 @@ public class TlsToolkitStandalone {
             }
 
             tlsClientConfig.setKeyStore(keystore.getAbsolutePath());
-            tlsClientConfig.setKeyStorePassword(keyStorePasswords.get(i));
-            tlsClientConfig.setKeyPassword(keyPasswords.get(i));
+            tlsClientConfig.setKeyStorePassword(hostDefinition.getKeyStorePassword());
+            tlsClientConfig.setKeyPassword(hostDefinition.getKeyPassword());
             tlsClientConfig.setTrustStore(truststore.getAbsolutePath());
-            tlsClientConfig.setTrustStorePassword(trustStorePasswords.get(i));
+            tlsClientConfig.setTrustStorePassword(hostDefinition.getTrustStorePassword());
             TlsClientManager tlsClientManager = new TlsClientManager(tlsClientConfig);
             KeyPair keyPair = TlsHelper.generateKeyPair(keyPairAlgorithm, keySize);
             tlsClientManager.addPrivateKeyToKeyStore(keyPair, NIFI_KEY, CertificateUtils.generateIssuedCertificate(TlsConfig.calcDefaultDn(hostname),
