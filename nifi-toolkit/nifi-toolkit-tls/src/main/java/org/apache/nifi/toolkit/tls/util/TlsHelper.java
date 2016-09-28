@@ -189,9 +189,13 @@ public class TlsHelper {
         return createKeyPairGenerator(algorithm, keySize).generateKeyPair();
     }
 
-    public static JcaPKCS10CertificationRequest generateCertificationRequest(String requestedDn, KeyPair keyPair, String signingAlgorithm) throws OperatorCreationException {
+    public static JcaPKCS10CertificationRequest generateCertificationRequest(String requestedDn, KeyPair keyPair, String signingAlgorithm) throws GeneralSecurityException {
         JcaPKCS10CertificationRequestBuilder jcaPKCS10CertificationRequestBuilder = new JcaPKCS10CertificationRequestBuilder(new X500Name(requestedDn), keyPair.getPublic());
         JcaContentSignerBuilder jcaContentSignerBuilder = new JcaContentSignerBuilder(signingAlgorithm);
-        return new JcaPKCS10CertificationRequest(jcaPKCS10CertificationRequestBuilder.build(jcaContentSignerBuilder.build(keyPair.getPrivate())));
+        try {
+            return new JcaPKCS10CertificationRequest(jcaPKCS10CertificationRequestBuilder.build(jcaContentSignerBuilder.build(keyPair.getPrivate())));
+        } catch (OperatorCreationException e) {
+            throw new GeneralSecurityException(e);
+        }
     }
 }

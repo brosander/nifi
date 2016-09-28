@@ -18,9 +18,9 @@
 package org.apache.nifi.toolkit.tls;
 
 import org.apache.nifi.toolkit.tls.commandLine.ExitCode;
-import org.apache.nifi.toolkit.tls.service.client.TlsCertificateAuthorityClientCommandLine;
-import org.apache.nifi.toolkit.tls.service.server.TlsCertificateAuthorityServiceCommandLine;
-import org.apache.nifi.toolkit.tls.standalone.TlsToolkitStandaloneCommandLine;
+import org.apache.nifi.toolkit.tls.service.TlsToolkitClient;
+import org.apache.nifi.toolkit.tls.service.TlsToolkitServer;
+import org.apache.nifi.toolkit.tls.standalone.TlsToolkitStandalone;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -39,9 +39,9 @@ public class TlsToolkitMain {
 
     public TlsToolkitMain() {
         mainMap = new LinkedHashMap<>();
-        mainMap.put("standalone", TlsToolkitStandaloneCommandLine.class);
-        mainMap.put("server", TlsCertificateAuthorityServiceCommandLine.class);
-        mainMap.put("client", TlsCertificateAuthorityClientCommandLine.class);
+        mainMap.put("standalone", TlsToolkitStandalone.class);
+        mainMap.put("server", TlsToolkitServer.class);
+        mainMap.put("client", TlsToolkitClient.class);
     }
 
     /**

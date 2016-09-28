@@ -17,7 +17,7 @@
 
 package org.apache.nifi.toolkit.tls.configuration;
 
-import org.apache.nifi.toolkit.tls.properties.NiFiPropertiesWriterFactory;
+import org.apache.nifi.toolkit.tls.configuration.writer.NiFiPropertiesWriterFactory;
 
 import java.io.File;
 import java.util.List;
@@ -25,7 +25,8 @@ import java.util.List;
 /**
  * Configuration object of the standalone service
  */
-public class StandaloneConfig extends TlsConfig {
+public class StandaloneConfig extends BaseConfiguration {
+    private CertificateAuthorityConfig certificateAuthorityConfig;
     private File baseDir;
     private NiFiPropertiesWriterFactory niFiPropertiesWriterFactory;
     private List<InstanceDefinition> instanceDefinitions;
@@ -88,5 +89,22 @@ public class StandaloneConfig extends TlsConfig {
 
     public void setInstanceDefinitions(List<InstanceDefinition> instanceDefinitions) {
         this.instanceDefinitions = instanceDefinitions;
+    }
+
+    public CertificateAuthorityConfig getCertificateAuthorityConfig() {
+        return certificateAuthorityConfig;
+    }
+
+    public void setCertificateAuthorityConfig(CertificateAuthorityConfig certificateAuthorityConfig) {
+        this.certificateAuthorityConfig = certificateAuthorityConfig;
+    }
+
+    @Override
+    public void initDefaults() {
+        if (certificateAuthorityConfig == null) {
+            certificateAuthorityConfig = new CertificateAuthorityConfig();
+        }
+        certificateAuthorityConfig.initDefaults();
+        super.initDefaults();
     }
 }

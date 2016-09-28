@@ -17,7 +17,7 @@
 
 package org.apache.nifi.toolkit.tls.configuration;
 
-import org.apache.nifi.toolkit.tls.standalone.TlsToolkitStandaloneCommandLine;
+import org.apache.nifi.toolkit.tls.commandLine.impl.StandaloneCommandLine;
 
 import java.util.List;
 import java.util.Map;
@@ -63,7 +63,7 @@ public class InstanceDefinition {
             return InstanceIdentifier.createIdentifiers(currentHostnameExpressions).map(id -> {
                 Integer number = orderMap.get(id);
                 if (number == null) {
-                    throw new IllegalArgumentException("Unable to find " + id.getHostname() + " in specified " + TlsToolkitStandaloneCommandLine.GLOBAL_PORT_SEQUENCE_ARG + " expression(s).");
+                    throw new IllegalArgumentException("Unable to find " + id.getHostname() + " in specified " + StandaloneCommandLine.GLOBAL_PORT_SEQUENCE_ARG + " expression(s).");
                 }
                 return createDefinition(id, number, keyStorePasswords, keyPasswords, trustStorePasswords);
             }).collect(Collectors.toList());
