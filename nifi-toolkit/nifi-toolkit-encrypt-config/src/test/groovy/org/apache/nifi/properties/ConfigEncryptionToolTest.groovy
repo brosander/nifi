@@ -19,6 +19,7 @@ package org.apache.nifi.properties
 import ch.qos.logback.classic.spi.LoggingEvent
 import ch.qos.logback.core.AppenderBase
 import org.apache.commons.lang3.SystemUtils
+import org.apache.nifi.encrypt.StringEncryptor
 import org.apache.nifi.toolkit.tls.commandLine.CommandLineParseException
 import org.apache.nifi.util.NiFiProperties
 import org.apache.nifi.util.console.TextDevice
@@ -44,6 +45,11 @@ import java.nio.file.Files
 import java.nio.file.attribute.PosixFilePermission
 import java.security.KeyException
 import java.security.Security
+import java.util.function.Function
+import java.util.regex.Pattern
+
+import static org.mockito.Mockito.mock
+import static org.mockito.Mockito.when
 
 @RunWith(JUnit4.class)
 class ConfigEncryptionToolTest extends GroovyTestCase {
@@ -1825,6 +1831,30 @@ class ConfigEncryptionToolTest extends GroovyTestCase {
         // Assert
 
         // Assertions in common method above
+    }
+
+    @Test
+    public void testEncRegex() {
+        assertTrue(ConfigEncryptionTool.ENC_PATTERN.matcher("enc{aBc19+==}").matches())
+        assertTrue(ConfigEncryptionTool.ENC_PATTERN.matcher("enc{aBc19+=}").matches())
+        assertTrue(ConfigEncryptionTool.ENC_PATTERN.matcher("enc{aBc19+}").matches())
+        assertTrue(ConfigEncryptionTool.ENC_PATTERN.matcher("enc{a}").matches())
+
+        assertFalse(ConfigEncryptionTool.ENC_PATTERN.matcher("enc{aBc19+===}").matches())
+        assertFalse(ConfigEncryptionTool.ENC_PATTERN.matcher("enc{aB=c19+}").matches())
+        assertFalse(ConfigEncryptionTool.ENC_PATTERN.matcher("enc{aB@}").matches())
+        assertFalse(ConfigEncryptionTool.ENC_PATTERN.matcher("enc{\"}").matches())
+        assertFalse(ConfigEncryptionTool.ENC_PATTERN.matcher("enc{>}").matches())
+    }
+
+    @Test
+    public void testReplaceOldCipherTextWithNewCipherText() {
+        // This is a test migrator function just for verification that the pattern matching is working as expected
+        Function<String, String> migrator = { s -> s.toUpperCase() }
+
+        String testString = "<my><test><value>enc{abc=}</value><value>enc{def==}<value>enc{ghi#}</test>enc{jk=l}</my>"
+
+        assertEquals(testString.replaceAll("abc", "ABC").replaceAll("def", "DEF"), ConfigEncryptionTool.replaceOldCipherTextWithNewCipherText(testString, migrator))
     }
 }
 
