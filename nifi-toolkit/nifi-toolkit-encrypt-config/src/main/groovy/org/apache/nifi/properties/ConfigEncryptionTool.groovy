@@ -17,13 +17,12 @@
 package org.apache.nifi.properties
 
 import groovy.io.GroovyPrintWriter
-import org.apache.commons.cli.CommandLine
-import org.apache.commons.cli.CommandLineParser
-import org.apache.commons.cli.DefaultParser
-import org.apache.commons.cli.HelpFormatter
-import org.apache.commons.cli.Options
-import org.apache.commons.cli.ParseException
+import org.apache.commons.cli.*
 import org.apache.commons.codec.binary.Hex
+import org.apache.commons.io.IOUtils
+import org.apache.nifi.controller.serialization.FlowSerializer
+import org.apache.nifi.encrypt.StringEncryptor
+import org.apache.nifi.stream.io.GZIPOutputStream
 import org.apache.nifi.toolkit.tls.commandLine.CommandLineParseException
 import org.apache.nifi.toolkit.tls.commandLine.ExitCode
 import org.apache.nifi.util.NiFiProperties
@@ -38,9 +37,14 @@ import javax.crypto.Cipher
 import java.nio.charset.StandardCharsets
 import java.security.KeyException
 import java.security.Security
+import java.util.function.Function
+import java.util.regex.Matcher
+import java.util.regex.Pattern
+import java.util.zip.GZIPInputStream
 
 class ConfigEncryptionTool {
     private static final Logger logger = LoggerFactory.getLogger(ConfigEncryptionTool.class)
+    private static final Pattern ENC_PATTERN = Pattern.compile("${Pattern.quote(FlowSerializer.ENC_PREFIX)}[\\w+]+=?=?${Pattern.quote(FlowSerializer.ENC_SUFFIX)}")
 
     public String bootstrapConfPath
     public String niFiPropertiesPath
@@ -63,12 +67,15 @@ class ConfigEncryptionTool {
     private static final String BOOTSTRAP_CONF_ARG = "bootstrapConf"
     private static final String NIFI_PROPERTIES_ARG = "niFiProperties"
     private static final String OUTPUT_NIFI_PROPERTIES_ARG = "outputNiFiProperties"
+    private static final String FLOW_XML_ARG = "flowXml"
+    private static final String OUTPUT_FLOW_XML_ARG = "outputFlowXml"
     private static final String KEY_ARG = "key"
     private static final String PASSWORD_ARG = "password"
     private static final String KEY_MIGRATION_ARG = "oldKey"
     private static final String PASSWORD_MIGRATION_ARG = "oldPassword"
     private static final String USE_KEY_ARG = "useRawKey"
     private static final String MIGRATION_ARG = "migrate"
+    private static final String PROPS_KEY_ARG = "propsKey"
 
     private static final int MIN_PASSWORD_LENGTH = 12
 
@@ -99,6 +106,10 @@ class ConfigEncryptionTool {
 
     private final Options options;
     private final String header;
+    private String flowXmlPath
+    private String outputFlowXmlPath
+    private boolean handlingFlowXml
+    private String propsKey
 
 
     public ConfigEncryptionTool() {
@@ -111,14 +122,17 @@ class ConfigEncryptionTool {
         options.addOption("h", HELP_ARG, false, "Prints this usage message")
         options.addOption("v", VERBOSE_ARG, false, "Sets verbose mode (default false)")
         options.addOption("n", NIFI_PROPERTIES_ARG, true, "The nifi.properties file containing unprotected config values (will be overwritten)")
+        options.addOption("f", FLOW_XML_ARG, true, "The flow.xml.gz file currently unprotected or protected with old password (will be overwritten)")
         options.addOption("b", BOOTSTRAP_CONF_ARG, true, "The bootstrap.conf file to persist master key")
         options.addOption("o", OUTPUT_NIFI_PROPERTIES_ARG, true, "The destination nifi.properties file containing protected config values (will not modify input nifi.properties)")
+        options.addOption("g", OUTPUT_FLOW_XML_ARG, true, "The destination flow.xml.gz file containing protected config values (will not modify input flow.xml.gz)")
         options.addOption("k", KEY_ARG, true, "The raw hexadecimal key to use to encrypt the sensitive properties")
         options.addOption("e", KEY_MIGRATION_ARG, true, "The old raw hexadecimal key to use during key migration")
         options.addOption("p", PASSWORD_ARG, true, "The password from which to derive the key to use to encrypt the sensitive properties")
         options.addOption("w", PASSWORD_MIGRATION_ARG, true, "The old password from which to derive the key during migration")
         options.addOption("r", USE_KEY_ARG, false, "If provided, the secure console will prompt for the raw key value in hexadecimal form")
         options.addOption("m", MIGRATION_ARG, false, "If provided, the sensitive properties will be re-encrypted with a new key")
+        options.addOption("s", PROPS_KEY_ARG, true, "The password or key to use to encrypt the sensitive processor properties in flow.xml.gz (true key will be derived from this value)")
     }
 
     /**
@@ -156,9 +170,33 @@ class ConfigEncryptionTool {
             niFiPropertiesPath = commandLine.getOptionValue(NIFI_PROPERTIES_ARG, determineDefaultNiFiPropertiesPath())
             outputNiFiPropertiesPath = commandLine.getOptionValue(OUTPUT_NIFI_PROPERTIES_ARG, niFiPropertiesPath)
 
+            if (commandLine.hasOption(PROPS_KEY_ARG)) {
+                propsKey = commandLine.getOptionValue(PROPS_KEY_ARG)
+            } else {
+                propsKey = null
+            }
+
             if (niFiPropertiesPath == outputNiFiPropertiesPath) {
                 // TODO: Add confirmation pause and provide -y flag to offer no-interaction mode?
                 logger.warn("The source nifi.properties and destination nifi.properties are identical [${outputNiFiPropertiesPath}] so the original will be overwritten")
+            }
+
+            if (commandLine.hasOption(FLOW_XML_ARG)) {
+                if (isVerbose) {
+                    logger.info("Handling encryption of flow.xml.gz")
+                }
+                flowXmlPath = commandLine.getOptionValue(FLOW_XML_ARG)
+                outputFlowXmlPath = commandLine.getOptionValue(OUTPUT_FLOW_XML_ARG, flowXmlPath)
+                handlingFlowXml = true
+
+                if (flowXmlPath == outputFlowXmlPath) {
+                // TODO: Add confirmation pause and provide -y flag to offer no-interaction mode?
+                    logger.warn("The source flow.xml.gz and destination flow.xml.gz are identical [${flowXmlPath}] so the original will be overwritten")
+                }
+            }
+
+            if (commandLine.hasOption(FLOW_XML_ARG) && !commandLine.hasOption(NIFI_PROPERTIES_ARG)) {
+                printUsageAndThrow("In order to migrate a flow.xml.gz, a nifi.properties file must also be specified.")
             }
 
             if (commandLine.hasOption(MIGRATION_ARG)) {
@@ -461,6 +499,47 @@ class ConfigEncryptionTool {
         }
     }
 
+    private void changeSensitivePropsKeyIfNecessary() {
+        if (propsKey != null) {
+            String propsKey = propsKey;
+            NiFiProperties oldNiFiProperties = niFiProperties;
+            niFiProperties = new NiFiProperties() {
+                @Override
+                String getProperty(String key) {
+                    if (NiFiProperties.SENSITIVE_PROPS_KEY == key) {
+                        return propsKey
+                    }
+                    return oldNiFiProperties.getProperty(key)
+                }
+
+                @Override
+                Set<String> getPropertyKeys() {
+                    Set<String> result = new LinkedHashSet<>(oldNiFiProperties.getPropertyKeys())
+                    result.add(NiFiProperties.SENSITIVE_PROPS_KEY)
+                    return result
+                }
+            }
+            if (handlingFlowXml) {
+                String reEncryptedFlow = null
+                new FileInputStream(flowXmlPath).withCloseable {
+                    new GZIPInputStream(it).withCloseable {
+                        StringEncryptor flowDecryptor = StringEncryptor.createEncryptor(oldNiFiProperties)
+                        StringEncryptor flowEncryptor = StringEncryptor.createEncryptor(niFiProperties)
+
+                        reEncryptedFlow = replaceOldCipherTextWithNewCipherText(IOUtils.toString(it, StandardCharsets.UTF_8), { cipher -> flowEncryptor.encrypt(flowDecryptor.decrypt(cipher)) })
+                    }
+                }
+
+                new FileOutputStream(outputFlowXmlPath).withCloseable {
+                    new GZIPOutputStream(it).withCloseable {
+                        IOUtils.write(reEncryptedFlow, it, StandardCharsets.UTF_8)
+                    }
+                }
+            }
+        }
+    }
+
+
     private
     static List<String> serializeNiFiPropertiesAndPreserveFormat(NiFiProperties niFiProperties, File originalPropertiesFile) {
         List<String> lines = originalPropertiesFile.readLines()
@@ -605,6 +684,7 @@ class ConfigEncryptionTool {
                 } catch (Exception e) {
                     tool.printUsageAndThrow("Cannot migrate key if no previous encryption occurred", ExitCode.ERROR_READING_NIFI_PROPERTIES)
                 }
+                tool.changeSensitivePropsKeyIfNecessary()
                 tool.niFiProperties = tool.encryptSensitiveProperties(tool.niFiProperties)
             } catch (CommandLineParseException e) {
                 if (e.exitCode == ExitCode.HELP) {
@@ -635,5 +715,18 @@ class ConfigEncryptionTool {
         }
 
         System.exit(ExitCode.SUCCESS.ordinal())
+    }
+
+
+    static String replaceOldCipherTextWithNewCipherText(String oldFlowString, Function<String, String> cipherTextMigrator) {
+        Matcher m = ENC_PATTERN.matcher(oldFlowString)
+        StringBuffer stringBuffer = new StringBuffer()
+        while (m.find()) {
+            String encryptedString = m.group()
+            def cipherText = encryptedString.substring(FlowSerializer.ENC_PREFIX.length(), encryptedString.length() - FlowSerializer.ENC_SUFFIX.length())
+            m.appendReplacement(stringBuffer, FlowSerializer.ENC_PREFIX + cipherTextMigrator.apply(cipherText) + FlowSerializer.ENC_SUFFIX)
+        }
+        m.appendTail(stringBuffer)
+        return stringBuffer.toString()
     }
 }
