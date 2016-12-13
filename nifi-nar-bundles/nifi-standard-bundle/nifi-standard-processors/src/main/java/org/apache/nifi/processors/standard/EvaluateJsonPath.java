@@ -16,6 +16,8 @@
  */
 package org.apache.nifi.processors.standard;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
@@ -30,6 +32,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.nifi.annotation.behavior.DynamicProperty;
 import org.apache.nifi.annotation.behavior.EventDriven;
@@ -40,6 +43,8 @@ import org.apache.nifi.annotation.behavior.SupportsBatching;
 import org.apache.nifi.annotation.documentation.CapabilityDescription;
 import org.apache.nifi.annotation.documentation.Tags;
 import org.apache.nifi.annotation.lifecycle.OnRemoved;
+import org.apache.nifi.annotation.lifecycle.OnScheduled;
+import org.apache.nifi.annotation.lifecycle.OnUnscheduled;
 import org.apache.nifi.components.PropertyDescriptor;
 import org.apache.nifi.components.ValidationContext;
 import org.apache.nifi.components.ValidationResult;
@@ -51,12 +56,15 @@ import org.apache.nifi.processor.ProcessorInitializationContext;
 import org.apache.nifi.processor.Relationship;
 import org.apache.nifi.processor.exception.ProcessException;
 import org.apache.nifi.processor.io.OutputStreamCallback;
+import org.apache.nifi.processors.standard.performance.Benchmark;
 import org.apache.nifi.stream.io.BufferedOutputStream;
 
 import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.InvalidJsonException;
 import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.PathNotFoundException;
+import org.apache.nifi.util.NiFiProperties;
+
 import java.util.concurrent.atomic.AtomicReference;
 
 @EventDriven
@@ -139,6 +147,7 @@ public class EvaluateJsonPath extends AbstractJsonPathProcessor {
     private List<PropertyDescriptor> properties;
 
     private final ConcurrentMap<String, JsonPath> cachedJsonPathMap = new ConcurrentHashMap<>();
+    private Benchmark benchmark;
 
     @Override
     protected void init(final ProcessorInitializationContext context) {
@@ -232,7 +241,16 @@ public class EvaluateJsonPath extends AbstractJsonPathProcessor {
 
     @Override
     public void onTrigger(final ProcessContext processContext, final ProcessSession processSession) throws ProcessException {
+        Thread currentThread = Thread.currentThread();
+        benchmark.enter(currentThread);
+        try {
+            doOnTrigger(processContext, processSession);
+        } finally {
+            benchmark.exit(currentThread);
+        }
+    }
 
+    public void doOnTrigger(final ProcessContext processContext, final ProcessSession processSession) throws ProcessException {
         FlowFile flowFile = processSession.get();
         if (flowFile == null) {
             return;
@@ -324,4 +342,25 @@ public class EvaluateJsonPath extends AbstractJsonPathProcessor {
         flowFile = processSession.putAllAttributes(flowFile, jsonPathResults);
         processSession.transfer(flowFile, REL_MATCH);
     }
+
+    @OnScheduled
+    public void onScheduled() {
+        benchmark = new Benchmark(Benchmark.makeRandomSupplier(50));
+    }
+
+    @OnUnscheduled
+    public void onUnscheduled() {
+        benchmark.stop();
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        try (FileOutputStream out = new FileOutputStream(new File("logs/benchmark-" + System.currentTimeMillis() + ".log"))) {
+            new ObjectMapper().writerWithDefaultPrettyPrinter().writeValue(out, benchmark.getElement());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
 }
