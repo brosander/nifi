@@ -204,13 +204,13 @@ public class TestWriteAheadFlowFileRepository {
         repo.updateRepository(records);
 
         // update to add new attribute
-        ffBuilder = new StandardFlowFileRecord.Builder().fromFlowFile(flowFileRecord).addAttribute("hello", "world");
+        ffBuilder = StandardFlowFileRecord.Builder.create(flowFileRecord).addAttribute("hello", "world");
         final FlowFileRecord flowFileRecord2 = ffBuilder.build();
         record.setWorking(flowFileRecord2);
         repo.updateRepository(records);
 
         // update size but no attribute
-        ffBuilder = new StandardFlowFileRecord.Builder().fromFlowFile(flowFileRecord2).size(40L);
+        ffBuilder = StandardFlowFileRecord.Builder.create(flowFileRecord2).size(40L);
         final FlowFileRecord flowFileRecord3 = ffBuilder.build();
         record.setWorking(flowFileRecord3);
         repo.updateRepository(records);

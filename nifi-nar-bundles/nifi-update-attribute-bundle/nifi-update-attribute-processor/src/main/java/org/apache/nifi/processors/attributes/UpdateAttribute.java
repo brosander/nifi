@@ -391,12 +391,12 @@ public class UpdateAttribute extends AbstractProcessor implements Searchable {
     public void onTrigger(final ProcessContext context, final ProcessSession session) {
         final ComponentLog logger = getLogger();
         final Criteria criteria = criteriaCache.get();
-
-        FlowFile flowFile = session.get();
-        if (flowFile == null) {
-            return;
+        for (FlowFile flowFile : session.get(50)) {
+            doOnTrigger(logger, criteria, flowFile, context, session);
         }
+    }
 
+    private void doOnTrigger(ComponentLog logger, Criteria criteria, FlowFile flowFile, ProcessContext context, ProcessSession session) {
         final Map<PropertyDescriptor, String> properties = context.getProperties();
 
         // get the default actions
@@ -644,13 +644,22 @@ public class UpdateAttribute extends AbstractProcessor implements Searchable {
         }
 
         // update and delete the FlowFile attributes
-        FlowFile returnFlowfile = session.removeAllAttributes(session.putAllAttributes(flowfile, attributesToUpdate), attributesToDelete);
+        attributesToUpdate.keySet().removeAll(attributesToDelete);
+        attributesToDelete.retainAll(flowfile.getAttributes().keySet());
+
+        FlowFile returnFlowfile = flowfile;
+        if (attributesToUpdate.size() > 0) {
+            returnFlowfile = session.putAllAttributes(returnFlowfile, attributesToUpdate);
+        }
+        if (attributesToDelete.size() > 0) {
+            returnFlowfile = session.removeAllAttributes(returnFlowfile, attributesToDelete);
+        }
 
         if(statefulAttributesToSet != null) {
             context.getStateManager().setState(statefulAttributesToSet, Scope.LOCAL);
         }
 
-        return  returnFlowfile;
+        return returnFlowfile;
     }
 
     // Gets the default actions.

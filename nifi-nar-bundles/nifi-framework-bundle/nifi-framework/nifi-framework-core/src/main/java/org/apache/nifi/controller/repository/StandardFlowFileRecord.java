@@ -168,19 +168,58 @@ public final class StandardFlowFileRecord implements FlowFile, FlowFileRecord {
     }
 
     public static final class Builder {
-
         private long bId;
-        private long bEntryDate = System.currentTimeMillis();
-        private long bLineageStartDate = bEntryDate;
-        private long bLineageStartIndex = 0L;
-        private final Set<String> bLineageIdentifiers = new HashSet<>();
-        private long bPenaltyExpirationMs = -1L;
-        private long bSize = 0L;
-        private final Map<String, String> bAttributes = new HashMap<>();
-        private ContentClaim bClaim = null;
-        private long bClaimOffset = 0L;
-        private long bLastQueueDate = System.currentTimeMillis();
-        private long bQueueDateIndex = 0L;
+        private long bEntryDate;
+        private long bLineageStartDate;
+        private long bLineageStartIndex;
+        private final Set<String> bLineageIdentifiers;
+        private long bPenaltyExpirationMs;
+        private long bSize;
+        private final Map<String, String> bAttributes;
+        private ContentClaim bClaim;
+        private long bClaimOffset;
+        private long bLastQueueDate;
+        private long bQueueDateIndex;
+
+        public static Builder create(FlowFileRecord specFlowFile) {
+            if (specFlowFile == null) {
+                return new Builder();
+            }
+            return new Builder(specFlowFile);
+        }
+
+        public Builder() {
+            bEntryDate = System.currentTimeMillis();
+            bLineageStartDate = bEntryDate;
+            bLineageStartIndex = 0L;
+            bLineageIdentifiers = new HashSet<>();
+            bPenaltyExpirationMs = -1L;
+            bSize = 0L;
+            bAttributes = new HashMap<>();
+            bClaim = null;
+            bClaimOffset = 0L;
+            bLastQueueDate = System.currentTimeMillis();
+            bQueueDateIndex = 0L;
+        }
+
+        private Builder(FlowFileRecord specFlowFile) {
+            init(specFlowFile);
+            bLineageIdentifiers = new HashSet<>();
+            bAttributes = new HashMap<>(specFlowFile.getAttributes());
+        }
+
+        private void init(FlowFileRecord specFlowFile) {
+            bId = specFlowFile.getId();
+            bEntryDate = specFlowFile.getEntryDate();
+            bLineageStartDate = specFlowFile.getLineageStartDate();
+            bLineageStartIndex = specFlowFile.getLineageStartIndex();
+            bPenaltyExpirationMs = specFlowFile.getPenaltyExpirationMillis();
+            bSize = specFlowFile.getSize();
+            bClaim = specFlowFile.getContentClaim();
+            bClaimOffset = specFlowFile.getContentClaimOffset();
+            bLastQueueDate = specFlowFile.getLastQueueDate();
+            bQueueDateIndex = specFlowFile.getQueueDateIndex();
+        }
 
         public Builder id(final long id) {
             bId = id;
@@ -297,19 +336,9 @@ public final class StandardFlowFileRecord implements FlowFile, FlowFileRecord {
             if (specFlowFile == null) {
                 return this;
             }
-            bId = specFlowFile.getId();
-            bEntryDate = specFlowFile.getEntryDate();
-            bLineageStartDate = specFlowFile.getLineageStartDate();
-            bLineageStartIndex = specFlowFile.getLineageStartIndex();
+            init(specFlowFile);
             bLineageIdentifiers.clear();
-            bPenaltyExpirationMs = specFlowFile.getPenaltyExpirationMillis();
-            bSize = specFlowFile.getSize();
             bAttributes.putAll(specFlowFile.getAttributes());
-            bClaim = specFlowFile.getContentClaim();
-            bClaimOffset = specFlowFile.getContentClaimOffset();
-            bLastQueueDate = specFlowFile.getLastQueueDate();
-            bQueueDateIndex = specFlowFile.getQueueDateIndex();
-
             return this;
         }
 

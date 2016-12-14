@@ -496,11 +496,13 @@ public class FileSystemRepository implements ContentRepository {
         Path resolvedPath = containerPath.resolve(resourceClaim.getSection()).resolve(resourceClaim.getId());
 
         // If the data does not exist, create a Path that points to where the data would exist in the archive directory.
-        if (!Files.exists(resolvedPath)) {
+        boolean missingFromInitialPath = !Files.exists(resolvedPath);
+
+        if (missingFromInitialPath) {
             resolvedPath = getArchivePath(claim.getResourceClaim());
         }
 
-        if (verifyExists && !Files.exists(resolvedPath)) {
+        if (missingFromInitialPath && verifyExists && !Files.exists(resolvedPath)) {
             throw new ContentNotFoundException(claim);
         }
         return resolvedPath;

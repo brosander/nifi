@@ -40,6 +40,8 @@ import org.apache.nifi.annotation.behavior.SupportsBatching;
 import org.apache.nifi.annotation.documentation.CapabilityDescription;
 import org.apache.nifi.annotation.documentation.Tags;
 import org.apache.nifi.annotation.lifecycle.OnRemoved;
+import org.apache.nifi.annotation.lifecycle.OnScheduled;
+import org.apache.nifi.annotation.lifecycle.OnUnscheduled;
 import org.apache.nifi.components.PropertyDescriptor;
 import org.apache.nifi.components.ValidationContext;
 import org.apache.nifi.components.ValidationResult;
@@ -139,6 +141,7 @@ public class EvaluateJsonPath extends AbstractJsonPathProcessor {
     private List<PropertyDescriptor> properties;
 
     private final ConcurrentMap<String, JsonPath> cachedJsonPathMap = new ConcurrentHashMap<>();
+    private ThreadLocal<Map<String, JsonPath>> jsonPathThreadLocal;
 
     @Override
     protected void init(final ProcessorInitializationContext context) {
@@ -232,12 +235,12 @@ public class EvaluateJsonPath extends AbstractJsonPathProcessor {
 
     @Override
     public void onTrigger(final ProcessContext processContext, final ProcessSession processSession) throws ProcessException {
-
-        FlowFile flowFile = processSession.get();
-        if (flowFile == null) {
-            return;
+        for (FlowFile flowFile : processSession.get(50)) {
+            doOnTrigger(flowFile, processContext, processSession);
         }
+    }
 
+    private void doOnTrigger(FlowFile flowFile, final ProcessContext processContext, final ProcessSession processSession) throws ProcessException {
         final ComponentLog logger = getLogger();
 
         String representationOption = processContext.getProperty(NULL_VALUE_DEFAULT_REPRESENTATION).getValue();
@@ -250,7 +253,8 @@ public class EvaluateJsonPath extends AbstractJsonPathProcessor {
             if (!entry.getKey().isDynamic()) {
                 continue;
             }
-            final JsonPath jsonPath = JsonPath.compile(entry.getValue());
+            String jsonPathString = entry.getValue();
+            final JsonPath jsonPath = jsonPathThreadLocal.get().computeIfAbsent(jsonPathString, key -> JsonPath.compile(jsonPathString));
             attributeToJsonPathMap.put(entry.getKey().getName(), jsonPath);
         }
 
@@ -260,7 +264,7 @@ public class EvaluateJsonPath extends AbstractJsonPathProcessor {
             returnType = destination.equals(DESTINATION_CONTENT) ? RETURN_TYPE_JSON : RETURN_TYPE_SCALAR;
         }
 
-        DocumentContext documentContext = null;
+        DocumentContext documentContext;
         try {
             documentContext = validateAndEstablishJsonContext(processSession, flowFile);
         } catch (InvalidJsonException e) {
@@ -323,5 +327,15 @@ public class EvaluateJsonPath extends AbstractJsonPathProcessor {
         }
         flowFile = processSession.putAllAttributes(flowFile, jsonPathResults);
         processSession.transfer(flowFile, REL_MATCH);
+    }
+
+    @OnScheduled
+    public void initThreadLocal() {
+        jsonPathThreadLocal = ThreadLocal.withInitial(() -> new HashMap<>());
+    }
+
+    @OnUnscheduled
+    public void clearThreadLocal() {
+        jsonPathThreadLocal = null;
     }
 }

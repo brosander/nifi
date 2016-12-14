@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 import org.apache.nifi.annotation.behavior.DynamicProperty;
 import org.apache.nifi.annotation.behavior.DynamicRelationship;
@@ -198,26 +199,24 @@ public class RouteOnAttribute extends AbstractProcessor {
 
     @Override
     public void onTrigger(final ProcessContext context, final ProcessSession session) {
-        FlowFile flowFile = session.get();
-        if (flowFile == null) {
-            return;
+        String routeStrategy = context.getProperty(ROUTE_STRATEGY).getValue();
+        for (FlowFile flowFile : session.get(50)) {
+            doOnTrigger(routeStrategy, flowFile, session);
         }
+    }
 
+    private void doOnTrigger(String routeStrategy, FlowFile flowFile, final ProcessSession session) {
         final ComponentLog logger = getLogger();
 
         final Map<Relationship, PropertyValue> propMap = this.propertyMap;
-        final Set<Relationship> matchingRelationships = new HashSet<>();
-        for (final Map.Entry<Relationship, PropertyValue> entry : propMap.entrySet()) {
-            final PropertyValue value = entry.getValue();
-
-            final boolean matches = value.evaluateAttributeExpressions(flowFile).asBoolean();
-            if (matches) {
-                matchingRelationships.add(entry.getKey());
-            }
-        }
+        final FlowFile finalFlowFile = flowFile;
+        final Set<Relationship> matchingRelationships = propMap.entrySet().stream()
+                .filter(e -> e.getValue().evaluateAttributeExpressions(finalFlowFile).asBoolean())
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toSet());
 
         final Set<Relationship> destinationRelationships = new HashSet<>();
-        switch (context.getProperty(ROUTE_STRATEGY).getValue()) {
+        switch (routeStrategy) {
             case routeAllMatchValue:
                 if (matchingRelationships.size() == propMap.size()) {
                     destinationRelationships.add(REL_MATCH);

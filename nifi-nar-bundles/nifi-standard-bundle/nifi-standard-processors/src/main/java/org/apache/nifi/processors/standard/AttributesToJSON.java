@@ -36,12 +36,9 @@ import org.apache.nifi.processor.ProcessContext;
 import org.apache.nifi.processor.ProcessSession;
 import org.apache.nifi.processor.ProcessorInitializationContext;
 import org.apache.nifi.processor.exception.ProcessException;
-import org.apache.nifi.processor.io.StreamCallback;
 import org.apache.nifi.processor.util.StandardValidators;
-import org.apache.nifi.stream.io.BufferedOutputStream;
 
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.BufferedOutputStream;
 import java.io.OutputStream;
 import java.util.List;
 import java.util.ArrayList;
@@ -202,11 +199,12 @@ public class AttributesToJSON extends AbstractProcessor {
 
     @Override
     public void onTrigger(ProcessContext context, ProcessSession session) throws ProcessException {
-        final FlowFile original = session.get();
-        if (original == null) {
-            return;
+        for (FlowFile flowFile : session.get(50)) {
+            doOnTrigger(flowFile, context, session);
         }
+    }
 
+    public void doOnTrigger(FlowFile original, ProcessContext context, ProcessSession session) throws ProcessException {
         final Map<String, String> atrList = buildAttributesMapForFlowFile(original,
                 context.getProperty(ATTRIBUTES_LIST).getValue(),
                 context.getProperty(INCLUDE_CORE_ATTRIBUTES).asBoolean(),
@@ -221,12 +219,9 @@ public class AttributesToJSON extends AbstractProcessor {
                     session.transfer(atFlowfile, REL_SUCCESS);
                     break;
                 case DESTINATION_CONTENT:
-                    FlowFile conFlowfile = session.write(original, new StreamCallback() {
-                        @Override
-                        public void process(InputStream in, OutputStream out) throws IOException {
-                            try (OutputStream outputStream = new BufferedOutputStream(out)) {
-                                outputStream.write(objectMapper.writeValueAsBytes(atrList));
-                            }
+                    FlowFile conFlowfile = session.write(original, (in, out) -> {
+                        try (OutputStream outputStream = new BufferedOutputStream(out)) {
+                            outputStream.write(objectMapper.writeValueAsBytes(atrList));
                         }
                     });
                     conFlowfile = session.putAttribute(conFlowfile, CoreAttributes.MIME_TYPE.key(), APPLICATION_JSON);
