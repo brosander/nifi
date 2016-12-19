@@ -30,7 +30,7 @@ import org.apache.nifi.annotation.documentation.Tags;
 import org.apache.nifi.components.PropertyDescriptor;
 import org.apache.nifi.flowfile.FlowFile;
 import org.apache.nifi.flowfile.attributes.CoreAttributes;
-import org.apache.nifi.processor.AbstractProcessor;
+import org.apache.nifi.processor.AbstractBatchingProcessor;
 import org.apache.nifi.processor.Relationship;
 import org.apache.nifi.processor.ProcessContext;
 import org.apache.nifi.processor.ProcessSession;
@@ -56,7 +56,7 @@ import java.util.Collections;
 @CapabilityDescription("Generates a JSON representation of the input FlowFile Attributes. The resulting JSON " +
         "can be written to either a new Attribute 'JSONAttributes' or written to the FlowFile as content.")
 @WritesAttribute(attribute = "JSONAttributes", description = "JSON representation of Attributes")
-public class AttributesToJSON extends AbstractProcessor {
+public class AttributesToJSON extends AbstractBatchingProcessor<AttributesToJSON.OnTriggerInvariants> {
 
     public static final String JSON_ATTRIBUTE_NAME = "JSONAttributes";
     private static final String AT_LIST_SEPARATOR = ",";
@@ -121,6 +121,7 @@ public class AttributesToJSON extends AbstractProcessor {
         properties.add(DESTINATION);
         properties.add(INCLUDE_CORE_ATTRIBUTES);
         properties.add(NULL_VALUE_FOR_EMPTY_STRING);
+        properties.add(BATCH_SIZE);
         this.properties = Collections.unmodifiableList(properties);
 
         final Set<Relationship> relationships = new HashSet<>();
@@ -146,35 +147,32 @@ public class AttributesToJSON extends AbstractProcessor {
      * @return
      *  Map of values that are feed to a Jackson ObjectMapper
      */
-    protected Map<String, String> buildAttributesMapForFlowFile(FlowFile ff, String atrList,
-                                                                boolean includeCoreAttributes,
-                                                                boolean nullValForEmptyString) {
+    protected Map<String, String> buildAttributesMapForFlowFile(FlowFile ff, OnTriggerInvariants invariants) {
 
-        Map<String, String> atsToWrite = new HashMap<>();
+        Map<String, String> atsToWrite;
 
         //If list of attributes specified get only those attributes. Otherwise write them all
-        if (StringUtils.isNotBlank(atrList)) {
-            String[] ats = StringUtils.split(atrList, AT_LIST_SEPARATOR);
-            if (ats != null) {
-                for (String str : ats) {
-                    String cleanStr = str.trim();
-                    String val = ff.getAttribute(cleanStr);
-                    if (val != null) {
-                        atsToWrite.put(cleanStr, val);
+        if (StringUtils.isNotBlank(invariants.atrList)) {
+            String[] ats = StringUtils.split(invariants.atrList, AT_LIST_SEPARATOR);
+            atsToWrite = new HashMap<>(ats.length);
+            for (String str : ats) {
+                String cleanStr = str.trim();
+                String val = ff.getAttribute(cleanStr);
+                if (val != null) {
+                    atsToWrite.put(cleanStr, val);
+                } else {
+                    if (invariants.nullValForEmptyString) {
+                        atsToWrite.put(cleanStr, null);
                     } else {
-                        if (nullValForEmptyString) {
-                            atsToWrite.put(cleanStr, null);
-                        } else {
-                            atsToWrite.put(cleanStr, "");
-                        }
+                        atsToWrite.put(cleanStr, "");
                     }
                 }
             }
         } else {
-            atsToWrite.putAll(ff.getAttributes());
+            atsToWrite = new HashMap<>(ff.getAttributes());
         }
 
-        if (!includeCoreAttributes) {
+        if (!invariants.includeCoreAttributes) {
             atsToWrite = removeCoreAttributes(atsToWrite);
         }
 
@@ -198,40 +196,45 @@ public class AttributesToJSON extends AbstractProcessor {
     }
 
     @Override
-    public void onTrigger(ProcessContext context, ProcessSession session) throws ProcessException {
-        for (FlowFile flowFile : session.get(50)) {
-            doOnTrigger(flowFile, context, session);
-        }
+    protected OnTriggerInvariants getOnTriggerInvariants(ProcessContext processContext) {
+        return new OnTriggerInvariants(processContext);
     }
 
-    public void doOnTrigger(FlowFile original, ProcessContext context, ProcessSession session) throws ProcessException {
-        final Map<String, String> atrList = buildAttributesMapForFlowFile(original,
-                context.getProperty(ATTRIBUTES_LIST).getValue(),
-                context.getProperty(INCLUDE_CORE_ATTRIBUTES).asBoolean(),
-                context.getProperty(NULL_VALUE_FOR_EMPTY_STRING).asBoolean());
+    @Override
+    protected void doOnTrigger(FlowFile original, ProcessContext context, ProcessSession session, OnTriggerInvariants invariants) throws ProcessException {
+        final Map<String, String> atrList = buildAttributesMapForFlowFile(original, invariants);
 
         try {
-
-            switch (context.getProperty(DESTINATION).getValue()) {
-                case DESTINATION_ATTRIBUTE:
-                    FlowFile atFlowfile = session.putAttribute(original, JSON_ATTRIBUTE_NAME,
-                            objectMapper.writeValueAsString(atrList));
-                    session.transfer(atFlowfile, REL_SUCCESS);
-                    break;
-                case DESTINATION_CONTENT:
-                    FlowFile conFlowfile = session.write(original, (in, out) -> {
-                        try (OutputStream outputStream = new BufferedOutputStream(out)) {
-                            outputStream.write(objectMapper.writeValueAsBytes(atrList));
-                        }
-                    });
-                    conFlowfile = session.putAttribute(conFlowfile, CoreAttributes.MIME_TYPE.key(), APPLICATION_JSON);
-                    session.transfer(conFlowfile, REL_SUCCESS);
-                    break;
+            if (invariants.destinationContent) {
+                FlowFile conFlowfile = session.write(original, (in, out) -> {
+                    try (OutputStream outputStream = new BufferedOutputStream(out)) {
+                        outputStream.write(objectMapper.writeValueAsBytes(atrList));
+                    }
+                });
+                conFlowfile = session.putAttribute(conFlowfile, CoreAttributes.MIME_TYPE.key(), APPLICATION_JSON);
+                session.transfer(conFlowfile, REL_SUCCESS);
+            } else {
+                FlowFile atFlowfile = session.putAttribute(original, JSON_ATTRIBUTE_NAME, objectMapper.writeValueAsString(atrList));
+                session.transfer(atFlowfile, REL_SUCCESS);
             }
 
         } catch (JsonProcessingException e) {
             getLogger().error(e.getMessage());
             session.transfer(original, REL_FAILURE);
+        }
+    }
+
+    public static class OnTriggerInvariants {
+        private final String atrList;
+        private final boolean includeCoreAttributes;
+        private final boolean nullValForEmptyString;
+        private final boolean destinationContent;
+
+        public OnTriggerInvariants(ProcessContext context) {
+            atrList = context.getProperty(ATTRIBUTES_LIST).getValue();
+            includeCoreAttributes = context.getProperty(INCLUDE_CORE_ATTRIBUTES).asBoolean();
+            nullValForEmptyString = context.getProperty(NULL_VALUE_FOR_EMPTY_STRING).asBoolean();
+            destinationContent = DESTINATION_CONTENT.equals(context.getProperty(DESTINATION).getValue());
         }
     }
 }

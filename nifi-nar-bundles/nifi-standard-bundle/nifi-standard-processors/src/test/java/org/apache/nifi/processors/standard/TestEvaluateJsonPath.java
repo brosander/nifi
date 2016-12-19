@@ -310,7 +310,7 @@ public class TestEvaluateJsonPath {
         final TestRunner testRunner = TestRunners.newTestRunner(new EvaluateJsonPath());
         testRunner.setProperty(EvaluateJsonPath.RETURN_TYPE, EvaluateJsonPath.RETURN_TYPE_JSON);
         testRunner.setProperty(EvaluateJsonPath.DESTINATION, EvaluateJsonPath.DESTINATION_ATTRIBUTE);
-        testRunner.setProperty(EvaluateJsonPath.NULL_VALUE_DEFAULT_REPRESENTATION, AbstractJsonPathProcessor.NULL_STRING_OPTION);
+        testRunner.setProperty(AbstractJsonPathProcessor.NULL_VALUE_DEFAULT_REPRESENTATION, AbstractJsonPathProcessor.NULL_STRING_OPTION);
         testRunner.setProperty("stringField", "$.stringField");
         testRunner.setProperty("missingField", "$.missingField");
         testRunner.setProperty("nullField", "$.nullField");

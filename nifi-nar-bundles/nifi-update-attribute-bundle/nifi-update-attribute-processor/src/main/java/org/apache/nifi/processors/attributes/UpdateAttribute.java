@@ -56,7 +56,7 @@ import org.apache.nifi.expression.AttributeExpression;
 import org.apache.nifi.flowfile.FlowFile;
 import org.apache.nifi.flowfile.attributes.CoreAttributes;
 import org.apache.nifi.logging.ComponentLog;
-import org.apache.nifi.processor.AbstractProcessor;
+import org.apache.nifi.processor.AbstractBatchingProcessor;
 import org.apache.nifi.processor.ProcessContext;
 import org.apache.nifi.processor.ProcessSession;
 import org.apache.nifi.processor.Relationship;
@@ -82,7 +82,7 @@ import org.apache.nifi.update.attributes.serde.CriteriaSerDe;
         description = "Updates a FlowFile attribute specified by the Dynamic Property's key with the value specified by the Dynamic Property's value")
 @WritesAttribute(attribute = "See additional details", description = "This processor may write or remove zero or more attributes as described in additional details")
 @Stateful(scopes = {Scope.LOCAL}, description = "Gives the option to store values not only on the FlowFile but as stateful variables to be referenced in a recursive manner.")
-public class UpdateAttribute extends AbstractProcessor implements Searchable {
+public class UpdateAttribute extends AbstractBatchingProcessor<UpdateAttribute.OnTriggerInvariants> implements Searchable {
 
 
     public static final String DO_NOT_STORE_STATE = "do not store state";
@@ -185,6 +185,7 @@ public class UpdateAttribute extends AbstractProcessor implements Searchable {
         descriptors.add(DELETE_ATTRIBUTES);
         descriptors.add(STORE_STATE);
         descriptors.add(STATEFUL_VARIABLES_INIT_VALUE);
+        descriptors.add(BATCH_SIZE);
         return Collections.unmodifiableList(descriptors);
     }
 
@@ -388,19 +389,13 @@ public class UpdateAttribute extends AbstractProcessor implements Searchable {
     }
 
     @Override
-    public void onTrigger(final ProcessContext context, final ProcessSession session) {
-        final ComponentLog logger = getLogger();
-        final Criteria criteria = criteriaCache.get();
-        for (FlowFile flowFile : session.get(50)) {
-            doOnTrigger(logger, criteria, flowFile, context, session);
-        }
+    protected OnTriggerInvariants getOnTriggerInvariants(ProcessContext processContext) {
+        return new OnTriggerInvariants(processContext, criteriaCache, getLogger());
     }
 
-    private void doOnTrigger(ComponentLog logger, Criteria criteria, FlowFile flowFile, ProcessContext context, ProcessSession session) {
-        final Map<PropertyDescriptor, String> properties = context.getProperties();
-
-        // get the default actions
-        final Map<String, Action> defaultActions = getDefaultActions(properties);
+    @Override
+    protected void doOnTrigger(FlowFile flowFile, ProcessContext context, ProcessSession session, OnTriggerInvariants invariants) throws ProcessException {
+        final ComponentLog logger = getLogger();
 
         // record which rule should be applied to which flow file - when operating
         // in 'use clone' mode, this collection will contain a number of entries
@@ -427,8 +422,12 @@ public class UpdateAttribute extends AbstractProcessor implements Searchable {
             return;
         }
 
+        Criteria criteria = invariants.criteria;
+        Map<String, Action> defaultActions = invariants.defaultActions;
+        boolean isLogDebugEnabled = invariants.isLogDebugEnabled;
+
         // if there is update criteria specified, evaluate it
-        if (criteria != null && evaluateCriteria(session, context, criteria, flowFile, matchedRules, statefulAttributes)) {
+        if (criteria != null && evaluateCriteria(session, context, criteria, flowFile, matchedRules, statefulAttributes, isLogDebugEnabled)) {
             // apply the actions for each rule and transfer the flowfile
             for (final Map.Entry<FlowFile, List<Rule>> entry : matchedRules.entrySet()) {
                 FlowFile match = entry.getKey();
@@ -436,7 +435,7 @@ public class UpdateAttribute extends AbstractProcessor implements Searchable {
 
                 // execute each matching rule(s)
                 try {
-                    match = executeActions(session, context, rules, defaultActions, match, statefulAttributes);
+                    match = executeActions(session, context, rules, defaultActions, match, statefulAttributes, isLogDebugEnabled);
                     logger.info("Updated attributes for {}; transferring to '{}'", new Object[]{match, REL_SUCCESS.getName()});
 
                     // transfer the match
@@ -451,7 +450,7 @@ public class UpdateAttribute extends AbstractProcessor implements Searchable {
         } else {
             // transfer the flowfile to no match (that has the default actions applied)
             try {
-                flowFile = executeActions(session, context, null, defaultActions, flowFile, statefulAttributes);
+                flowFile = executeActions(session, context, null, defaultActions, flowFile, statefulAttributes, isLogDebugEnabled);
                 logger.info("Updated attributes for {}; transferring to '{}'", new Object[]{flowFile, REL_SUCCESS.getName()});
                 session.getProvenanceReporter().modifyAttributes(flowFile);
                 session.transfer(flowFile, REL_SUCCESS);
@@ -466,7 +465,7 @@ public class UpdateAttribute extends AbstractProcessor implements Searchable {
     //Evaluates the specified Criteria on the specified flowfile. Clones the
     // specified flow file for each rule that is applied.
     private boolean evaluateCriteria(final ProcessSession session, final ProcessContext context, final Criteria criteria, final FlowFile flowfile, final Map<FlowFile,
-            List<Rule>> matchedRules, final Map<String, String> statefulAttributes) {
+            List<Rule>> matchedRules, final Map<String, String> statefulAttributes, boolean isLogDebugEnabled) {
             final ComponentLog logger = getLogger();
         final List<Rule> rules = criteria.getRules();
 
@@ -493,7 +492,7 @@ public class UpdateAttribute extends AbstractProcessor implements Searchable {
                 rulesForFlowFile.add(rule);
 
                 // log if appropriate
-                if (logger.isDebugEnabled()) {
+                if (isLogDebugEnabled) {
                     logger.debug(this + " all conditions met for rule '" + rule.getName() + "'. Using flow file - " + flowfileToUse);
                 }
             }
@@ -541,7 +540,7 @@ public class UpdateAttribute extends AbstractProcessor implements Searchable {
 
     // Executes the specified action on the specified flowfile.
     private FlowFile executeActions(final ProcessSession session, final ProcessContext context, final List<Rule> rules, final Map<String, Action> defaultActions, final FlowFile flowfile,
-                                    final Map<String, String> statefulAttributes) throws IOException {
+                                    final Map<String, String> statefulAttributes, boolean isLogDebugEnabled) throws IOException {
             final ComponentLog logger = getLogger();
         final Map<String, Action> actions = new HashMap<>(defaultActions);
         final String ruleName = (rules == null || rules.isEmpty()) ? "default" : rules.get(rules.size() - 1).getName();
@@ -588,7 +587,7 @@ public class UpdateAttribute extends AbstractProcessor implements Searchable {
                     final String newAttributeValue = getPropertyValue(action.getValue(), context).evaluateAttributeExpressions(flowfile, null, null, statefulAttributes).getValue();
 
                     // log if appropriate
-                    if (logger.isDebugEnabled()) {
+                    if (isLogDebugEnabled) {
                         logger.debug(String.format("%s setting attribute '%s' = '%s' for %s per rule '%s'.", this, action.getAttribute(), newAttributeValue, flowfile, ruleName));
                     }
 
@@ -614,7 +613,7 @@ public class UpdateAttribute extends AbstractProcessor implements Searchable {
                             if (pattern.matcher(key).matches()) {
 
                                 // log if appropriate
-                                if (logger.isDebugEnabled()) {
+                                if (isLogDebugEnabled) {
                                     logger.debug(String.format("%s deleting attribute '%s' for %s per regex '%s'.", this,
                                             key, flowfile, regex));
                                 }
@@ -662,19 +661,31 @@ public class UpdateAttribute extends AbstractProcessor implements Searchable {
         return returnFlowfile;
     }
 
-    // Gets the default actions.
-    private Map<String, Action> getDefaultActions(final Map<PropertyDescriptor, String> properties) {
-        final Map<String, Action> defaultActions = new HashMap<>();
+    public static final class OnTriggerInvariants {
+        private final Criteria criteria;
+        private final Map<String, Action> defaultActions;
+        private final boolean isLogDebugEnabled;
 
-        for (final Map.Entry<PropertyDescriptor, String> entry : properties.entrySet()) {
-            if(entry.getKey() != STORE_STATE && entry.getKey() != STATEFUL_VARIABLES_INIT_VALUE) {
-                final Action action = new Action();
-                action.setAttribute(entry.getKey().getName());
-                action.setValue(entry.getValue());
-                defaultActions.put(action.getAttribute(), action);
-            }
+        public OnTriggerInvariants(ProcessContext processContext, AtomicReference<Criteria> criteriaCache, ComponentLog componentLog) {
+            criteria = criteriaCache.get();
+            defaultActions = getDefaultActions(processContext.getProperties());
+            isLogDebugEnabled = componentLog.isDebugEnabled();
         }
 
-        return defaultActions;
+        // Gets the default actions.
+        private Map<String, Action> getDefaultActions(final Map<PropertyDescriptor, String> properties) {
+            final Map<String, Action> defaultActions = new HashMap<>();
+
+            for (final Map.Entry<PropertyDescriptor, String> entry : properties.entrySet()) {
+                if(entry.getKey() != STORE_STATE && entry.getKey() != STATEFUL_VARIABLES_INIT_VALUE && entry.getKey() != BATCH_SIZE) {
+                    final Action action = new Action();
+                    action.setAttribute(entry.getKey().getName());
+                    action.setValue(entry.getValue());
+                    defaultActions.put(action.getAttribute(), action);
+                }
+            }
+
+            return defaultActions;
+        }
     }
 }
