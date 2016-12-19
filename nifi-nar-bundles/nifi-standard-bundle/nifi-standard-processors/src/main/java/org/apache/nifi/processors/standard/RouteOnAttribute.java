@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 import org.apache.nifi.annotation.behavior.DynamicProperty;
 import org.apache.nifi.annotation.behavior.DynamicRelationship;
@@ -42,11 +43,12 @@ import org.apache.nifi.components.PropertyValue;
 import org.apache.nifi.expression.AttributeExpression.ResultType;
 import org.apache.nifi.flowfile.FlowFile;
 import org.apache.nifi.logging.ComponentLog;
-import org.apache.nifi.processor.AbstractProcessor;
+import org.apache.nifi.processor.AbstractBatchingProcessor;
 import org.apache.nifi.processor.ProcessContext;
 import org.apache.nifi.processor.ProcessSession;
 import org.apache.nifi.processor.ProcessorInitializationContext;
 import org.apache.nifi.processor.Relationship;
+import org.apache.nifi.processor.exception.ProcessException;
 import org.apache.nifi.processor.util.StandardValidators;
 
 /**
@@ -67,7 +69,7 @@ import org.apache.nifi.processor.util.StandardValidators;
 @DynamicProperty(name = "Relationship Name", value = "Attribute Expression Language", supportsExpressionLanguage = true, description = "Routes FlowFiles whose "
         + "attributes match the Attribute Expression Language specified in the Dynamic Property Value to the Relationship specified in the Dynamic Property Key")
 @DynamicRelationship(name = "Name from Dynamic Property", description = "FlowFiles that match the Dynamic Property's Attribute Expression Language")
-public class RouteOnAttribute extends AbstractProcessor {
+public class RouteOnAttribute extends AbstractBatchingProcessor<String> {
 
     public static final String ROUTE_ATTRIBUTE_KEY = "RouteOnAttribute.Route";
 
@@ -121,6 +123,7 @@ public class RouteOnAttribute extends AbstractProcessor {
 
         final List<PropertyDescriptor> properties = new ArrayList<>();
         properties.add(ROUTE_STRATEGY);
+        properties.add(BATCH_SIZE);
         this.properties = Collections.unmodifiableList(properties);
     }
 
@@ -195,46 +198,41 @@ public class RouteOnAttribute extends AbstractProcessor {
         this.propertyMap = newPropertyMap;
     }
 
+    @Override
+    protected String getOnTriggerInvariants(ProcessContext context) {
+        return context.getProperty(ROUTE_STRATEGY).getValue();
+    }
 
     @Override
-    public void onTrigger(final ProcessContext context, final ProcessSession session) {
-        FlowFile flowFile = session.get();
-        if (flowFile == null) {
-            return;
-        }
-
+    protected void onTrigger(FlowFile flowFile, ProcessContext context, ProcessSession session, String routeStrategy) throws ProcessException {
         final ComponentLog logger = getLogger();
 
         final Map<Relationship, PropertyValue> propMap = this.propertyMap;
-        final Set<Relationship> matchingRelationships = new HashSet<>();
-        for (final Map.Entry<Relationship, PropertyValue> entry : propMap.entrySet()) {
-            final PropertyValue value = entry.getValue();
+        final FlowFile finalFlowFile = flowFile;
+        final Set<Relationship> matchingRelationships = propMap.entrySet().stream()
+                .filter(e -> e.getValue().evaluateAttributeExpressions(finalFlowFile).asBoolean())
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toSet());
 
-            final boolean matches = value.evaluateAttributeExpressions(flowFile).asBoolean();
-            if (matches) {
-                matchingRelationships.add(entry.getKey());
-            }
-        }
-
-        final Set<Relationship> destinationRelationships = new HashSet<>();
-        switch (context.getProperty(ROUTE_STRATEGY).getValue()) {
+        final Set<Relationship> destinationRelationships;
+        switch (routeStrategy) {
             case routeAllMatchValue:
                 if (matchingRelationships.size() == propMap.size()) {
-                    destinationRelationships.add(REL_MATCH);
+                    destinationRelationships = Collections.singleton(REL_MATCH);
                 } else {
-                    destinationRelationships.add(REL_NO_MATCH);
+                    destinationRelationships = Collections.singleton(REL_NO_MATCH);
                 }
                 break;
             case routeAnyMatches:
                 if (matchingRelationships.isEmpty()) {
-                    destinationRelationships.add(REL_NO_MATCH);
+                    destinationRelationships = Collections.singleton(REL_NO_MATCH);
                 } else {
-                    destinationRelationships.add(REL_MATCH);
+                    destinationRelationships = Collections.singleton(REL_MATCH);
                 }
                 break;
             case routePropertyNameValue:
             default:
-                destinationRelationships.addAll(matchingRelationships);
+                destinationRelationships = new HashSet<>(matchingRelationships);
                 break;
         }
 
@@ -247,7 +245,7 @@ public class RouteOnAttribute extends AbstractProcessor {
             final Iterator<Relationship> relationshipNameIterator = destinationRelationships.iterator();
             final Relationship firstRelationship = relationshipNameIterator.next();
             final Map<Relationship, FlowFile> transferMap = new HashMap<>();
-            final Set<FlowFile> clones = new HashSet<>();
+            final Set<FlowFile> clones = new HashSet<>(destinationRelationships.size() - 1);
 
             // make all the clones for any remaining relationships
             while (relationshipNameIterator.hasNext()) {

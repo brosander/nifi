@@ -30,8 +30,8 @@ import org.apache.nifi.processor.AbstractProcessor;
 import org.apache.nifi.processor.ProcessSession;
 import org.apache.nifi.processor.io.InputStreamCallback;
 import org.apache.nifi.processors.standard.util.JsonPathExpressionValidator;
-import org.apache.nifi.stream.io.BufferedInputStream;
 
+import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.HashMap;
