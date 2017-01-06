@@ -542,15 +542,13 @@ public class EndpointConnectionPool {
             }
         }
 
-        final ClusterNodeInformation clusterNodeInfo = new ClusterNodeInformation();
         final List<NodeInformation> nodeInfos = new ArrayList<>();
         for (final PeerStatus peerStatus : statuses) {
             final PeerDescription description = peerStatus.getPeerDescription();
             final NodeInformation nodeInfo = new NodeInformation(description.getHostname(), description.getPort(), 0, description.isSecure(), peerStatus.getFlowFileCount());
             nodeInfos.add(nodeInfo);
         }
-        clusterNodeInfo.setNodeInformation(nodeInfos);
-        return formulateDestinationList(clusterNodeInfo, direction);
+        return formulateDestinationList(nodeInfos, direction);
     }
 
     private Set<PeerStatus> getPeerStatuses() {
@@ -725,7 +723,10 @@ public class EndpointConnectionPool {
     }
 
     static List<PeerStatus> formulateDestinationList(final ClusterNodeInformation clusterNodeInfo, final TransferDirection direction) {
-        final Collection<NodeInformation> nodeInfoSet = clusterNodeInfo.getNodeInformation();
+        return formulateDestinationList(clusterNodeInfo.getNodeInformation(), direction);
+    }
+
+    private static List<PeerStatus> formulateDestinationList(Collection<NodeInformation> nodeInfoSet, final TransferDirection direction) {
         final int numDestinations = Math.max(128, nodeInfoSet.size());
         final Map<NodeInformation, Integer> entryCountMap = new HashMap<>();
 
