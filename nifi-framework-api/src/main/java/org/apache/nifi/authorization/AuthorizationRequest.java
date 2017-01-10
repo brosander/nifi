@@ -51,14 +51,17 @@ public class AuthorizationRequest {
         this.isAnonymous = builder.isAnonymous;
         this.userContext = builder.userContext == null ? null : Collections.unmodifiableMap(builder.userContext);
         this.resourceContext = builder.resourceContext == null ? null : Collections.unmodifiableMap(builder.resourceContext);
-        this.explanationSupplier = () -> {
-            final String explanation = builder.explanationSupplier.get();
+        this.explanationSupplier = new Supplier<String>() {
+            @Override
+            public String get() {
+                final String explanation = builder.explanationSupplier.get();
 
-            // ensure the specified supplier returns non null
-            if (explanation == null) {
-                return DEFAULT_EXPLANATION;
-            } else {
-                return explanation;
+                // ensure the specified supplier returns non null
+                if (explanation == null) {
+                    return DEFAULT_EXPLANATION;
+                } else {
+                    return explanation;
+                }
             }
         };
     }
@@ -147,7 +150,12 @@ public class AuthorizationRequest {
         private RequestAction action;
         private Map<String, String> userContext;
         private Map<String, String> resourceContext;
-        private Supplier<String> explanationSupplier = () -> DEFAULT_EXPLANATION;
+        private Supplier<String> explanationSupplier = new Supplier<String>() {
+            @Override
+            public String get() {
+                return DEFAULT_EXPLANATION;
+            }
+        };
 
         public Builder resource(final Resource resource) {
             this.resource = resource;

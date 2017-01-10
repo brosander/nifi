@@ -424,63 +424,69 @@ public class StandardValidators {
     }
 
     public static Validator createURLorFileValidator() {
-        return (subject, input, context) -> {
-            if (context.isExpressionLanguageSupported(subject) && context.isExpressionLanguagePresent(input)) {
-                return new ValidationResult.Builder().subject(subject).input(input).explanation("Expression Language Present").valid(true).build();
-            }
+        return new Validator() {
+            @Override
+            public ValidationResult validate(String subject, String input, ValidationContext context){
+                if (context.isExpressionLanguageSupported(subject) && context.isExpressionLanguagePresent(input)) {
+                    return new ValidationResult.Builder().subject(subject).input(input).explanation("Expression Language Present").valid(true).build();
+                }
 
-            try {
-                PropertyValue propertyValue = context.newPropertyValue(input);
-                String evaluatedInput = (propertyValue == null) ? input : propertyValue.evaluateAttributeExpressions().getValue();
-
-                boolean validUrl = true;
-
-                // First check to see if it is a valid URL
                 try {
-                    new URL(evaluatedInput);
-                } catch (MalformedURLException mue) {
-                    validUrl = false;
+                    PropertyValue propertyValue = context.newPropertyValue(input);
+                    String evaluatedInput = (propertyValue == null) ? input : propertyValue.evaluateAttributeExpressions().getValue();
+
+                    boolean validUrl = true;
+
+                    // First check to see if it is a valid URL
+                    try {
+                        new URL(evaluatedInput);
+                    } catch (MalformedURLException mue) {
+                        validUrl = false;
+                    }
+
+                    boolean validFile = true;
+                    if (!validUrl) {
+                        // Check to see if it is a file and it exists
+                        final File file = new File(evaluatedInput);
+                        validFile = file.exists();
+                    }
+
+                    final boolean valid = validUrl || validFile;
+                    final String reason = valid ? "Valid URL or file" : "Not a valid URL or file";
+                    return new ValidationResult.Builder().subject(subject).input(input).explanation(reason).valid(valid).build();
+
+                } catch (final Exception e) {
+                    return new ValidationResult.Builder().subject(subject).input(input).explanation("Not a valid URL or file").valid(false).build();
                 }
-
-                boolean validFile = true;
-                if (!validUrl) {
-                    // Check to see if it is a file and it exists
-                    final File file = new File(evaluatedInput);
-                    validFile = file.exists();
-                }
-
-                final boolean valid = validUrl || validFile;
-                final String reason = valid ? "Valid URL or file" : "Not a valid URL or file";
-                return new ValidationResult.Builder().subject(subject).input(input).explanation(reason).valid(valid).build();
-
-            } catch (final Exception e) {
-                return new ValidationResult.Builder().subject(subject).input(input).explanation("Not a valid URL or file").valid(false).build();
             }
         };
     }
 
-    public static Validator createListValidator(boolean trimEntries, boolean excludeEmptyEntries, Validator validator) {
-        return (subject, input, context) -> {
-            if (context.isExpressionLanguageSupported(subject) && context.isExpressionLanguagePresent(input)) {
-                return new ValidationResult.Builder().subject(subject).input(input).explanation("Expression Language Present").valid(true).build();
-            }
-            try {
-                if (input == null) {
-                    return new ValidationResult.Builder().subject(subject).input(null).explanation("List must have at least one non-empty element").valid(false).build();
+    public static Validator createListValidator(final boolean trimEntries, final boolean excludeEmptyEntries, final Validator validator) {
+        return new Validator() {
+            @Override
+            public ValidationResult validate(String subject, String input, ValidationContext context) {
+                if (context.isExpressionLanguageSupported(subject) && context.isExpressionLanguagePresent(input)) {
+                    return new ValidationResult.Builder().subject(subject).input(input).explanation("Expression Language Present").valid(true).build();
                 }
-                final String[] list = input.split(",");
-                for (String item : list) {
-                    String itemToValidate = trimEntries ? item.trim() : item;
-                    if (!isEmpty(itemToValidate) || !excludeEmptyEntries) {
-                        ValidationResult result = validator.validate(subject, itemToValidate, context);
-                        if (!result.isValid()) {
-                            return result;
+                try {
+                    if (input == null) {
+                        return new ValidationResult.Builder().subject(subject).input(null).explanation("List must have at least one non-empty element").valid(false).build();
+                    }
+                    final String[] list = input.split(",");
+                    for (String item : list) {
+                        String itemToValidate = trimEntries ? item.trim() : item;
+                        if (!isEmpty(itemToValidate) || !excludeEmptyEntries) {
+                            ValidationResult result = validator.validate(subject, itemToValidate, context);
+                            if (!result.isValid()) {
+                                return result;
+                            }
                         }
                     }
+                    return new ValidationResult.Builder().subject(subject).input(input).explanation("Valid List").valid(true).build();
+                } catch (final Exception e) {
+                    return new ValidationResult.Builder().subject(subject).input(input).explanation("Not a valid list").valid(false).build();
                 }
-                return new ValidationResult.Builder().subject(subject).input(input).explanation("Valid List").valid(true).build();
-            } catch (final Exception e) {
-                return new ValidationResult.Builder().subject(subject).input(input).explanation("Not a valid list").valid(false).build();
             }
         };
     }

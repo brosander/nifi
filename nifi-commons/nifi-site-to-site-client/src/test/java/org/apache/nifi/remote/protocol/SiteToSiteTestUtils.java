@@ -39,7 +39,7 @@ public class SiteToSiteTestUtils {
         try {
             byte[] bytes = contents.getBytes("UTF-8");
             ByteArrayInputStream is = new ByteArrayInputStream(bytes);
-            return new StandardDataPacket(new HashMap<>(), is, bytes.length);
+            return new StandardDataPacket(new HashMap<String, String>(), is, bytes.length);
         } catch (UnsupportedEncodingException e){
             throw new RuntimeException(e);
         }

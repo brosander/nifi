@@ -18,26 +18,58 @@
     <parent>
         <groupId>org.apache.nifi</groupId>
         <artifactId>nifi</artifactId>
-        <version>1.2.0-SNAPSHOT</version>
+        <version>1.2.0-ANDROID-SNAPSHOT</version>
     </parent>
     <groupId>org.apache.nifi</groupId>
     <artifactId>nifi-commons</artifactId>
     <packaging>pom</packaging>
     <modules>
-        <module>nifi-data-provenance-utils</module>
+        <!--<module>nifi-data-provenance-utils</module>
         <module>nifi-flowfile-packager</module>
         <module>nifi-expression-language</module>
         <module>nifi-logging-utils</module>
-        <module>nifi-properties</module>
+        <module>nifi-properties</module>-->
         <module>nifi-security-utils</module>
-        <module>nifi-socket-utils</module>
+        <!--<module>nifi-socket-utils</module>-->
         <module>nifi-utils</module>
-        <module>nifi-web-utils</module>
+        <!--<module>nifi-web-utils</module>
         <module>nifi-processor-utilities</module>
-        <module>nifi-write-ahead-log</module>
+        <module>nifi-write-ahead-log</module>-->
         <module>nifi-site-to-site-client</module>
-        <module>nifi-hl7-query-language</module>
+        <!--<module>nifi-hl7-query-language</module>
         <module>nifi-hadoop-utils</module>
-        <module>nifi-schema-utils</module>
+        <module>nifi-schema-utils</module>-->
     </modules>
+
+    <build>
+        <plugins>
+
+            <plugin>
+                <groupId>org.apache.rat</groupId>
+                <artifactId>apache-rat-plugin</artifactId>
+                <configuration>
+                    <excludes>
+                        <exclude>nifi-hl7-query-language/src/test/resources/hyperglycemia</exclude>
+                        <exclude>nifi-hl7-query-language/src/test/resources/hypoglycemia</exclude>
+                        <exclude>nifi-hadoop-utils/src/test/resources/krb5.conf</exclude>
+                        <exclude>nifi-expression-language/src/test/resources/json/address-book.json</exclude>
+                    </excludes>
+                </configuration>
+                <dependencies>
+                    <!-- workaround for RAT-158 -->
+                    <dependency>
+                        <groupId>org.apache.maven.doxia</groupId>
+                        <artifactId>doxia-core</artifactId>
+                        <version>1.6</version>
+                        <exclusions>
+                            <exclusion>
+                                <groupId>xerces</groupId>
+                                <artifactId>xercesImpl</artifactId>
+                            </exclusion>
+                        </exclusions>
+                    </dependency>
+                </dependencies>
+            </plugin>
+        </plugins>
+    </build>
 </project>

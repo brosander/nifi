@@ -18,14 +18,14 @@
     <parent>
         <groupId>org.apache.nifi</groupId>
         <artifactId>nifi-framework-bundle</artifactId>
-        <version>1.2.0-SNAPSHOT</version>
+        <version>1.2.0-ANDROID-SNAPSHOT</version>
     </parent>
     <artifactId>nifi-framework</artifactId>
     <packaging>pom</packaging>
     <modules>
-        <module>nifi-framework-core-api</module>
+        <!--<module>nifi-framework-core-api</module>-->
         <module>nifi-client-dto</module>
-        <module>nifi-nar-utils</module>
+        <!--<module>nifi-nar-utils</module>
         <module>nifi-runtime</module>
         <module>nifi-security</module>
         <module>nifi-site-to-site</module>
@@ -40,7 +40,7 @@
         <module>nifi-resources</module>
         <module>nifi-documentation</module>
         <module>nifi-authorizer</module>
-        <module>nifi-properties-loader</module>
+        <module>nifi-properties-loader</module>-->
     </modules>
     <dependencies>
         <dependency>

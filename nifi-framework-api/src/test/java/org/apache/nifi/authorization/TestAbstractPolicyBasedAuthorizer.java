@@ -358,7 +358,7 @@ public class TestAbstractPolicyBasedAuthorizer {
         users.add(user1);
 
         AuthorizerConfigurationContext context = Mockito.mock(AuthorizerConfigurationContext.class);
-        AbstractPolicyBasedAuthorizer authorizer = new MockPolicyBasedAuthorizer(new HashSet<>(), users, policies);
+        AbstractPolicyBasedAuthorizer authorizer = new MockPolicyBasedAuthorizer(new HashSet<Group>(), users, policies);
         authorizer.onConfigured(context);
     }
 
@@ -372,7 +372,7 @@ public class TestAbstractPolicyBasedAuthorizer {
         users.add(user2);
 
         AuthorizerConfigurationContext context = Mockito.mock(AuthorizerConfigurationContext.class);
-        AbstractPolicyBasedAuthorizer authorizer = new MockPolicyBasedAuthorizer(new HashSet<>(), users, new HashSet<>());
+        AbstractPolicyBasedAuthorizer authorizer = new MockPolicyBasedAuthorizer(new HashSet<Group>(), users, new HashSet<AccessPolicy>());
         authorizer.onConfigured(context);
     }
 
@@ -386,7 +386,7 @@ public class TestAbstractPolicyBasedAuthorizer {
         groups.add(group2);
 
         AuthorizerConfigurationContext context = Mockito.mock(AuthorizerConfigurationContext.class);
-        AbstractPolicyBasedAuthorizer authorizer = new MockPolicyBasedAuthorizer(groups, new HashSet<>(), new HashSet<>());
+        AbstractPolicyBasedAuthorizer authorizer = new MockPolicyBasedAuthorizer(groups, new HashSet<User>(), new HashSet<AccessPolicy>());
         authorizer.onConfigured(context);
     }
 

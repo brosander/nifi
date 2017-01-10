@@ -16,17 +16,12 @@
  */
 package org.apache.nifi.authorization.resource;
 
-import org.apache.nifi.authorization.AccessDeniedException;
-import org.apache.nifi.authorization.AuthorizationRequest;
 import org.apache.nifi.authorization.AuthorizationResult;
-import org.apache.nifi.authorization.AuthorizationResult.Result;
 import org.apache.nifi.authorization.Authorizer;
 import org.apache.nifi.authorization.RequestAction;
 import org.apache.nifi.authorization.Resource;
-import org.apache.nifi.authorization.UserContextKeys;
 import org.apache.nifi.authorization.user.NiFiUser;
 
-import java.util.HashMap;
 import java.util.Map;
 
 public interface Authorizable {
@@ -54,9 +49,7 @@ public interface Authorizable {
      * @param action action
      * @return is authorized
      */
-    default boolean isAuthorized(Authorizer authorizer, RequestAction action, NiFiUser user) {
-        return Result.Approved.equals(checkAuthorization(authorizer, action, user).getResult());
-    }
+    boolean isAuthorized(Authorizer authorizer, RequestAction action, NiFiUser user);
 
     /**
      * Returns the result of an authorization request for the specified user for the specified action on the specified
@@ -68,86 +61,7 @@ public interface Authorizable {
      * @param user user
      * @return is authorized
      */
-    default AuthorizationResult checkAuthorization(Authorizer authorizer, RequestAction action, NiFiUser user, Map<String, String> resourceContext) {
-        if (user == null) {
-            return AuthorizationResult.denied("Unknown user.");
-        }
-
-        final Map<String,String> userContext;
-        if (user.getClientAddress() != null && !user.getClientAddress().trim().isEmpty()) {
-            userContext = new HashMap<>();
-            userContext.put(UserContextKeys.CLIENT_ADDRESS.name(), user.getClientAddress());
-        } else {
-            userContext = null;
-        }
-
-        final Resource resource = getResource();
-        final AuthorizationRequest request = new AuthorizationRequest.Builder()
-                .identity(user.getIdentity())
-                .anonymous(user.isAnonymous())
-                .accessAttempt(false)
-                .action(action)
-                .resource(resource)
-                .resourceContext(resourceContext)
-                .userContext(userContext)
-                .explanationSupplier(() -> {
-                    // build the safe explanation
-                    final StringBuilder safeDescription = new StringBuilder("Unable to ");
-
-                    if (RequestAction.READ.equals(action)) {
-                        safeDescription.append("view ");
-                    } else {
-                        safeDescription.append("modify ");
-                    }
-                    safeDescription.append(resource.getSafeDescription()).append(".");
-
-                    return safeDescription.toString();
-                })
-                .build();
-
-        // perform the authorization
-        final AuthorizationResult result = authorizer.authorize(request);
-
-        // verify the results
-        if (Result.ResourceNotFound.equals(result.getResult())) {
-            final Authorizable parent = getParentAuthorizable();
-            if (parent == null) {
-                return AuthorizationResult.denied("No applicable policies could be found.");
-            } else {
-                // create a custom authorizable to override the safe description but still defer to the parent authorizable
-                final Authorizable parentProxy = new Authorizable() {
-                    @Override
-                    public Authorizable getParentAuthorizable() {
-                        return parent.getParentAuthorizable();
-                    }
-
-                    @Override
-                    public Resource getResource() {
-                        final Resource parentResource = parent.getResource();
-                        return new Resource() {
-                            @Override
-                            public String getIdentifier() {
-                                return parentResource.getIdentifier();
-                            }
-
-                            @Override
-                            public String getName() {
-                                return parentResource.getName();
-                            }
-
-                            @Override
-                            public String getSafeDescription() {
-                                return resource.getSafeDescription();
-                            }
-                        };
-                    }
-                };
-                return parentProxy.checkAuthorization(authorizer, action, user, resourceContext);
-            }
-        } else {
-            return result;
-        }
-    }
+    AuthorizationResult checkAuthorization(Authorizer authorizer, RequestAction action, NiFiUser user, Map<String, String> resourceContext);
 
     /**
      * Returns the result of an authorization request for the specified user for the specified action on the specified
@@ -159,9 +73,7 @@ public interface Authorizable {
      * @param user user
      * @return is authorized
      */
-    default AuthorizationResult checkAuthorization(Authorizer authorizer, RequestAction action, NiFiUser user) {
-        return checkAuthorization(authorizer, action, user, null);
-    }
+    AuthorizationResult checkAuthorization(Authorizer authorizer, RequestAction action, NiFiUser user);
 
     /**
      * Authorizes the current user for the specified action on the specified resource. This method does imply the user is
@@ -172,83 +84,7 @@ public interface Authorizable {
      * @param user user
      * @param resourceContext resource context
      */
-    default void authorize(Authorizer authorizer, RequestAction action, NiFiUser user, Map<String, String> resourceContext) throws AccessDeniedException {
-        if (user == null) {
-            throw new AccessDeniedException("Unknown user.");
-        }
-
-        final Map<String,String> userContext;
-        if (user.getClientAddress() != null && !user.getClientAddress().trim().isEmpty()) {
-            userContext = new HashMap<>();
-            userContext.put(UserContextKeys.CLIENT_ADDRESS.name(), user.getClientAddress());
-        } else {
-            userContext = null;
-        }
-
-        final Resource resource = getResource();
-        final AuthorizationRequest request = new AuthorizationRequest.Builder()
-                .identity(user.getIdentity())
-                .anonymous(user.isAnonymous())
-                .accessAttempt(true)
-                .action(action)
-                .resource(resource)
-                .resourceContext(resourceContext)
-                .userContext(userContext)
-                .explanationSupplier(() -> {
-                    // build the safe explanation
-                    final StringBuilder safeDescription = new StringBuilder("Unable to ");
-
-                    if (RequestAction.READ.equals(action)) {
-                        safeDescription.append("view ");
-                    } else {
-                        safeDescription.append("modify ");
-                    }
-                    safeDescription.append(resource.getSafeDescription()).append(".");
-
-                    return safeDescription.toString();
-                })
-                .build();
-
-        final AuthorizationResult result = authorizer.authorize(request);
-        if (Result.ResourceNotFound.equals(result.getResult())) {
-            final Authorizable parent = getParentAuthorizable();
-            if (parent == null) {
-                throw new AccessDeniedException("No applicable policies could be found.");
-            } else {
-                // create a custom authorizable to override the safe description but still defer to the parent authorizable
-                final Authorizable parentProxy = new Authorizable() {
-                    @Override
-                    public Authorizable getParentAuthorizable() {
-                        return parent.getParentAuthorizable();
-                    }
-
-                    @Override
-                    public Resource getResource() {
-                        final Resource parentResource = parent.getResource();
-                        return new Resource() {
-                            @Override
-                            public String getIdentifier() {
-                                return parentResource.getIdentifier();
-                            }
-
-                            @Override
-                            public String getName() {
-                                return parentResource.getName();
-                            }
-
-                            @Override
-                            public String getSafeDescription() {
-                                return resource.getSafeDescription();
-                            }
-                        };
-                    }
-                };
-                parentProxy.authorize(authorizer, action, user, resourceContext);
-            }
-        } else if (Result.Denied.equals(result.getResult())) {
-            throw new AccessDeniedException(result.getExplanation());
-        }
-    }
+    void authorize(Authorizer authorizer, RequestAction action, NiFiUser user, Map<String, String> resourceContext);
 
     /**
      * Authorizes the current user for the specified action on the specified resource. This method does imply the user is
@@ -258,7 +94,5 @@ public interface Authorizable {
      * @param action action
      * @param user user
      */
-    default void authorize(Authorizer authorizer, RequestAction action, NiFiUser user) throws AccessDeniedException {
-        authorize(authorizer, action, user, null);
-    }
+    void authorize(Authorizer authorizer, RequestAction action, NiFiUser user);
 }

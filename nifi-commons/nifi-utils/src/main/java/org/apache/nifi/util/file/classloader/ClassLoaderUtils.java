@@ -24,7 +24,6 @@ import java.io.FilenameFilter;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
@@ -52,7 +51,7 @@ public class ClassLoaderUtils {
      * @throws MalformedURLException if a module path does not exist
      */
     public static URL[] getURLsForClasspath(String modulePath, FilenameFilter filenameFilter, boolean suppressExceptions) throws MalformedURLException {
-        return getURLsForClasspath(modulePath == null ? Collections.emptySet() : Collections.singleton(modulePath), filenameFilter, suppressExceptions);
+        return getURLsForClasspath(modulePath == null ? Collections.<String>emptySet() : Collections.singleton(modulePath), filenameFilter, suppressExceptions);
     }
 
     /**
@@ -72,11 +71,13 @@ public class ClassLoaderUtils {
         // use LinkedHashSet to maintain the ordering that the incoming paths are processed
         Set<String> modules = new LinkedHashSet<>();
         if (modulePaths != null) {
-            modulePaths.stream()
-                    .flatMap(path -> Arrays.stream(path.split(",")))
-                    .filter(path -> isNotBlank(path))
-                    .map(String::trim)
-                    .forEach(m -> modules.add(m));
+            for (String modulePath : modulePaths) {
+                for (String s : modulePath.split(",")) {
+                    if (isNotBlank(s)) {
+                        modules.add(s.trim());
+                    }
+                }
+            }
         }
         return toURLs(modules, filenameFilter, suppressExceptions);
     }

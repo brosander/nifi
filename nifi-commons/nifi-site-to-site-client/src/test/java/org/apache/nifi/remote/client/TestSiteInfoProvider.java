@@ -22,6 +22,8 @@ import org.apache.nifi.remote.util.SiteToSiteRestApiClient;
 import org.apache.nifi.web.api.dto.ControllerDTO;
 import org.apache.nifi.web.api.dto.PortDTO;
 import org.junit.Test;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 import javax.net.ssl.SSLContext;
 import java.io.IOException;
@@ -91,21 +93,24 @@ public class TestSiteInfoProvider {
         controllerDTO.setSiteToSiteSecure(true);
 
         // SiteInfoProvider uses SiteToSIteRestApiClient to get ControllerDTO.
-        doAnswer(invocation -> {
-            final SSLContext sslContext = invocation.getArgumentAt(0, SSLContext.class);
-            final HttpProxy httpProxy = invocation.getArgumentAt(1, HttpProxy.class);
+        doAnswer(new Answer() {
+            @Override
+            public Object answer(InvocationOnMock invocation) throws Throwable {
+                final SSLContext sslContext = invocation.getArgumentAt(0, SSLContext.class);
+                final HttpProxy httpProxy = invocation.getArgumentAt(1, HttpProxy.class);
 
-            assertEquals(expectedSslConText, sslContext);
-            assertEquals(expectedHttpProxy, httpProxy);
+                assertEquals(expectedSslConText, sslContext);
+                assertEquals(expectedHttpProxy, httpProxy);
 
-            final SiteToSiteRestApiClient apiClient = mock(SiteToSiteRestApiClient.class);
+                final SiteToSiteRestApiClient apiClient = mock(SiteToSiteRestApiClient.class);
 
-            when(apiClient.getController(eq(expectedClusterUrl))).thenReturn(controllerDTO);
+                when(apiClient.getController(eq(expectedClusterUrl))).thenReturn(controllerDTO);
 
-            when(apiClient.getBaseUrl()).thenReturn(expectedActiveClusterUrl);
+                when(apiClient.getBaseUrl()).thenReturn(expectedActiveClusterUrl);
 
-            return apiClient;
-        }).when(siteInfoProvider).createSiteToSiteRestApiClient(any(), any());
+                return apiClient;
+            }
+        }).when(siteInfoProvider).createSiteToSiteRestApiClient(any(SSLContext.class), any(HttpProxy.class));
 
         // siteInfoProvider should expose correct information of the remote NiFi cluster.
         assertEquals(controllerDTO.getRemoteSiteListeningPort(), siteInfoProvider.getSiteToSitePort());
@@ -138,22 +143,25 @@ public class TestSiteInfoProvider {
 
         final ControllerDTO controllerDTO = new ControllerDTO();
 
-        controllerDTO.setInputPorts(Collections.emptySet());
-        controllerDTO.setOutputPorts(Collections.emptySet());
+        controllerDTO.setInputPorts(Collections.<PortDTO>emptySet());
+        controllerDTO.setOutputPorts(Collections.<PortDTO>emptySet());
         controllerDTO.setRemoteSiteListeningPort(8081);
         controllerDTO.setRemoteSiteHttpListeningPort(8080);
         controllerDTO.setSiteToSiteSecure(false);
 
         // SiteInfoProvider uses SiteToSIteRestApiClient to get ControllerDTO.
-        doAnswer(invocation -> {
-            final SiteToSiteRestApiClient apiClient = mock(SiteToSiteRestApiClient.class);
+        doAnswer(new Answer() {
+            @Override
+            public Object answer(InvocationOnMock invocation) throws Throwable {
+                final SiteToSiteRestApiClient apiClient = mock(SiteToSiteRestApiClient.class);
 
-            when(apiClient.getController(eq(expectedClusterUrl))).thenReturn(controllerDTO);
+                when(apiClient.getController(eq(expectedClusterUrl))).thenReturn(controllerDTO);
 
-            when(apiClient.getBaseUrl()).thenReturn(expectedActiveClusterUrl);
+                when(apiClient.getBaseUrl()).thenReturn(expectedActiveClusterUrl);
 
-            return apiClient;
-        }).when(siteInfoProvider).createSiteToSiteRestApiClient(any(), any());
+                return apiClient;
+            }
+        }).when(siteInfoProvider).createSiteToSiteRestApiClient(any(SSLContext.class), any(HttpProxy.class));
 
         // siteInfoProvider should expose correct information of the remote NiFi cluster.
         assertEquals(controllerDTO.getRemoteSiteListeningPort(), siteInfoProvider.getSiteToSitePort());
@@ -175,20 +183,23 @@ public class TestSiteInfoProvider {
 
         final ControllerDTO controllerDTO = new ControllerDTO();
 
-        controllerDTO.setInputPorts(Collections.emptySet());
-        controllerDTO.setOutputPorts(Collections.emptySet());
+        controllerDTO.setInputPorts(Collections.<PortDTO>emptySet());
+        controllerDTO.setOutputPorts(Collections.<PortDTO>emptySet());
         controllerDTO.setRemoteSiteListeningPort(8081);
         controllerDTO.setRemoteSiteHttpListeningPort(8080);
         controllerDTO.setSiteToSiteSecure(false);
 
         // SiteInfoProvider uses SiteToSIteRestApiClient to get ControllerDTO.
-        doAnswer(invocation -> {
-            final SiteToSiteRestApiClient apiClient = mock(SiteToSiteRestApiClient.class);
+        doAnswer(new Answer() {
+            @Override
+            public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
+                final SiteToSiteRestApiClient apiClient = mock(SiteToSiteRestApiClient.class);
 
-            when(apiClient.getController(eq(expectedClusterUrl))).thenThrow(new IOException("Connection refused."));
+                when(apiClient.getController(eq(expectedClusterUrl))).thenThrow(new IOException("Connection refused."));
 
-            return apiClient;
-        }).when(siteInfoProvider).createSiteToSiteRestApiClient(any(), any());
+                return apiClient;
+            }
+        }).when(siteInfoProvider).createSiteToSiteRestApiClient(any(SSLContext.class), any(HttpProxy.class));
 
         try {
             siteInfoProvider.getSiteToSitePort();

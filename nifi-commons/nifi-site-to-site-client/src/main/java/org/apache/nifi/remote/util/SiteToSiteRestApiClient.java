@@ -105,7 +105,6 @@ import java.nio.channels.ReadableByteChannel;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashSet;
@@ -121,7 +120,6 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
 import static org.apache.commons.lang3.StringUtils.isEmpty;
@@ -918,18 +916,21 @@ public class SiteToSiteRestApiClient implements Closeable {
         extendingApiClient.readTimeoutMillis = this.readTimeoutMillis;
         final int extendFrequency = serverTransactionTtl / 2;
 
-        ttlExtendingFuture = ttlExtendTaskExecutor.scheduleWithFixedDelay(() -> {
-            try {
-                extendingApiClient.extendTransaction(transactionUrl);
-            } catch (final Exception e) {
-                logger.warn("Failed to extend transaction ttl", e);
-
+        ttlExtendingFuture = ttlExtendTaskExecutor.scheduleWithFixedDelay(new Runnable() {
+            @Override
+            public void run() {
                 try {
-                    // Without disconnecting, Site-to-Site client keep reading data packet,
-                    // while server has already rollback.
-                    this.close();
-                } catch (final IOException ec) {
-                    logger.warn("Failed to close", e);
+                    extendingApiClient.extendTransaction(transactionUrl);
+                } catch (final Exception e) {
+                    logger.warn("Failed to extend transaction ttl", e);
+
+                    try {
+                        // Without disconnecting, Site-to-Site client keep reading data packet,
+                        // while server has already rollback.
+                        SiteToSiteRestApiClient.this.close();
+                    } catch (final IOException ec) {
+                        logger.warn("Failed to close", e);
+                    }
                 }
             }
         }, extendFrequency, extendFrequency, TimeUnit.SECONDS);
@@ -1122,12 +1123,16 @@ public class SiteToSiteRestApiClient implements Closeable {
         final CloseableHttpClient httpClient = getHttpClient();
 
         if (logger.isTraceEnabled()) {
-            Arrays.stream(get.getAllHeaders()).forEach(h -> logger.debug("REQ| {}", h));
+            for (Header h : get.getAllHeaders()) {
+                logger.debug("REQ| {}", h);
+            }
         }
 
         try (final CloseableHttpResponse response = httpClient.execute(get)) {
             if (logger.isTraceEnabled()) {
-                Arrays.stream(response.getAllHeaders()).forEach(h -> logger.debug("RES| {}", h));
+                for (Header h : response.getAllHeaders()) {
+                    logger.debug("RES| {}", h);
+                }
             }
 
             final StatusLine statusLine = response.getStatusLine();
@@ -1225,21 +1230,29 @@ public class SiteToSiteRestApiClient implements Closeable {
     public static Set<String> parseClusterUrls(final String clusterUrlStr) {
         final Set<String> urls = new LinkedHashSet<>();
         if (clusterUrlStr != null && clusterUrlStr.length() > 0) {
-            Arrays.stream(clusterUrlStr.split(","))
-                    .map(s -> s.trim())
-                    .filter(s -> s.length() > 0)
-                    .forEach(s -> {
-                        validateUriString(s);
-                        urls.add(resolveBaseUrl(s).intern());
-                    });
+            for (String s : clusterUrlStr.split(",")) {
+                String trimmed = s.trim();
+                if (trimmed.length() > 0) {
+                    validateUriString(trimmed);
+                    urls.add(resolveBaseUrl(trimmed).intern());
+                }
+            }
         }
 
         if (urls.size() == 0) {
             throw new IllegalArgumentException("Cluster URL was not specified.");
         }
 
-        final Predicate<String> isHttps = url -> url.toLowerCase().startsWith("https:");
-        if (urls.stream().anyMatch(isHttps) && urls.stream().anyMatch(isHttps.negate())) {
+        boolean foundHttps = false;
+        boolean foundHttp = false;
+        for (String url : urls) {
+            if (url.startsWith("https:")) {
+                foundHttps = true;
+            } else {
+                foundHttp = true;
+            }
+        }
+        if (foundHttps && foundHttp) {
             throw new IllegalArgumentException("Different protocols are used in the cluster URLs " + clusterUrlStr);
         }
 

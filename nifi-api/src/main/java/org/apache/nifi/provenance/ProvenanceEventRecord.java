@@ -106,10 +106,7 @@ public interface ProvenanceEventRecord {
     /**
      * @return whether this event originated from a remote group port
      */
-    default boolean isRemotePortType() {
-        final String componentType = getComponentType();
-        return REMOTE_INPUT_PORT_TYPE.equals(componentType) || REMOTE_OUTPUT_PORT_TYPE.equals(componentType);
-    }
+    boolean isRemotePortType();
 
     /**
      * @return a URI that provides information about the System and Protocol

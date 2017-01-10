@@ -104,7 +104,12 @@ public class SiteInfoProvider {
     }
 
     public boolean isWebInterfaceSecure() {
-        return clusterUrls.stream().anyMatch(url -> url.startsWith("https"));
+        for (String clusterUrl : clusterUrls) {
+            if (clusterUrl.startsWith("https")) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

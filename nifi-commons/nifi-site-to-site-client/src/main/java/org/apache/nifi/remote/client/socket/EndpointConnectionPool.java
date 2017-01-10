@@ -74,7 +74,7 @@ public class EndpointConnectionPool implements PeerStatusProvider {
 
     private final ConcurrentMap<PeerDescription, BlockingQueue<EndpointConnection>> connectionQueueMap = new ConcurrentHashMap<>();
 
-    private final Set<EndpointConnection> activeConnections = Collections.synchronizedSet(new HashSet<>());
+    private final Set<EndpointConnection> activeConnections = Collections.synchronizedSet(new HashSet<EndpointConnection>());
 
     private final EventReporter eventReporter;
     private final SSLContext sslContext;

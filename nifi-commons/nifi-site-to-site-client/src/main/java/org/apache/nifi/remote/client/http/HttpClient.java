@@ -48,7 +48,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 public class HttpClient extends AbstractSiteToSiteClient implements PeerStatusProvider {
 
@@ -56,7 +55,7 @@ public class HttpClient extends AbstractSiteToSiteClient implements PeerStatusPr
 
     private final ScheduledExecutorService taskExecutor;
     private final PeerSelector peerSelector;
-    private final Set<HttpClientTransaction> activeTransactions = Collections.synchronizedSet(new HashSet<>());
+    private final Set<HttpClientTransaction> activeTransactions = Collections.synchronizedSet(new HashSet<HttpClientTransaction>());
 
     public HttpClient(final SiteToSiteClientConfig config) {
         super(config);
@@ -114,8 +113,11 @@ public class HttpClient extends AbstractSiteToSiteClient implements PeerStatusPr
 
             // Convert the PeerDTO's to PeerStatus objects. Use 'true' for the query-peer-for-peers flag because Site-to-Site over HTTP
             // was added in NiFi 1.0.0, which means that peer-to-peer queries are always allowed.
-            return peers.stream().map(p -> new PeerStatus(new PeerDescription(p.getHostname(), p.getPort(), p.isSecure()), p.getFlowFileCount(), true))
-                    .collect(Collectors.toSet());
+            Set<PeerStatus> result = new HashSet<>();
+            for (PeerDTO p : peers) {
+                result.add(new PeerStatus(new PeerDescription(p.getHostname(), p.getPort(), p.isSecure()), p.getFlowFileCount(), true));
+            }
+            return result;
         }
     }
 
@@ -130,12 +132,12 @@ public class HttpClient extends AbstractSiteToSiteClient implements PeerStatusPr
             final CommunicationsSession commSession = new HttpCommunicationsSession();
             final String nodeApiUrl = resolveNodeApiUrl(peerStatus.getPeerDescription());
             final StringBuilder clusterUrls = new StringBuilder();
-            config.getUrls().forEach(url -> {
+            for (String url : config.getUrls()) {
                 if (clusterUrls.length() > 0) {
                     clusterUrls.append(",");
                     clusterUrls.append(url);
                 }
-            });
+            }
             final Peer peer = new Peer(peerStatus.getPeerDescription(), commSession, nodeApiUrl, clusterUrls.toString());
 
             final int penaltyMillis = (int) config.getPenalizationPeriod(TimeUnit.MILLISECONDS);

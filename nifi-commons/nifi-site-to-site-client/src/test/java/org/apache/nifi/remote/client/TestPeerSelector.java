@@ -21,20 +21,19 @@ import org.apache.nifi.remote.PeerStatus;
 import org.apache.nifi.remote.TransferDirection;
 import org.junit.Test;
 import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-
-import static java.util.stream.Collectors.groupingBy;
-import static java.util.stream.Collectors.reducing;
-import static java.util.stream.Collectors.toMap;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -47,16 +46,32 @@ public class TestPeerSelector {
 
     private static final Logger logger = LoggerFactory.getLogger(TestPeerSelector.class);
 
+    private Map<String, Integer> countHostnameOccurences(Collection<PeerStatus> peerStatuses) {
+        final Map<String, Integer> hostNameCounts = new HashMap<>();
+        for (PeerStatus peerStatus : peerStatuses) {
+            String hostname = peerStatus.getPeerDescription().getHostname();
+            Integer sum = hostNameCounts.get(hostname);
+            if (sum == null) {
+                sum = 1;
+            } else {
+                sum++;
+            }
+            hostNameCounts.put(hostname, sum);
+        }
+        return hostNameCounts;
+    }
     private Map<String, Integer> calculateAverageSelectedCount(Set<PeerStatus> collection, List<PeerStatus> destinations) {
         // Calculate hostname entry, for average calculation. Because there're multiple entry with same host name, different port.
-        final Map<String, Integer> hostNameCounts
-                = collection.stream().collect(groupingBy(p -> p.getPeerDescription().getHostname(), reducing(0, p -> 1, Integer::sum)));
+        final Map<String, Integer> hostNameCounts = countHostnameOccurences(collection);
+        final Map<String, Integer> destinationCounts = countHostnameOccurences(destinations);
+        final Map<String, Integer> result = new HashMap<>();
+
+        for (Map.Entry<String, Integer> e : destinationCounts.entrySet()) {
+            result.put(e.getKey(), e.getValue() / hostNameCounts.get(e.getKey()));
+        }
 
         // Calculate how many times each hostname is selected.
-        return destinations.stream().collect(groupingBy(p -> p.getPeerDescription().getHostname(), reducing(0, p -> 1, Integer::sum)))
-                .entrySet().stream().collect(toMap(Map.Entry::getKey, e -> {
-                    return e.getValue() / hostNameCounts.get(e.getKey());
-                }));
+        return result;
     }
 
     @Test
@@ -168,13 +183,17 @@ public class TestPeerSelector {
         peerSelector.setSystemTime(systemTime);
 
         doReturn(bootstrapNode).when(peerStatusProvider).getBootstrapPeerDescription();
-        doAnswer(invocation -> {
-            final PeerDescription peerFetchStatusesFrom = invocation.getArgumentAt(0, PeerDescription.class);
-            if (peerStatuses.stream().filter(ps -> ps.getPeerDescription().equals(peerFetchStatusesFrom)).collect(Collectors.toSet()).size() > 0) {
-                // If the remote peer is running, then return available peer statuses.
-                return peerStatuses;
+        doAnswer(new Answer() {
+            @Override
+            public Object answer(InvocationOnMock invocation) throws Throwable {
+                final PeerDescription peerFetchStatusesFrom = invocation.getArgumentAt(0, PeerDescription.class);
+                for (PeerStatus peerStatus : peerStatuses) {
+                    if (peerStatus.getPeerDescription().equals(peerFetchStatusesFrom)) {
+                        return peerStatuses;
+                    }
+                }
+                throw new IOException("Connection refused. " + peerFetchStatusesFrom + " is not running.");
             }
-            throw new IOException("Connection refused. " + peerFetchStatusesFrom + " is not running.");
         }).when(peerStatusProvider).fetchRemotePeerStatuses(any(PeerDescription.class));
 
         // 1st attempt. It uses the bootstrap node.

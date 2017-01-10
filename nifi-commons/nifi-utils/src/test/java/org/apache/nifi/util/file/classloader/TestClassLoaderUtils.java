@@ -16,6 +16,7 @@
  */
 package org.apache.nifi.util.file.classloader;
 
+import java.io.File;
 import java.io.FilenameFilter;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -121,6 +122,11 @@ public class TestClassLoaderUtils {
     }
 
     protected FilenameFilter getJarFilenameFilter(){
-        return  (dir, name) -> name != null && name.endsWith(".jar");
+        return new FilenameFilter() {
+            @Override
+            public boolean accept(File dir, String name) {
+                return name != null && name.endsWith(".jar");
+            }
+        };
     }
 }

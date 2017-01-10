@@ -22,7 +22,6 @@ import org.apache.nifi.authorization.exception.AuthorizerDestructionException;
 
 import java.util.HashSet;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  * Mock implementation of AbstractPolicyBasedAuthorizer.
@@ -57,7 +56,12 @@ public class MockPolicyBasedAuthorizer extends AbstractPolicyBasedAuthorizer {
 
     @Override
     public Group getGroup(String identifier) throws AuthorizationAccessException {
-        return groups.stream().filter(g -> g.getIdentifier().equals(identifier)).findFirst().get();
+        for (Group group : groups) {
+            if (group.getIdentifier().equals(identifier)) {
+                return group;
+            }
+        }
+        return null;
     }
 
     @Override
@@ -85,12 +89,22 @@ public class MockPolicyBasedAuthorizer extends AbstractPolicyBasedAuthorizer {
 
     @Override
     public User getUser(String identifier) throws AuthorizationAccessException {
-        return users.stream().filter(u -> u.getIdentifier().equals(identifier)).findFirst().get();
+        for (User user : users) {
+            if (user.getIdentifier().equals(identifier)) {
+                return user;
+            }
+        }
+        return null;
     }
 
     @Override
     public User getUserByIdentity(String identity) throws AuthorizationAccessException {
-        return users.stream().filter(u -> u.getIdentity().equals(identity)).findFirst().get();
+        for (User user : users) {
+            if (user.getIdentity().equals(identity)) {
+                return user;
+            }
+        }
+        return null;
     }
 
     @Override
@@ -118,7 +132,12 @@ public class MockPolicyBasedAuthorizer extends AbstractPolicyBasedAuthorizer {
 
     @Override
     public AccessPolicy getAccessPolicy(String identifier) throws AuthorizationAccessException {
-        return policies.stream().filter(p -> p.getIdentifier().equals(identifier)).findFirst().get();
+        for (AccessPolicy policy : policies) {
+            if (policy.getIdentifier().equals(identifier)) {
+                return policy;
+            }
+        }
+        return null;
     }
 
     @Override
@@ -157,9 +176,13 @@ public class MockPolicyBasedAuthorizer extends AbstractPolicyBasedAuthorizer {
                 if (user == null) {
                     return new HashSet<>();
                 } else {
-                    return groups.stream()
-                            .filter(g -> g.getUsers().contains(user.getIdentifier()))
-                            .collect(Collectors.toSet());
+                    Set<Group> result = new HashSet<>();
+                    for (Group group : groups) {
+                        if (group.getUsers().contains(user.getIdentifier())) {
+                            result.add(group);
+                        }
+                    }
+                    return result;
                 }
             }
         };

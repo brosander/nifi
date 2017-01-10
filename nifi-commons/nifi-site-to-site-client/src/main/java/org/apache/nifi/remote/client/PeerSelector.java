@@ -48,7 +48,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 import static org.apache.nifi.remote.util.EventReportUtil.error;
 import static org.apache.nifi.remote.util.EventReportUtil.warn;
@@ -365,8 +364,9 @@ public class PeerSelector {
         // Look at all of the peers that we fetched last time.
         final Set<PeerStatus> lastFetched = lastFetchedQueryablePeers;
         if (lastFetched != null && !lastFetched.isEmpty()) {
-            lastFetched.stream().map(peer -> peer.getPeerDescription())
-                    .forEach(desc -> peersToRequestClusterInfoFrom.add(desc));
+            for (PeerStatus peerStatus : lastFetched) {
+                peersToRequestClusterInfoFrom.add(peerStatus.getPeerDescription());
+            }
         }
 
         // Always add the configured node info to the list of peers to communicate with
@@ -377,9 +377,12 @@ public class PeerSelector {
         for (final PeerDescription peerDescription : peersToRequestClusterInfoFrom) {
             try {
                 final Set<PeerStatus> statuses = peerStatusProvider.fetchRemotePeerStatuses(peerDescription);
-                lastFetchedQueryablePeers = statuses.stream()
-                        .filter(p -> p.isQueryForPeers())
-                        .collect(Collectors.toSet());
+                lastFetchedQueryablePeers = new HashSet<>();
+                for (PeerStatus status : statuses) {
+                    if (status.isQueryForPeers()) {
+                        lastFetchedQueryablePeers.add(status);
+                    }
+                }
 
                 return statuses;
             } catch (final Exception e) {

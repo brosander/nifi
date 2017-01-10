@@ -782,18 +782,21 @@ public class TestHttpClient {
 
     private void testSend(SiteToSiteClient client) throws Exception {
 
-        testSendIgnoreProxyError(client, transaction -> {
-            serverChecksum = "1071206772";
+        testSendIgnoreProxyError(client, new SendData() {
+            @Override
+            public void apply(Transaction transaction) throws IOException {
+                serverChecksum = "1071206772";
 
-            for (int i = 0; i < 20; i++) {
-                DataPacket packet = new DataPacketBuilder()
-                        .contents("Example contents from client.")
-                        .attr("Client attr 1", "Client attr 1 value")
-                        .attr("Client attr 2", "Client attr 2 value")
-                        .build();
-                transaction.send(packet);
-                long written = ((Peer)transaction.getCommunicant()).getCommunicationsSession().getBytesWritten();
-                logger.info("{}: {} bytes have been written.", i, written);
+                for (int i = 0; i < 20; i++) {
+                    DataPacket packet = new DataPacketBuilder()
+                            .contents("Example contents from client.")
+                            .attr("Client attr 1", "Client attr 1 value")
+                            .attr("Client attr 2", "Client attr 2 value")
+                            .build();
+                    transaction.send(packet);
+                    long written = ((Peer) transaction.getCommunicant()).getCommunicationsSession().getBytesWritten();
+                    logger.info("{}: {} bytes have been written.", i, written);
+                }
             }
         });
 
@@ -937,23 +940,26 @@ public class TestHttpClient {
 
     private static void testSendLargeFile(SiteToSiteClient client) throws IOException {
 
-        testSendIgnoreProxyError(client, transaction -> {
-            serverChecksum = "1527414060";
+        testSendIgnoreProxyError(client, new SendData() {
+            @Override
+            public void apply(Transaction transaction) throws IOException {
+                serverChecksum = "1527414060";
 
-            final int contentSize = 10_000;
-            final StringBuilder sb = new StringBuilder(contentSize);
-            for (int i = 0; i < contentSize; i++) {
-                sb.append("a");
+                final int contentSize = 10_000;
+                final StringBuilder sb = new StringBuilder(contentSize);
+                for (int i = 0; i < contentSize; i++) {
+                    sb.append("a");
+                }
+
+                DataPacket packet = new DataPacketBuilder()
+                        .contents(sb.toString())
+                        .attr("Client attr 1", "Client attr 1 value")
+                        .attr("Client attr 2", "Client attr 2 value")
+                        .build();
+                transaction.send(packet);
+                long written = ((Peer) transaction.getCommunicant()).getCommunicationsSession().getBytesWritten();
+                logger.info("{} bytes have been written.", written);
             }
-
-            DataPacket packet = new DataPacketBuilder()
-                    .contents(sb.toString())
-                    .attr("Client attr 1", "Client attr 1 value")
-                    .attr("Client attr 2", "Client attr 2 value")
-                    .build();
-            transaction.send(packet);
-            long written = ((Peer)transaction.getCommunicant()).getCommunicationsSession().getBytesWritten();
-            logger.info("{} bytes have been written.", written);
         });
 
     }

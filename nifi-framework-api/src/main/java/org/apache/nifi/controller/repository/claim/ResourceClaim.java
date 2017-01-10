@@ -75,17 +75,5 @@ public interface ResourceClaim extends Comparable<ResourceClaim> {
      *         x >= 1 if this is greater than other
      */
     @Override
-    default int compareTo(final ResourceClaim other) {
-        final int idComparison = getId().compareTo(other.getId());
-        if (idComparison != 0) {
-            return idComparison;
-        }
-
-        final int containerComparison = getContainer().compareTo(other.getContainer());
-        if (containerComparison != 0) {
-            return containerComparison;
-        }
-
-        return getSection().compareTo(other.getSection());
-    }
+    int compareTo(final ResourceClaim other);
 }

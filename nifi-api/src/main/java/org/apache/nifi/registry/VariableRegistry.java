@@ -32,7 +32,43 @@ public interface VariableRegistry {
      * Returns an empty registry which can be used as a more intentional null
      * value.
      */
-    public static final VariableRegistry EMPTY_REGISTRY = () -> Collections.emptyMap();
+    public static final VariableRegistry EMPTY_REGISTRY = new VariableRegistry() {
+        @Override
+        public Map<VariableDescriptor, String> getVariableMap() {
+            return Collections.emptyMap();
+        }
+
+        @Override
+        public VariableDescriptor getVariableKey(String name) {
+            if (name == null) {
+                return null;
+            }
+            final VariableDescriptor spec = new VariableDescriptor(name);
+            for (final Map.Entry<VariableDescriptor, String> entry : getVariableMap().entrySet()) {
+                if (entry.getKey().equals(spec)) {
+                    return entry.getKey();
+                }
+            }
+            return null;
+
+        }
+
+        @Override
+        public String getVariableValue(String name) {
+            if (name == null) {
+                return null;
+            }
+            return getVariableMap().get(new VariableDescriptor(name));
+        }
+
+        @Override
+        public String getVariableValue(VariableDescriptor descriptor) {
+            if (descriptor == null) {
+                return null;
+            }
+            return getVariableMap().get(descriptor);
+        }
+    };
 
     /**
      * Provides a registry containing all environment variables and system
@@ -42,21 +78,20 @@ public interface VariableRegistry {
         final Map<VariableDescriptor, String> map = new HashMap<>();
 
         {
-            System.getenv().entrySet().stream().forEach((entry) -> {
+            for (Map.Entry<String, String> entry : System.getenv().entrySet()) {
                 final VariableDescriptor desc = new VariableDescriptor.Builder(entry.getKey())
                         .description("Env Var")
                         .sensitive(false)
                         .build();
                 map.put(desc, entry.getValue());
-            });
-            System.getProperties().entrySet().stream().forEach((entry) -> {
+            }
+            for (Map.Entry<Object, Object> entry : System.getProperties().entrySet()) {
                 final VariableDescriptor desc = new VariableDescriptor.Builder(entry.getKey().toString())
                         .description("System Property")
                         .sensitive(false)
                         .build();
                 map.put(desc, entry.getValue().toString());
-            });
-
+            }
         }
 
         @Override
@@ -65,6 +100,36 @@ public interface VariableRegistry {
 
         }
 
+        @Override
+        public VariableDescriptor getVariableKey(String name) {
+            if (name == null) {
+                return null;
+            }
+            final VariableDescriptor spec = new VariableDescriptor(name);
+            for (final Map.Entry<VariableDescriptor, String> entry : getVariableMap().entrySet()) {
+                if (entry.getKey().equals(spec)) {
+                    return entry.getKey();
+                }
+            }
+            return null;
+
+        }
+
+        @Override
+        public String getVariableValue(String name) {
+            if (name == null) {
+                return null;
+            }
+            return getVariableMap().get(new VariableDescriptor(name));
+        }
+
+        @Override
+        public String getVariableValue(VariableDescriptor descriptor) {
+            if (descriptor == null) {
+                return null;
+            }
+            return getVariableMap().get(descriptor);
+        }
     };
 
     /**
@@ -84,19 +149,7 @@ public interface VariableRegistry {
      * @return the variable descriptor registered for this name if it exists;
      * null otherwise
      */
-    default VariableDescriptor getVariableKey(final String name) {
-        if (name == null) {
-            return null;
-        }
-        final VariableDescriptor spec = new VariableDescriptor(name);
-        for (final Map.Entry<VariableDescriptor, String> entry : getVariableMap().entrySet()) {
-            if (entry.getKey().equals(spec)) {
-                return entry.getKey();
-            }
-        }
-        return null;
-
-    }
+    VariableDescriptor getVariableKey(final String name);
 
     /**
      * Gets the variable value
@@ -106,12 +159,7 @@ public interface VariableRegistry {
      * @return the value associated with the given variable name if found; null
      * otherwise
      */
-    default String getVariableValue(final String name) {
-        if (name == null) {
-            return null;
-        }
-        return getVariableMap().get(new VariableDescriptor(name));
-    }
+    String getVariableValue(final String name);
 
     /**
      * Gets the variable value
@@ -120,11 +168,5 @@ public interface VariableRegistry {
      * @return the variable value if the given descriptor is equivalent to one
      * of the entries in the registry; null otherwise
      */
-    default String getVariableValue(final VariableDescriptor descriptor) {
-        if (descriptor == null) {
-            return null;
-        }
-        return getVariableMap().get(descriptor);
-    }
-
+    String getVariableValue(final VariableDescriptor descriptor);
 }
