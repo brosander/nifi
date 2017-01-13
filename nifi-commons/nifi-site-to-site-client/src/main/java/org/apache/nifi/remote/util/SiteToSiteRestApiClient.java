@@ -39,6 +39,7 @@ import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.client.utils.URIUtils;
 import org.apache.http.conn.ManagedHttpClientConnection;
+import org.apache.http.conn.ssl.StrictHostnameVerifier;
 import org.apache.http.entity.BasicHttpEntity;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.CloseableHttpClient;
@@ -262,6 +263,12 @@ public class SiteToSiteRestApiClient implements Closeable {
         if (sslContext != null) {
             clientBuilder.setSslcontext(sslContext);
             clientBuilder.addInterceptorFirst(new HttpsResponseInterceptor());
+            // Workaround for Android
+            try {
+                Class.forName("javax.naming.ldap.LdapName");
+            } catch (ClassNotFoundException e) {
+                clientBuilder.setSSLHostnameVerifier(new StrictHostnameVerifier());
+            }
         }
 
         httpClient = clientBuilder
@@ -274,6 +281,12 @@ public class SiteToSiteRestApiClient implements Closeable {
         if (sslContext != null) {
             clientBuilder.setSSLContext(sslContext);
             clientBuilder.addInterceptorFirst(new HttpsResponseInterceptor());
+            // Workaround for Android
+            try {
+                Class.forName("javax.naming.ldap.LdapName");
+            } catch (ClassNotFoundException e) {
+                clientBuilder.setSSLHostnameVerifier(new StrictHostnameVerifier());
+            }
         }
 
         httpAsyncClient = clientBuilder.setDefaultCredentialsProvider(getCredentialsProvider()).build();

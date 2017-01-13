@@ -22,5 +22,6 @@ package org.apache.nifi.security.util;
 public enum KeystoreType {
 
     PKCS12,
-    JKS;
+    JKS,
+    BKS;
 }

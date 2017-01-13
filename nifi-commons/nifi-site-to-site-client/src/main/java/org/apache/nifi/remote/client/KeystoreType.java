@@ -20,5 +20,6 @@ import java.io.Serializable;
 
 public enum KeystoreType implements Serializable {
     PKCS12,
-    JKS;
+    JKS,
+    BKS;
 }

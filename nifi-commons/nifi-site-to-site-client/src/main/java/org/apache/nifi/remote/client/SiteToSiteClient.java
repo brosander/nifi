@@ -807,8 +807,16 @@ public interface SiteToSiteClient extends Closeable {
                 try {
                     // prepare the keystore
                     final KeyStore keyStore = KeyStoreUtils.getKeyStore(getKeystoreType().name());
-                    try (final InputStream keyStoreStream = new FileInputStream(new File(getKeystoreFilename()))) {
+                    InputStream keyStoreStream;
+                    if (keystoreFilename.startsWith("classpath:")) {
+                        keyStoreStream = getClass().getClassLoader().getResourceAsStream(keystoreFilename.substring("classpath:".length()));
+                    } else {
+                        keyStoreStream = new FileInputStream(keystoreFilename);
+                    }
+                    try {
                         keyStore.load(keyStoreStream, keystorePass.toCharArray());
+                    } finally {
+                        keyStoreStream.close();
                     }
                     keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
                     keyManagerFactory.init(keyStore, keystorePass.toCharArray());
@@ -824,8 +832,16 @@ public interface SiteToSiteClient extends Closeable {
                 try {
                     // prepare the truststore
                     final KeyStore trustStore = KeyStoreUtils.getTrustStore(getTruststoreType().name());
-                    try (final InputStream trustStoreStream = new FileInputStream(new File(getTruststoreFilename()))) {
+                    InputStream trustStoreStream;
+                    if (truststoreFilename.startsWith("classpath:")) {
+                        trustStoreStream = getClass().getClassLoader().getResourceAsStream(truststoreFilename.substring("classpath:".length()));
+                    } else {
+                        trustStoreStream = new FileInputStream(truststoreFilename);
+                    }
+                    try {
                         trustStore.load(trustStoreStream, truststorePass.toCharArray());
+                    } finally {
+                        trustStoreStream.close();
                     }
                     trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
                     trustManagerFactory.init(trustStore);

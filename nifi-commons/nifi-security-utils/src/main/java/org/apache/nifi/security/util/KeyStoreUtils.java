@@ -40,7 +40,7 @@ public class KeyStoreUtils {
      * @return the provider that will be used
      */
     public static String getKeyStoreProvider(String keyStoreType) {
-        if (KeystoreType.PKCS12.toString().equalsIgnoreCase(keyStoreType)) {
+        if (KeystoreType.PKCS12.toString().equalsIgnoreCase(keyStoreType) || KeystoreType.BKS.toString().equalsIgnoreCase(keyStoreType)) {
             return BouncyCastleProvider.PROVIDER_NAME;
         }
         return null;
