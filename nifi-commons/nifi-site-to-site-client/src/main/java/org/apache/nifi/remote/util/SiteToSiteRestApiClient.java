@@ -39,7 +39,6 @@ import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.client.utils.URIUtils;
 import org.apache.http.conn.ManagedHttpClientConnection;
-import org.apache.http.conn.ssl.StrictHostnameVerifier;
 import org.apache.http.entity.BasicHttpEntity;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.CloseableHttpClient;
@@ -88,6 +87,7 @@ import org.codehaus.jackson.map.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.net.ssl.SSLSession;
@@ -204,14 +204,14 @@ public class SiteToSiteRestApiClient implements Closeable {
         closeSilently(httpAsyncClient);
     }
 
-    private CloseableHttpClient getHttpClient() {
+    private CloseableHttpClient getHttpClient() throws IOException {
         if (httpClient == null) {
             setupClient();
         }
         return httpClient;
     }
 
-    private CloseableHttpAsyncClient getHttpAsyncClient() {
+    private CloseableHttpAsyncClient getHttpAsyncClient() throws IOException {
         if (httpAsyncClient == null) {
             setupAsyncClient();
         }
@@ -257,40 +257,47 @@ public class SiteToSiteRestApiClient implements Closeable {
         }
     }
 
-    private void setupClient() {
+    private void setupClient() throws IOException {
         final HttpClientBuilder clientBuilder = HttpClients.custom();
 
         if (sslContext != null) {
             clientBuilder.setSslcontext(sslContext);
             clientBuilder.addInterceptorFirst(new HttpsResponseInterceptor());
-            // Workaround for Android
-            try {
-                Class.forName("javax.naming.ldap.LdapName");
-            } catch (ClassNotFoundException e) {
-                clientBuilder.setSSLHostnameVerifier(new StrictHostnameVerifier());
-            }
+            clientBuilder.setSSLHostnameVerifier(createHostnameVerifierIfNecessary());
         }
 
         httpClient = clientBuilder
             .setDefaultCredentialsProvider(getCredentialsProvider()).build();
     }
 
-    private void setupAsyncClient() {
+    private void setupAsyncClient() throws IOException {
         final HttpAsyncClientBuilder clientBuilder = HttpAsyncClients.custom();
 
         if (sslContext != null) {
             clientBuilder.setSSLContext(sslContext);
             clientBuilder.addInterceptorFirst(new HttpsResponseInterceptor());
-            // Workaround for Android
-            try {
-                Class.forName("javax.naming.ldap.LdapName");
-            } catch (ClassNotFoundException e) {
-                clientBuilder.setSSLHostnameVerifier(new StrictHostnameVerifier());
-            }
+            clientBuilder.setSSLHostnameVerifier(createHostnameVerifierIfNecessary());
         }
 
         httpAsyncClient = clientBuilder.setDefaultCredentialsProvider(getCredentialsProvider()).build();
         httpAsyncClient.start();
+    }
+
+    private HostnameVerifier createHostnameVerifierIfNecessary() throws IOException {
+        // httpcomponents expects the following package, we'll use android sdk verifier if its missing
+        try {
+            Class.forName("javax.naming.ldap.LdapName");
+            return null;
+        } catch (ClassNotFoundException e) {
+            try {
+                // We do NOT want this classname transformed by maven shade plugin
+                String http = "org.apache";
+                http += ".http.conn.ssl.StrictHostnameVerifier";
+                return (HostnameVerifier) Class.forName(http).newInstance();
+            } catch (Exception e1) {
+                throw new IOException("Unable to create hostname verifier.", e1);
+            }
+        }
     }
 
     private class HttpsResponseInterceptor implements HttpResponseInterceptor {
